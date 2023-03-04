@@ -19,8 +19,8 @@ app = func.FunctionApp()
 
 _match_results_container = 'MatchResults2023'
 
-@app.function_name(name="HttpTrigger1")
-@app.route(route="hello") # HTTP Trigger
+@app.function_name(name="HelloWorld")
+@app.route(route="hello", auth_level=func.AuthLevel.ANONYMOUS)
 def test_function(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse("HttpTrigger1 function processed a request!!!")
 
