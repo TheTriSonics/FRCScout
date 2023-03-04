@@ -14,7 +14,7 @@ from azure.storage.blob import BlobClient, ContentSettings
 from azure.cosmos import CosmosClient
 from uuid import uuid4
 
-app = func.FunctionApp(auth_level=func.AuthLevel.ANONYMOUS)
+app = func.FunctionApp()
 
 
 _match_results_container = 'MatchResults2023'
