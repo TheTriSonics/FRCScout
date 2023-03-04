@@ -5,7 +5,6 @@ import base64
 import math
 import logging
 import requests
-import datetime
 import numpy as np
 import pandas as pd
 import azure.functions as func
@@ -15,9 +14,8 @@ from azure.cosmos import CosmosClient
 from uuid import uuid4
 
 app = func.FunctionApp()
-
-
 _match_results_container = 'MatchResults2023'
+
 
 @app.function_name(name="HelloWorld")
 @app.route(route="hello", auth_level=func.AuthLevel.ANONYMOUS)
@@ -26,7 +24,7 @@ def test_function(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="GetOPRData")
-@app.route(route="GetOPRData")
+@app.route(route="GetOPRData", auth_level=func.AuthLevel.ANONYMOUS)
 def get_opr_data(req: func.HttpRequest) -> func.HttpResponse:
     event_key = req.params.get('event_key')
     df = http_get_opr_data(event_key)
@@ -38,7 +36,7 @@ def get_opr_data(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="GetPitResults")
-@app.route(route="GetPitResults")
+@app.route(route="GetPitResults", auth_level=func.AuthLevel.ANONYMOUS)
 def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     secret_team_key = req.params.get('secret_team_key')
     team_key = req.params.get('team_key')
@@ -60,7 +58,7 @@ def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="GetResults")
-@app.route(route="GetResults")
+@app.route(route="GetResults", auth_level=func.AuthLevel.ANONYMOUS)
 def get_results(req: func.HttpRequest) -> func.HttpResponse:
     secret_team_key = req.params.get('secret_team_key')
     event_key = req.params.get('event_key')
@@ -74,7 +72,7 @@ def get_results(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="GetTeamsForEvent")
-@app.route(route="GetTeamsForEvent")
+@app.route(route="GetTeamsForEvent", auth_level=func.AuthLevel.ANONYMOUS)
 def get_teams_for_event(req: func.HttpRequest) -> func.HttpResponse:
     event_key = req.params.get('event_key')
     df = get_event_teams_df(event_key)
@@ -94,7 +92,7 @@ def get_teams_for_event(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="GetTimeEntries")
-@app.route(route="GetTimeEntries")
+@app.route(route="GetTimeEntries", auth_level=func.AuthLevel.ANONYMOUS)
 def get_time_entries(req: func.HttpRequest) -> func.HttpResponse:
     secret_team_key = req.params.get('secret_team_key')
     account_name = req.params.get('account_name')
@@ -109,7 +107,7 @@ def get_time_entries(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="PostPitResults")
-@app.route(route="PostPitResults")
+@app.route(route="PostPitResults", auth_level=func.AuthLevel.ANONYMOUS)
 def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     # Get the request body, interpreted as JSON into an python object
     payload = req.get_json()
@@ -147,7 +145,7 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="PostResults")
-@app.route(route="PostResults")
+@app.route(route="PostResults", auth_level=func.AuthLevel.ANONYMOUS)
 def post_results(req: func.HttpRequest) -> func.HttpResponse:
     # Get the request body, interpreted as JSON into an python object
     payload = req.get_json()
@@ -164,7 +162,7 @@ def post_results(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name(name="PostTimeEntry")
-@app.route(route="PostTimeEntry")
+@app.route(route="PostTimeEntry", auth_level=func.AuthLevel.ANONYMOUS)
 def post_time_entry(req: func.HttpRequest) -> func.HttpResponse:
     # Get the request body, interpreted as JSON into an python object
     payload = req.get_json()
@@ -383,7 +381,7 @@ def get_scouting_data(secret_team_key=None, event_key=None):
     df = pd.DataFrame(items)
     df = df[df.columns.drop(list(df.filter(regex='^_')))]
     df = df.drop(columns=['id'])
-    bool_to_int_cols = ['auto_engaged', 'auto_docked', 'auto_community', 
+    bool_to_int_cols = ['auto_engaged', 'auto_docked', 'auto_community',
                         'endgame_engaged', 'endgame_docked', 'endgame_parked']
     for c in bool_to_int_cols:
         if c in df.columns:
