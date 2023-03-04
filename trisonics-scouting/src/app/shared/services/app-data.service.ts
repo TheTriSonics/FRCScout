@@ -111,6 +111,11 @@ export class AppDataService {
       eventDate: new Date(2023, 3, 2),
     },
     {
+      eventKey: '2023mimil',
+      eventName: 'Milford (Test)',
+      eventDate: new Date(2023, 3, 2),
+    },
+    {
       eventKey: '2023mista',
       eventName: 'Standish',
       eventDate: new Date(2023, 3, 16),
