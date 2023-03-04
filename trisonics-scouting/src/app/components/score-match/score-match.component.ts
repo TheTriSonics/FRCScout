@@ -89,7 +89,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
   }
 
   public toggleAutoCommunity(): void {
-    this.appData.autoCommunity = this.fgMatch.get('autoTarmac')?.value;
+    this.appData.autoCommunity = this.fgMatch.get('autoCommunity')?.value;
   }
 
   public toggleEndgameDocked(): void {
@@ -321,7 +321,29 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
   }
 
   public resetForm(): void {
+    this.appData.autoConeHigh = 0;
+    this.appData.autoConeMedium = 0;
+    this.appData.autoConeLow = 0;
+    this.appData.autoCubeHigh = 0;
+    this.appData.autoCubeMedium = 0;
+    this.appData.autoCubeLow = 0;
+    this.appData.teleopConeHigh = 0;
+    this.appData.teleopConeMedium = 0;
+    this.appData.teleopConeLow = 0;
+    this.appData.teleopCubeHigh = 0;
+    this.appData.teleopCubeMedium = 0;
+    this.appData.teleopCubeLow = 0;
+    const bools = ['autoCommunity', 'autoEngaged', 'autoDocked', 'endgameEngaged',
+      'endgameDocked', 'endgameParked'];
+    bools.forEach((b) => {
+      this.fgMatch.get(b)?.setValue(false);
+    });
+    const strs = ['scoutingTeam', 'match', 'matchNotes'];
+    strs.forEach((s) => {
+      this.fgMatch.get(s)?.setValue('');
+    });
   }
+
   public resetFormConfirm(): void {
     const resp = confirm('Are you sure you want to clear the form?');
     if (resp) {

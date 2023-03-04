@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  baseUrl: 'http://localhost:7071/api',
+  // baseUrl: 'http://localhost:7071/api',
+  baseUrl: 'https://trisonics-scouting-api.azurewebsites.net/api',
   // baseUrl: 'https://www.frcscout.org/api',
 };
 
