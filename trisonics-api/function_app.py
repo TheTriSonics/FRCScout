@@ -178,6 +178,7 @@ def post_time_entry(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+"""
 @app.function_name(name="RebuildData")
 @app.schedule(schedule="0 */1 * * * *", arg_name="req",
               run_on_startup=True, use_monitor=False)
@@ -189,6 +190,7 @@ def rebuild_data(req: func.TimerRequest) -> None:
         logging.info('The timer is past due!')
 
     logging.error('Python timer trigger function ran at %s', utc_timestamp)
+"""
 
 
 def get_tba_url_as_df(url):
