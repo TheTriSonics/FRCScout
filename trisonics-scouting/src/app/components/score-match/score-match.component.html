@@ -44,7 +44,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube High Goal</h4>
+      <h4 class="mat-h4 game-element">Cube High Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
@@ -53,7 +53,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube Medium Goal</h4>
+      <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
@@ -62,7 +62,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube Low Goal</h4>
+      <h4 class="mat-h4 game-element">Cube Low Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
@@ -72,7 +72,7 @@
 
     
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone High Goal</h4>
+      <h4 class="mat-h4 game-element">Cone High Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeHighDec()">-</button>
@@ -81,7 +81,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone Medium Goal</h4>
+      <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
@@ -90,7 +90,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone Low Goal</h4>
+      <h4 class="mat-h4 game-element">Cone Low Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeLowDec()">-</button>
@@ -103,7 +103,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube High Goal</h4>
+      <h4 class="mat-h4 game-element">Cube High Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
@@ -112,7 +112,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube Medium Goal</h4>
+      <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
@@ -121,7 +121,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cube Low Goal</h4>
+      <h4 class="mat-h4 game-element">Cube Low Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
@@ -130,7 +130,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone High Goal</h4>
+      <h4 class="mat-h4 game-element">Cone High Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
@@ -139,7 +139,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone Medium Goal</h4>
+      <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
@@ -148,7 +148,7 @@
     </div>
 
     <div class="flex-row score-label">
-      <h4 mat-h4>Cone Low Goal</h4>
+      <h4 class="mat-h4 game-element">Cone Low Goal</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
@@ -180,12 +180,10 @@
         Robot Parked
       </mat-slide-toggle>
     </div>
-
-
-
     
+   
     <div class="flex-row score-label">
-      <h4 mat-h4>Buddy Bots</h4>
+      <h4 class="mat-h4 game-element">Buddy Bots</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameBuddyDec()">-</button>
@@ -218,23 +216,8 @@
       <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
     </div>
 
-    <div class="flex-row score-label">
-      <h4 mat-h4>Backup Data Transfer</h4>
-    </div>
-    <div class="flex-row">
-      <qrcode [qrdata]="this.gameJSON"></qrcode>
-    </div>
-    <div class="flex-row">
-      <h3 mat-h3>If you have a screenshot of the QR code and the data won't upload you can use the button below to reset the form</h3>
-    </div>
     <div class="flex-row">
       <button mat-raised-button (click)="this.resetFormConfirm()">Clear Form</button>
-    </div>
-    <div class="flex-row">
-      Or copy/paste text this to Justin... not sure how that's going to work just yet.
-      <pre>
-        {{ this.gameJSONFormatted }}
-      </pre>
     </div>
   </div>
 </form>
