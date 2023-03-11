@@ -333,6 +333,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     this.appData.teleopCubeHigh = 0;
     this.appData.teleopCubeMedium = 0;
     this.appData.teleopCubeLow = 0;
+    this.appData.buddyBots = 0;
     const bools = ['autoCommunity', 'autoEngaged', 'autoDocked', 'endgameEngaged',
       'endgameDocked', 'endgameParked'];
     bools.forEach((b) => {
