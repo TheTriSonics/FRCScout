@@ -15,6 +15,8 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public teamList: TBATeam[] = [];
 
+  public sendingData: boolean = false;
+
   public fgMatch: FormGroup = new FormGroup({
     autoEngaged: new FormControl(this.appData.autoEngaged, Validators.required),
     autoDocked: new FormControl(this.appData.autoEngaged, Validators.required),
@@ -279,9 +281,11 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public uploadData(): void {
     if (this.fgMatch.valid) {
+      this.sendingData = true;
       this.appData.postResults(this.matchData).subscribe({
         next: (data) => {
           this.uploadError = false;
+          this.sendingData = false;
           this.snackbar.open(
             'Success! Data uploaded!',
             'Close',
@@ -293,6 +297,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
         error: (err) => {
           console.log('Error uploading data: ', err);
           this.uploadError = true;
+          this.sendingData = false;
           this.snackbar.open(
             'Error uploading data, please try again.',
             'Close',

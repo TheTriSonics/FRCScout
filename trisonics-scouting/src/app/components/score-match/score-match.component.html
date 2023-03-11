@@ -212,8 +212,13 @@
         <h3 mat-h3 class="upload-error-test">Error uploading data, try again when network improves.</h3>
       </ng-container>
     </div>
-    <div class="flex-row">
+   
+    <div class="flex-row" *ngIf="!this.sendingData">
       <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
+    </div>
+    
+    <div class="flex-row progress-bar" *ngIf="this.sendingData">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     </div>
 
     <div class="flex-row">
