@@ -53,6 +53,7 @@ import { TimeKeeperComponent } from './components/time-keeper/time-keeper.compon
 import { TimeDetailsComponent } from './components/dialogs/time-details/time-details.component';
 import { ErrorCatchingInterceptor } from './interceptors/error-catching.interceptor';
 import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog/http-error-dialog.component';
+import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
 
 @NgModule({
   declarations: [
@@ -70,6 +71,7 @@ import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog
     TimeKeeperComponent,
     TimeDetailsComponent,
     HttpErrorDialogComponent,
+    DisplayScheduleComponent,
   ],
   imports: [
     BrowserModule,

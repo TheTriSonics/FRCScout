@@ -8,6 +8,7 @@ import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { HeldDataComponent } from './components/held-data/held-data.component';
 import { TimeKeeperComponent } from './components/time-keeper/time-keeper.component';
+import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
 
 const routes: Routes = [
   {
@@ -17,6 +18,10 @@ const routes: Routes = [
   {
     path: 'score-match',
     component: ScoreMatchComponent,
+  },
+  {
+    path: 'schedule',
+    component: DisplayScheduleComponent,
   },
   {
     path: 'scout-pit',
