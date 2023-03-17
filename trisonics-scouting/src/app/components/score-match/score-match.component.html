@@ -215,14 +215,12 @@
    
     <div class="flex-row" *ngIf="!this.sendingData">
       <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
+      <button mat-raised-button class="clear-form-button" (click)="this.resetFormConfirm()">Clear Form</button>
     </div>
     
     <div class="flex-row progress-bar" *ngIf="this.sendingData">
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     </div>
 
-    <div class="flex-row">
-      <button mat-raised-button (click)="this.resetFormConfirm()">Clear Form</button>
-    </div>
   </div>
 </form>
