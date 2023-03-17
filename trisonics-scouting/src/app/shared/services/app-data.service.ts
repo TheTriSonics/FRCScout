@@ -167,7 +167,7 @@ export class AppDataService {
   /*
   A default event that is only set to this because it's a handy spot for testing
   */
-  private _eventKey = '2023mifor';
+  private _eventKey = '2023mista';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
