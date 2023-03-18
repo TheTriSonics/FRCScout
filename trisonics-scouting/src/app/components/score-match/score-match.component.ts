@@ -19,7 +19,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public fgMatch: FormGroup = new FormGroup({
     autoEngaged: new FormControl(this.appData.autoEngaged, Validators.required),
-    autoDocked: new FormControl(this.appData.autoEngaged, Validators.required),
+    autoDocked: new FormControl(this.appData.autoDocked, Validators.required),
     autoCommunity: new FormControl(this.appData.autoCommunity, Validators.required),
     endgameEngaged: new FormControl(this.appData.endgameDock, Validators.required),
     endgameDocked: new FormControl(this.appData.endgameDock, Validators.required),
