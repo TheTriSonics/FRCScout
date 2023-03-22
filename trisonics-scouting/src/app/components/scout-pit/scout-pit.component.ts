@@ -21,6 +21,8 @@ export class ScoutPitComponent implements OnInit {
 
   public pitDataLoading = false;
 
+  public pitDataSending = false;
+
   public fgScoutPit: FormGroup = new FormGroup({
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     teamKey: new FormControl(this.appData.teamKey, Validators.required),
@@ -119,6 +121,7 @@ export class ScoutPitComponent implements OnInit {
 
   public sendData(): void {
     if (this.fgScoutPit.valid) {
+      this.pitDataSending = true;
       this.appData.postPitResults(this.pitData).subscribe({
         next: () => {
           this.snackbar.open(
@@ -126,10 +129,11 @@ export class ScoutPitComponent implements OnInit {
             'Close',
             { duration: 5000, panelClass: ['snackbar-success'] },
           );
+          this.pitDataSending = false;
           this.resetForm();
         },
         error: (err) => {
-          alert(err.error.message);
+          this.pitDataSending = false;
           this.snackbar.open(
             'Error uploading data',
             'Close',
@@ -157,9 +161,39 @@ export class ScoutPitComponent implements OnInit {
     console.log('uploading image');
     const fileReader = new FileReader();
     fileReader.onload = () => {
-      this.imageList.push(fileReader.result as string);
+      this.resizeImage(fileReader.result).then((res) => {
+        this.imageList.push(res as string);
+      });
     };
     fileReader.readAsDataURL($event.target.files[0]);
+  }
+
+  public resizeImage(imageURL: any): Promise<any> {
+    return new Promise((resolve) => {
+      const maxImageWidth = 1024;
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const origWidth = image.width;
+        let actualWidth = origWidth;
+        let actualHeight = image.height;
+        if (origWidth > maxImageWidth) {
+          // Shrink the image
+          actualWidth = maxImageWidth;
+          const ratio = maxImageWidth / image.width;
+          actualHeight = image.height * ratio;
+        }
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx != null) {
+          ctx.drawImage(image, 0, 0, actualWidth, actualHeight);
+        }
+        const data = canvas.toDataURL('image/jpeg', 1);
+        resolve(data);
+      };
+      image.src = imageURL;
+    });
   }
 }
 

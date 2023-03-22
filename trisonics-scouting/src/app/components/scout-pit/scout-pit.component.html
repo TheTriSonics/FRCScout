@@ -59,22 +59,27 @@
       (change)="uploadImage($event)" />
     <button mat-raised-button color="ts-red"
       class="upload-button"
-      (click)="uploaderNew.click()">Take New Photo</button>
+      (click)="uploaderNew.click()">Take Photo with Camera</button>
     <input #uploaderGallery type="file" accept="image"
       class="image-upload"
       (change)="uploadImage($event)" />
     <button mat-raised-button color="ts-red"
       class="upload-button"
-      (click)="uploaderGallery.click()">Upload Photo</button>
+      (click)="uploaderGallery.click()">Select Photo From Gallery</button>
   </div>
   <div class="flex-row">
     <div *ngFor="let img of this.imageList">
       <img [src]="img" class="image-container" />
     </div>
   </div>
-  <div class="flex-row">
+
+  <div class="flex-row" *ngIf="!this.pitDataSending">
     <button mat-raised-button color="ts-red" (click)="this.sendData()">Send Data</button>
   </div>
+  <div class="flex-row" *ngIf="this.pitDataSending">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
   </form>
   <div class="flex-row section-header" *ngIf="this.showExisting">
     <div>
