@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
-import AppDataService from 'src/app/shared/services/app-data.service';
+import * as _ from 'lodash';
+import { AppDataService} from 'src/app/shared/services/app-data.service';
 
 @Component({
   selector: 'app-view-pits',
@@ -17,7 +18,7 @@ export class ViewPitsComponent implements OnInit {
   ngOnInit(): void {
     this.appData.getPitResults(this.appData.teamKey, this.appData.eventKey, null)
       .subscribe((pitResults) => {
-        this.pitResultList = pitResults;
+        this.pitResultList = _.sortBy(pitResults, 'scouting_team');
       });
   }
 }
