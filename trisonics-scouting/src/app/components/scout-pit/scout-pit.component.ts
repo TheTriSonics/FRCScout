@@ -44,7 +44,6 @@ export class ScoutPitComponent implements OnInit {
     midHang: new FormControl(false),
     traversalHang: new FormControl(false),
     robotRating: new FormControl(0),
-    skipRating: new FormControl(false),
     robotNotes: new FormControl(''),
   });
 
@@ -61,13 +60,6 @@ export class ScoutPitComponent implements OnInit {
     });
     this.fgScoutPit.get('scoutingTeam')?.valueChanges.subscribe((teamKey) => {
       this.loadPitData(teamKey);
-    });
-    this.fgScoutPit.get('skipRating')?.valueChanges.subscribe((skipRating) => {
-      if (skipRating) {
-        this.fgScoutPit.get('robotRating')?.disable();
-      } else {
-        this.fgScoutPit.get('robotRating')?.enable();
-      }
     });
   }
 
@@ -108,7 +100,7 @@ export class ScoutPitComponent implements OnInit {
       robot_notes: this.fgScoutPit.get('robotNotes')?.value,
       images: this.imageList,
     } as PitResult;
-    if (this.fgScoutPit.get('skipRating')?.value === true) {
+    if (this.fgScoutPit.get('robotRating')?.dirty === false) {
       ret.robot_rating = null;
     }
     return ret;
