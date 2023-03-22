@@ -95,31 +95,46 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
   }
 
   public toggleAutoDocked(): void {
-    this.appData.autoDocked = this.fgMatch.get('autoDocked')?.value;
-    this.fgMatch.get('autoEngaged')?.setValue(false);
+    const val = this.fgMatch.get('autoDocked')?.value;
+    this.appData.autoDocked = val;
+    if (val) {
+      this.fgMatch.get('autoEngaged')?.setValue(!val);
+    }
   }
 
   public toggleAutoEngaged(): void {
-    this.appData.autoEngaged = this.fgMatch.get('autoEngaged')?.value;
-    this.fgMatch.get('autoDocked')?.setValue(false);
+    const val = this.fgMatch.get('autoEngaged')?.value;
+    this.appData.autoEngaged = val;
+    if (val) {
+      this.fgMatch.get('autoDocked')?.setValue(!val);
+    }
   }
 
   public toggleEndgameDocked(): void {
-    this.appData.endgameDock = this.fgMatch.get('endgameDocked')?.value;
-    this.fgMatch.get('endgameParked')?.setValue(false);
-    this.fgMatch.get('endgameEngaged')?.setValue(false);
+    const val = this.fgMatch.get('endgameDocked')?.value;
+    this.appData.endgameDock = val;
+    if (val) {
+      this.fgMatch.get('endgameParked')?.setValue(!val);
+      this.fgMatch.get('endgameEngaged')?.setValue(!val);
+    }
   }
 
   public toggleEndgameParked(): void {
-    this.appData.autoEngaged = this.fgMatch.get('endgameParked')?.value;
-    this.fgMatch.get('endgameDocked')?.setValue(false);
-    this.fgMatch.get('endgameEngaged')?.setValue(false);
+    const val = this.fgMatch.get('endgameParked')?.value;
+    this.appData.autoEngaged = val;
+    if (val) {
+      this.fgMatch.get('endgameDocked')?.setValue(!val);
+      this.fgMatch.get('endgameEngaged')?.setValue(!val);
+    }
   }
 
   public toggleEndgameEngaged(): void {
-    this.appData.autoEngaged = this.fgMatch.get('endgameEngaged')?.value;
-    this.fgMatch.get('endgameDocked')?.setValue(false);
-    this.fgMatch.get('endgameParked')?.setValue(false);
+    const val = this.fgMatch.get('endgameEngaged')?.value;
+    this.appData.autoEngaged = val;
+    if (val) {
+      this.fgMatch.get('endgameDocked')?.setValue(!val);
+      this.fgMatch.get('endgameParked')?.setValue(!val);
+    }
   }
 
   public autoCubeHighInc(): void {
