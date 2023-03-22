@@ -122,8 +122,9 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
         filedata = base64.b64decode(b64data)
         logging.info(fileext)
         # upload to blob storage
-        logging.info(blob_conn)
+        logging.info(f'Blob connections tring to use: {blob_conn}')
         filename = f'{uuid4()}.{fileext}'
+        logging.error(f'Trying {filename}')
         blob_client = BlobClient.from_connection_string(
             conn_str=blob_conn,
             container_name='images',
@@ -133,9 +134,12 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
             data=filedata,
             content_settings=ContentSettings(content_type=mimetype)
         )
+        logging.error(f'Added {filename}')
         payload['image_names'].append(filename)
     del payload['images']
-    container = get_container('PitResults')
+    if 'id' not in payload:
+        payload['id'] = str(uuid4())
+    container = get_container('PitResults2023')
     # Now that we have a connection to the container we can insert/update data
     container.upsert_item(payload)
     return func.HttpResponse(
@@ -408,7 +412,7 @@ def cosmos_get_time_entries(secret_team_key=None, account_name=None):
 
 
 def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
-    container = get_container('PitResults')
+    container = get_container('PitResults2023')
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
     ]
