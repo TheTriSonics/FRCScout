@@ -31,7 +31,11 @@
         </a>
         <a routerLink="/view-results" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">verified</mat-icon>Results
+          <mat-icon class="menu-icon">verified</mat-icon>Match Results
+        </a>
+        <a routerLink="/view-pits" mat-list-item routerLinkActive="active" class="menu-link"
+          (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
+          <mat-icon class="menu-icon">topic</mat-icon>View Pit Data
         </a>
         <a routerLink="/team-details" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">

@@ -412,7 +412,7 @@ export class AppDataService {
   public getPitResults(
     secretTeamKey: string,
     eventKey: string,
-    teamKey: string,
+    teamKey: string | null,
   ): Observable<PitResult[]> {
     let url = `${this.baseUrl}/GetPitResults?param=none`;
     if (secretTeamKey) {

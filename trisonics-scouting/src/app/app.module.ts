@@ -54,6 +54,7 @@ import { TimeDetailsComponent } from './components/dialogs/time-details/time-det
 import { ErrorCatchingInterceptor } from './interceptors/error-catching.interceptor';
 import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog/http-error-dialog.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
+import { ViewPitsComponent } from './components/view-pits/view-pits.component';
 
 @NgModule({
   declarations: [
@@ -72,6 +73,7 @@ import { DisplayScheduleComponent } from './components/display-schedule/display-
     TimeDetailsComponent,
     HttpErrorDialogComponent,
     DisplayScheduleComponent,
+    ViewPitsComponent,
   ],
   imports: [
     BrowserModule,
