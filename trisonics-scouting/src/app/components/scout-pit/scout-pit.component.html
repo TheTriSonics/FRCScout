@@ -1,9 +1,9 @@
 <h1 class="mat-h1">Pit Scouting</h1>
 <form [formGroup]="this.fgScoutPit">
   <div class="flex-row">
-    <mat-form-field class="scout-input">
+    <mat-form-field class="team-dropdown">
       <mat-label>Team you are Scouting</mat-label>
-      <mat-select formControlName="scoutingTeam">
+      <mat-select formControlName="scoutingTeam" class="team-dropdown">
         <mat-option value="0">Select Team</mat-option>
         <mat-option *ngFor="let t of this.teamList" [value]="t.number">{{t.number}} - {{t.name}}</mat-option>
       </mat-select>
