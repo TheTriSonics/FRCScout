@@ -4,6 +4,7 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'app-scout-pit',
@@ -22,6 +23,10 @@ export class ScoutPitComponent implements OnInit {
   public pitDataLoading = false;
 
   public pitDataSending = false;
+
+  private allPitData: PitResult[] = [];
+
+  public allPitDataLoaded = false;
 
   public fgScoutPit: FormGroup = new FormGroup({
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
@@ -80,9 +85,16 @@ export class ScoutPitComponent implements OnInit {
   }
 
   private loadData(): void {
+    this.allPitDataLoaded = false;
     this.appData.getEventTeamList(this.appData.eventKey).subscribe((tl) => {
       this.teamList = tl;
     });
+    this.appData.getPitResults(this.appData.teamKey, this.appData.eventKey, null)
+      .subscribe((pd) => {
+        this.allPitData = pd;
+        console.log('pit data:', pd);
+        this.allPitDataLoaded = true;
+      });
   }
 
   get pitData(): PitResult {
@@ -114,6 +126,9 @@ export class ScoutPitComponent implements OnInit {
   public sendData(): void {
     if (this.fgScoutPit.valid) {
       this.pitDataSending = true;
+      if (!this.pitData.id) {
+        this.pitData.id = uuidv4();
+      }
       this.appData.postPitResults(this.pitData).subscribe({
         next: () => {
           this.snackbar.open(
@@ -186,6 +201,16 @@ export class ScoutPitComponent implements OnInit {
       };
       image.src = imageURL;
     });
+  }
+
+  public isScouted(teamNumber: number): string {
+    console.log('finding', teamNumber);
+    const found = this.pitResultList.find((t) => t.scouting_team === teamNumber);
+    console.log('found', found);
+    if (found) {
+      return '';
+    }
+    return 'UNSCOUTED';
   }
 }
 

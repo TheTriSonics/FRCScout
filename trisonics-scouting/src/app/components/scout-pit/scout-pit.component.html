@@ -1,6 +1,6 @@
 <h1 class="mat-h1">Pit Scouting</h1>
 <form [formGroup]="this.fgScoutPit">
-  <div class="flex-row">
+  <div class="flex-row" *ngIf="this.allPitDataLoaded">
     <mat-form-field class="team-dropdown">
       <mat-label>Team you are Scouting</mat-label>
       <mat-select formControlName="scoutingTeam" class="team-dropdown">

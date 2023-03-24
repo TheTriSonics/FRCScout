@@ -1,4 +1,5 @@
 export interface PitResult {
+  id: string,
   scouter_name: string,
   secret_team_key: string,
   event_key: string,
