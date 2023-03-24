@@ -4,7 +4,6 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
-import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'app-scout-pit',
@@ -126,9 +125,6 @@ export class ScoutPitComponent implements OnInit {
   public sendData(): void {
     if (this.fgScoutPit.valid) {
       this.pitDataSending = true;
-      if (!this.pitData.id) {
-        this.pitData.id = uuidv4();
-      }
       this.appData.postPitResults(this.pitData).subscribe({
         next: () => {
           this.snackbar.open(
