@@ -1,8 +1,13 @@
-<ng-container *ngIf="this.hasScoutData || this.hasPitData || this.hasTimeData">
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" (click)="this.uploadData()">Send Data</button>
+<ng-container *ngIf="this.hasScoutData || this.hasPitData">
+  <div class="flex-row" *ngIf="!this.sendingData">
+    <button mat-raised-button color="ts-red" style="margin-bottom: 1em;" (click)="this.uploadData()">Send Data</button>
   </div>
+  <div class="flex-row progress-bar" *ngIf="this.sendingData">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
 </ng-container>
+<!--
 <ng-container *ngIf="this.hasTimeData">
   <h1 class="mat-h1">Time Data: {{ this.timeData.heldData.length }} entries</h1>
 </ng-container>
@@ -11,20 +16,22 @@
     All time data uploaded!
   </h2>
 </ng-container>
+
+-->
 <ng-container *ngIf="this.hasScoutData">
   <h1 class="mat-h1">Match Data</h1>
   <div class="flex-row">
     <ul>
       <li *ngFor="let sd of this.appData.heldScoutData">
-        <span class="mat-body">Scouted {{sd.scouting_team}} in match {{sd.match_key}}</span>
+        <span class="mat-body">Scouted team {{sd.scouting_team}} in match {{sd.match_key}} (Notes: {{sd.match_notes}})</span>
       </li>
     </ul>
   </div>
 </ng-container>
 <ng-container *ngIf="!this.hasScoutData">
-  <h2 class="mat-h2">
+  <h1 class="mat-h1">
     All Scout data uploaded!
-  </h2>
+  </h1>
 </ng-container>
 
 <hr />
@@ -33,12 +40,12 @@
   <h1 class="mat-h1">Pit Data</h1>
   <ul>
     <li *ngFor="let sd of this.appData.heldPitData">
-      <span class="mat-body">{{sd.scouting_team}}</span>
+      <span class="mat-body">{{sd.scouting_team}} (Notes: {{sd.robot_notes}})</span>
     </li>
   </ul>
 </ng-container>
 <ng-container *ngIf="!this.hasPitData">
-  <h2 class="mat-h2">
+  <h1 class="mat-h1">
     All Pit data uploaded!
-  </h2>
+  </h1>
 </ng-container>

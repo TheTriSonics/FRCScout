@@ -5,6 +5,14 @@
   background-color: #972123;
   color: white;
 }
+.mat-ts-cube {
+  background-color: purple;
+  color: white;
+}
+.mat-ts-cone {
+  background-color: darkgoldenrod;
+  color: white;
+}
 
 .mat-row:nth-child(even){
   background-color: white;
@@ -38,5 +46,4 @@
 
 app-scout-pit-view {
   margin: 2em;
-  width: 300px;
 }

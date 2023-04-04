@@ -22,52 +22,48 @@
     <div class="flex-row game-section">
       <h2 class="mat-h2">Autonomous</h2>
     </div>
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="autoCommunity" color="primary"
-        (change)="this.toggleAutoCommunity()">
-        Moved out of the community
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="autoNothing">Nothing</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="autoCommunity">Left Community</mat-checkbox>
+    </div>
+    <div class="flex-row" style="margin-top: 1em;">
+      <h2 class="mat-h2">Auto Charge Station</h2>
     </div>
 
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="autoDocked" color="primary"
-        (change)="this.toggleAutoDocked()"> <!-- docked on ramp -->
-        Robot Docked (on station, NOT balanced)
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="autoDocked">Docked on station not balanced, not touching carpet.</mat-checkbox>
     </div>
-
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="autoEngaged" color="primary"
-        (change)="this.toggleAutoEngaged()"> <!-- engaged on ramp -->
-        Robot Engaged (balanced)
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="autoEngaged">On charge station and balanced</mat-checkbox>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cube High Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
       <span class="score">{{ this.appData.autoCubeHigh }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeHighInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
       <span class="score">{{ this.appData.autoCubeMedium }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeMediumInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cube Low Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
       <span class="score">{{ this.appData.autoCubeLow }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
     </div>
 
     
@@ -75,27 +71,27 @@
       <h4 class="mat-h4 game-element">Cone High Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeHighDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighDec()">-</button>
       <span class="score">{{ this.appData.autoConeHigh }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeHighInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
       <span class="score">{{ this.appData.autoConeMedium }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeMediumInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone Low Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeLowDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowDec()">-</button>
       <span class="score">{{ this.appData.autoConeLow }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoConeLowInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowInc()">+</button>
     </div>
 
     <div class="flex-row game-section">
@@ -106,82 +102,75 @@
       <h4 class="mat-h4 game-element">Cube High Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
       <span class="score">{{ this.appData.teleopCubeHigh }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeHighInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
       <span class="score">{{ this.appData.teleopCubeMedium }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeMediumInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cube Low Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
       <span class="score">{{ this.appData.teleopCubeLow }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCubeLowInc()">+</button>
+      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone High Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
       <span class="score">{{ this.appData.teleopConeHigh }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeHighInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
       <span class="score">{{ this.appData.teleopConeMedium }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeMediumInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumInc()">+</button>
     </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone Low Goal</h4>
     </div>
     <div class="flex-row">
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
       <span class="score">{{ this.appData.teleopConeLow }}</span>
-      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
+      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
     </div>
 
     <div class="flex-row game-section">
       <h2 class="mat-h2">Endgame</h2>
     </div>
-    
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="endgameDocked" color="primary"
-        (change)="this.toggleEndgameDocked()"> <!-- docked on ramp -->
-        Robot Docked (on station, NOT balanced)
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="endNothing">Nothing</mat-checkbox>
     </div>
-
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="endgameEngaged" color="primary"
-        (change)="this.toggleEndgameEngaged()"> <!-- engaged on ramp -->
-        Robot Engaged (balanced)
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="endDead">Couldn't drive</mat-checkbox>
     </div>
-
-    <div class="flex-row score-label">
-      <mat-slide-toggle formControlName="endgameParked" color="primary"
-        (change)="this.toggleEndgameParked()"> <!-- parked in the community -->
-        Robot Parked (in community)
-      </mat-slide-toggle>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="endParked">Parked in Community</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="endDocked">Docked on station not balanced, not touching carpet.</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="endEngaged">On charge station and balanced</mat-checkbox>
     </div>
     
-   
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Buddy Bots</h4>
     </div>

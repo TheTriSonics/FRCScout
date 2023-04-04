@@ -15,15 +15,19 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public teamList: TBATeam[] = [];
 
-  public sendingData: boolean = false;
+  public sendingData = false;
 
   public fgMatch: FormGroup = new FormGroup({
-    autoEngaged: new FormControl(this.appData.autoEngaged, Validators.required),
-    autoDocked: new FormControl(this.appData.autoDocked, Validators.required),
-    autoCommunity: new FormControl(this.appData.autoCommunity, Validators.required),
-    endgameEngaged: new FormControl(this.appData.endgameDock, Validators.required),
-    endgameDocked: new FormControl(this.appData.endgameDock, Validators.required),
-    endgameParked: new FormControl(this.appData.endgameParked, Validators.required),
+    autoNothing: new FormControl(this.appData.autoNothing),
+    autoEngaged: new FormControl(this.appData.autoEngaged),
+    autoDocked: new FormControl(this.appData.autoDocked),
+    autoCommunity: new FormControl(this.appData.autoCommunity),
+
+    endNothing: new FormControl(this.appData.endgameNothing),
+    endDead: new FormControl(this.appData.endgameDeadRobot),
+    endParked: new FormControl(this.appData.endgameParked),
+    endDocked: new FormControl(this.appData.endgameDocked),
+    endEngaged: new FormControl(this.appData.endgameEngaged),
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     teamKey: new FormControl(this.appData.teamKey),
     scoutingTeam: new FormControl(this.appData.scoutingTeam, [
@@ -38,16 +42,57 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     matchNotes: new FormControl(this.appData.matchNotes),
   });
 
+  private endgameControls = ['endNothing', 'endDead', 'endParked', 'endDocked', 'endEngaged'];
+
   constructor(
     public appData: AppDataService,
     public snackbar: MatSnackBar,
   ) {}
+
+  public setEndgameControls(callingControl: string, disableOthers: boolean): void {
+    if (disableOthers) {
+      const otherControls = this.endgameControls.filter((c) => c !== callingControl);
+      otherControls.forEach((c) => {
+        this.fgMatch.get(c)?.setValue(false);
+      });
+    }
+  }
 
   public ngOnInit(): void {
     this.loadData();
     this.fgMatch.get('eventKey')?.valueChanges.subscribe((eventKey) => {
       this.appData.eventKey = eventKey;
       this.loadData();
+    });
+
+    this.fgMatch.get('autoNothing')?.valueChanges.subscribe((val) => {
+      if (val) {
+        this.fgMatch.get('autoCommunity')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('autoCommunity')?.valueChanges.subscribe((val) => {
+      if (val) {
+        this.fgMatch.get('autoNothing')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('autoDocked')?.valueChanges.subscribe((val) => {
+      if (val) {
+        this.fgMatch.get('autoEngaged')?.setValue(false);
+      }
+    });
+    this.fgMatch.get('autoEngaged')?.valueChanges.subscribe((val) => {
+      if (val) {
+        this.fgMatch.get('autoDocked')?.setValue(false);
+      }
+    });
+
+    // Setup change handlers for everything in endgameControls
+    this.endgameControls.forEach((c) => {
+      this.fgMatch.get(c)?.valueChanges.subscribe((x) => {
+        this.setEndgameControls(c, x);
+      });
     });
   }
 
@@ -88,53 +133,6 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public updateMatchNotes(notes: string): void {
     this.appData.matchNotes = notes;
-  }
-
-  public toggleAutoCommunity(): void {
-    this.appData.autoCommunity = this.fgMatch.get('autoCommunity')?.value;
-  }
-
-  public toggleAutoDocked(): void {
-    const val = this.fgMatch.get('autoDocked')?.value;
-    this.appData.autoDocked = val;
-    if (val) {
-      this.fgMatch.get('autoEngaged')?.setValue(!val);
-    }
-  }
-
-  public toggleAutoEngaged(): void {
-    const val = this.fgMatch.get('autoEngaged')?.value;
-    this.appData.autoEngaged = val;
-    if (val) {
-      this.fgMatch.get('autoDocked')?.setValue(!val);
-    }
-  }
-
-  public toggleEndgameDocked(): void {
-    const val = this.fgMatch.get('endgameDocked')?.value;
-    this.appData.endgameDock = val;
-    if (val) {
-      this.fgMatch.get('endgameParked')?.setValue(!val);
-      this.fgMatch.get('endgameEngaged')?.setValue(!val);
-    }
-  }
-
-  public toggleEndgameParked(): void {
-    const val = this.fgMatch.get('endgameParked')?.value;
-    this.appData.autoEngaged = val;
-    if (val) {
-      this.fgMatch.get('endgameDocked')?.setValue(!val);
-      this.fgMatch.get('endgameEngaged')?.setValue(!val);
-    }
-  }
-
-  public toggleEndgameEngaged(): void {
-    const val = this.fgMatch.get('endgameEngaged')?.value;
-    this.appData.autoEngaged = val;
-    if (val) {
-      this.fgMatch.get('endgameDocked')?.setValue(!val);
-      this.fgMatch.get('endgameParked')?.setValue(!val);
-    }
   }
 
   public autoCubeHighInc(): void {
@@ -196,7 +194,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       this.appData.autoConeLow -= 1;
     }
   }
-  
+
   public teleopCubeHighInc(): void {
     this.appData.teleopCubeHigh += 1;
   }
@@ -267,7 +265,6 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
-
   get matchData(): ScoutResult {
     const ret = {
       scouter_name: this.appData.scouterName,
@@ -279,17 +276,19 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       auto_engaged: this.appData.autoEngaged,
       auto_docked: this.appData.autoDocked,
       auto_community: this.appData.autoCommunity,
+
+      endgame_nothing: this.appData.endgameNothing,
+      endgame_dead_robot: this.appData.endgameDeadRobot,
       endgame_engaged: this.appData.endgameEngaged,
-      endgame_docked: this.appData.endgameDock,
+      endgame_docked: this.appData.endgameDocked,
       endgame_parked: this.appData.endgameParked,
-      
+
       auto_cubes_high: this.appData.autoCubeHigh,
       auto_cubes_medium: this.appData.autoCubeMedium,
       auto_cubes_low: this.appData.autoCubeLow,
       auto_cones_high: this.appData.autoConeHigh,
       auto_cones_medium: this.appData.autoConeMedium,
       auto_cones_low: this.appData.autoConeLow,
-      
       teleop_cubes_high: this.appData.teleopCubeHigh,
       teleop_cubes_medium: this.appData.teleopCubeMedium,
       teleop_cubes_low: this.appData.teleopCubeLow,

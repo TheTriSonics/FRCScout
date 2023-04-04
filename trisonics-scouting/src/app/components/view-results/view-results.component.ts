@@ -144,27 +144,29 @@ export class ViewResultsComponent implements AfterViewInit {
     _(this.scoutData.data).groupBy('scouting_team')
       .map((objs, key) => ({
         scouting_team: +key,
-        team_name: this.teamList.find((t) => t.number === +key)?.name!,
-        auto_engaged: _.meanBy(objs, (o) => o.auto_engaged ? 1 : 0),
-        auto_docked: _.meanBy(objs, (o) => o.auto_docked ? 1 : 0),
-        auto_community: _.meanBy(objs, (o) => o.auto_community ? 1 : 0),
+        team_name: this.teamList.find((t) => t.number === +key)?.name,
+        auto_engaged: _.meanBy(objs, (o) => (o.auto_engaged ? 1 : 0)),
+        auto_docked: _.meanBy(objs, (o) => (o.auto_docked ? 1 : 0)),
+        auto_community: _.meanBy(objs, (o) => (o.auto_community ? 1 : 0)),
+        endgame_nothing: _.meanBy(objs, 'endgame_nothing'),
+        endgame_dead_robot: _.meanBy(objs, 'endgame_dead_robot'),
         endgame_engaged: _.meanBy(objs, 'endgame_engaged'),
         endgame_docked: _.meanBy(objs, 'endgame_docked'),
         endgame_parked: _.meanBy(objs, 'endgame_parked'),
-        
-        auto_cubes_high:_.meanBy(objs, 'auto_cubes_high'),
-        auto_cubes_medium:_.meanBy(objs, 'auto_cubes_medium'),
-        auto_cubes_low:_.meanBy(objs, 'auto_cubes_low'),
-        auto_cones_high:_.meanBy(objs, 'auto_cones_high'),
-        auto_cones_medium:_.meanBy(objs, 'auto_cones_medium'),
-        auto_cones_low:_.meanBy(objs, 'auto_cones_low'),
-        
-        teleop_cubes_high:_.meanBy(objs, 'teleop_cubes_high'),
-        teleop_cubes_medium:_.meanBy(objs, 'teleop_cubes_medium'),
-        teleop_cubes_low:_.meanBy(objs, 'teleop_cubes_low'),
-        teleop_cones_high:_.meanBy(objs, 'teleop_cones_high'),
-        teleop_cones_medium:_.meanBy(objs, 'teleop_cones_medium'),
-        teleop_cones_low:_.meanBy(objs, 'teleop_cones_low'),
+
+        auto_cubes_high: _.meanBy(objs, 'auto_cubes_high'),
+        auto_cubes_medium: _.meanBy(objs, 'auto_cubes_medium'),
+        auto_cubes_low: _.meanBy(objs, 'auto_cubes_low'),
+        auto_cones_high: _.meanBy(objs, 'auto_cones_high'),
+        auto_cones_medium: _.meanBy(objs, 'auto_cones_medium'),
+        auto_cones_low: _.meanBy(objs, 'auto_cones_low'),
+
+        teleop_cubes_high: _.meanBy(objs, 'teleop_cubes_high'),
+        teleop_cubes_medium: _.meanBy(objs, 'teleop_cubes_medium'),
+        teleop_cubes_low: _.meanBy(objs, 'teleop_cubes_low'),
+        teleop_cones_high: _.meanBy(objs, 'teleop_cones_high'),
+        teleop_cones_medium: _.meanBy(objs, 'teleop_cones_medium'),
+        teleop_cones_low: _.meanBy(objs, 'teleop_cones_low'),
 
         // These cannot be summarized but we'll give them some empty values
         // that won't cause a problem later on in the code if we try and

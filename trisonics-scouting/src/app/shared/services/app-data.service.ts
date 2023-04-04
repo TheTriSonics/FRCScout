@@ -22,6 +22,7 @@ import { OPRData } from 'src/app/shared/models/opr-data-model';
 import { AppSettings } from 'src/app/shared/models/app-settings.model';
 import * as _ from 'lodash';
 import { PitResult } from '../models/pit-result.model';
+import { CloseScrollStrategy } from '@angular/cdk/overlay';
 
 @Injectable({
   providedIn: 'root',
@@ -40,7 +41,6 @@ export class AppDataService {
   We are also able to hook into changes to the data and force them to storage
   in the event that we need to reload the application entirely.
   */
-  public autoCommunity = false;
 
   public match = '';
 
@@ -70,19 +70,26 @@ export class AppDataService {
 
   public teleopConeLow = 0;
 
+  public autoNothing = false;
+
+  public autoCommunity = false;
+
   public autoDocked = false;
 
   public autoEngaged = false;
 
-  public endgameDock = false;
+  public endgameNothing = false;
 
-  public endgameEngaged = false;
+  public endgameDeadRobot = false;
 
   public endgameParked = false;
 
+  public endgameDocked = false;
+
+  public endgameEngaged = false;
+
   public buddyBots = 0;
 
- 
   public matchNotes = '';
 
   /*
@@ -331,11 +338,16 @@ export class AppDataService {
   stores all settings/data again.
   */
   public unCacheResults(payload: ScoutResult): void {
+    console.log(`Held lengh before ${this._heldScoutData.length}`);
+    console.log(payload);
+    console.log(this._heldScoutData);
     _.remove(this._heldScoutData, {
       event_key: payload.event_key,
       scouter_name: payload.scouter_name,
       scouting_team: payload.scouting_team,
     });
+    _.remove(this._heldScoutData, (i) => Object.keys(i).length === 0);
+    console.log(`Held lengh after ${this._heldScoutData.length}`);
     this.saveSettings();
   }
 
@@ -349,11 +361,13 @@ export class AppDataService {
   }
 
   public unCachePitResults(payload: PitResult): void {
-    _.remove(this._heldPitData, {
+    console.log(`Held lengh before ${this._heldPitData.length}`);
+    this._heldPitData = _.remove(this._heldPitData, {
       event_key: payload.event_key,
       scouter_name: payload.scouter_name,
       scouting_team: payload.scouting_team,
     });
+    console.log(`Held lengh after ${this._heldPitData.length}`);
     this.saveSettings();
   }
 
@@ -362,6 +376,7 @@ export class AppDataService {
   to the API for storage in the cloud.
   */
   public postResults(payload: ScoutResult): Observable<ScoutResult> {
+    console.log('posting', payload);
     /*
     The uncache and immediately recache was chosen because both methods
     existed and it works. If the event isn't alrady cached the uncache
