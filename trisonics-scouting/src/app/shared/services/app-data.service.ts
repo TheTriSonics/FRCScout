@@ -137,6 +137,12 @@ export class AppDataService {
       eventName: 'GVSU',
       eventDate: new Date(2023, 3, 23),
     },
+
+    {
+      eventKey: '2023micmp3',
+      eventName: 'States- Aptiv',
+      eventDate: new Date(2023, 4, 6),
+    }
   ];
 
   /*
@@ -174,7 +180,7 @@ export class AppDataService {
   /*
   A default event that is only set to this because it's a handy spot for testing
   */
-  private _eventKey = '2023miwmi';
+  private _eventKey = '2023micmp3';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
@@ -265,7 +271,7 @@ export class AppDataService {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
     this._scouterName = d.scouterName;
-    this._eventKey = '2023miwmi';
+    this._eventKey = '2023micmp3';
     this._teamKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
     this._eventTeamsCache = JSON.parse(teamCacheJson);
