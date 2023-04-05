@@ -42,21 +42,10 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     matchNotes: new FormControl(this.appData.matchNotes),
   });
 
-  private endgameControls = ['endNothing', 'endDead', 'endParked', 'endDocked', 'endEngaged'];
-
   constructor(
     public appData: AppDataService,
     public snackbar: MatSnackBar,
   ) {}
-
-  public setEndgameControls(callingControl: string, disableOthers: boolean): void {
-    if (disableOthers) {
-      const otherControls = this.endgameControls.filter((c) => c !== callingControl);
-      otherControls.forEach((c) => {
-        this.fgMatch.get(c)?.setValue(false);
-      });
-    }
-  }
 
   public ngOnInit(): void {
     this.loadData();
@@ -116,7 +105,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     });
 
     this.fgMatch.get('autoDocked')?.valueChanges.subscribe((val) => {
-      this.appData.autoDocked= val;
+      this.appData.autoDocked = val;
       if (val) {
         this.fgMatch.get('autoEngaged')?.setValue(false);
       }
@@ -128,11 +117,74 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       }
     });
 
-    // Setup change handlers for everything in endgameControls
-    this.endgameControls.forEach((c) => {
-      this.fgMatch.get(c)?.valueChanges.subscribe((x) => {
-        this.setEndgameControls(c, x);
-      });
+    this.fgMatch.get('endNothing')?.valueChanges.subscribe((val) => {
+      this.appData.endgameNothing = val;
+      if (val) {
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endParked')?.setValue(false);
+        this.fgMatch.get('endDocked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endDead')?.valueChanges.subscribe((val) => {
+      this.appData.endgameDeadRobot = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endParked')?.setValue(false);
+        this.fgMatch.get('endDocked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endParked')?.valueChanges.subscribe((val) => {
+      this.appData.endgameParked = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endDocked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endDocked')?.valueChanges.subscribe((val) => {
+      this.appData.endgameDocked = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endParked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endParked')?.valueChanges.subscribe((val) => {
+      this.appData.endgameParked = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endDocked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endDocked')?.valueChanges.subscribe((val) => {
+      this.appData.endgameDocked = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endParked')?.setValue(false);
+        this.fgMatch.get('endEngaged')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('endEngaged')?.valueChanges.subscribe((val) => {
+      this.appData.endgameEngaged = val;
+      if (val) {
+        this.fgMatch.get('endNothing')?.setValue(false);
+        this.fgMatch.get('endDead')?.setValue(false);
+        this.fgMatch.get('endParked')?.setValue(false);
+        this.fgMatch.get('endDocked')?.setValue(false);
+      }
     });
   }
 
@@ -278,6 +330,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       match_key: this.appData.match,
       scouting_team: this.appData.scoutingTeam,
 
+      auto_nothing: this.appData.autoNothing,
       auto_engaged: this.appData.autoEngaged,
       auto_docked: this.appData.autoDocked,
       auto_community: this.appData.autoCommunity,
@@ -366,8 +419,8 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     this.appData.teleopCubeMedium = 0;
     this.appData.teleopCubeLow = 0;
     this.appData.buddyBots = 0;
-    const bools = ['autoCommunity', 'autoEngaged', 'autoDocked', 'endgameEngaged',
-      'endgameDocked', 'endgameParked'];
+    const bools = ['autoNothing', 'autoCommunity', 'autoEngaged', 'autoDocked',
+      'endNothing', 'endDead', 'endEngaged', 'endDocked', 'endParked'];
     bools.forEach((b) => {
       this.fgMatch.get(b)?.setValue(false);
     });

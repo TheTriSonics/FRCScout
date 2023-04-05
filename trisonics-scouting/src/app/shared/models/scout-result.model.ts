@@ -5,7 +5,7 @@ export interface ScoutResult {
   match_key: string,
   scouting_team: number,
   team_name: string | undefined,
-
+  auto_nothing: boolean | number,
   auto_engaged: boolean | number,
   auto_docked: boolean | number,
   auto_community: boolean | number,

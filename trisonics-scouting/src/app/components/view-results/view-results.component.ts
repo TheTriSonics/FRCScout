@@ -145,6 +145,7 @@ export class ViewResultsComponent implements AfterViewInit {
       .map((objs, key) => ({
         scouting_team: +key,
         team_name: this.teamList.find((t) => t.number === +key)?.name,
+        auto_nothing: _.meanBy(objs, (o) => (o.auto_engaged ? 1 : 0)),
         auto_engaged: _.meanBy(objs, (o) => (o.auto_engaged ? 1 : 0)),
         auto_docked: _.meanBy(objs, (o) => (o.auto_docked ? 1 : 0)),
         auto_community: _.meanBy(objs, (o) => (o.auto_community ? 1 : 0)),
