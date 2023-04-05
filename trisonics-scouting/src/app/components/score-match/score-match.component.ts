@@ -60,40 +60,6 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
 
   public ngOnInit(): void {
     this.loadData();
-    this.fgMatch.get('eventKey')?.valueChanges.subscribe((eventKey) => {
-      this.appData.eventKey = eventKey;
-      this.loadData();
-    });
-
-    this.fgMatch.get('autoNothing')?.valueChanges.subscribe((val) => {
-      if (val) {
-        this.fgMatch.get('autoCommunity')?.setValue(false);
-      }
-    });
-
-    this.fgMatch.get('autoCommunity')?.valueChanges.subscribe((val) => {
-      if (val) {
-        this.fgMatch.get('autoNothing')?.setValue(false);
-      }
-    });
-
-    this.fgMatch.get('autoDocked')?.valueChanges.subscribe((val) => {
-      if (val) {
-        this.fgMatch.get('autoEngaged')?.setValue(false);
-      }
-    });
-    this.fgMatch.get('autoEngaged')?.valueChanges.subscribe((val) => {
-      if (val) {
-        this.fgMatch.get('autoDocked')?.setValue(false);
-      }
-    });
-
-    // Setup change handlers for everything in endgameControls
-    this.endgameControls.forEach((c) => {
-      this.fgMatch.get(c)?.valueChanges.subscribe((x) => {
-        this.setEndgameControls(c, x);
-      });
-    });
   }
 
   private loadData(): void {
@@ -129,6 +95,45 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     });
     // Now let's define one with a defined function instead of an anonymous one.
     this.fgMatch.get('matchNotes')?.valueChanges.subscribe((x) => this.updateMatchNotes(x));
+
+    this.fgMatch.get('eventKey')?.valueChanges.subscribe((eventKey) => {
+      this.appData.eventKey = eventKey;
+      this.loadData();
+    });
+
+    this.fgMatch.get('autoNothing')?.valueChanges.subscribe((val) => {
+      this.appData.autoNothing = val;
+      if (val) {
+        this.fgMatch.get('autoCommunity')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('autoCommunity')?.valueChanges.subscribe((val) => {
+      this.appData.autoCommunity = val;
+      if (val) {
+        this.fgMatch.get('autoNothing')?.setValue(false);
+      }
+    });
+
+    this.fgMatch.get('autoDocked')?.valueChanges.subscribe((val) => {
+      this.appData.autoDocked= val;
+      if (val) {
+        this.fgMatch.get('autoEngaged')?.setValue(false);
+      }
+    });
+    this.fgMatch.get('autoEngaged')?.valueChanges.subscribe((val) => {
+      this.appData.autoEngaged = val;
+      if (val) {
+        this.fgMatch.get('autoDocked')?.setValue(false);
+      }
+    });
+
+    // Setup change handlers for everything in endgameControls
+    this.endgameControls.forEach((c) => {
+      this.fgMatch.get(c)?.valueChanges.subscribe((x) => {
+        this.setEndgameControls(c, x);
+      });
+    });
   }
 
   public updateMatchNotes(notes: string): void {
