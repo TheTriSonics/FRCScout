@@ -33,10 +33,10 @@
     </div>
 
     <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" formControlName="autoDocked">Docked on station not balanced, not touching carpet.</mat-checkbox>
+        <mat-checkbox class="dt-checkbox" formControlName="autoDocked">Docked (not balanced, not touching carpet)</mat-checkbox>
     </div>
     <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" formControlName="autoEngaged">On charge station and balanced</mat-checkbox>
+        <mat-checkbox class="dt-checkbox" formControlName="autoEngaged">Balanced!</mat-checkbox>
     </div>
 
     <div class="flex-row score-label">
@@ -165,14 +165,14 @@
         <mat-checkbox class="dt-checkbox" formControlName="endParked">Parked in Community</mat-checkbox>
     </div>
     <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" formControlName="endDocked">Docked on station not balanced, not touching carpet.</mat-checkbox>
+        <mat-checkbox class="dt-checkbox" formControlName="endDocked">Docked (not balanced, not touching carpet)</mat-checkbox>
     </div>
     <div class="flex-row">
         <mat-checkbox class="dt-checkbox" formControlName="endEngaged">On charge station and balanced</mat-checkbox>
     </div>
     
     <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Buddy Bots</h4>
+      <h4 class="mat-h4 game-element"># of other bots balanced with them</h4>
     </div>
     <div class="flex-row">
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameBuddyDec()">-</button>
