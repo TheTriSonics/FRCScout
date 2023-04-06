@@ -139,8 +139,8 @@ export class AppDataService {
     },
 
     {
-      eventKey: '2023micmp3',
-      eventName: 'States- Aptiv',
+      eventKey: '2023micmp4',
+      eventName: 'States- Consumers',
       eventDate: new Date(2023, 4, 6),
     }
   ];
@@ -271,7 +271,7 @@ export class AppDataService {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
     this._scouterName = d.scouterName;
-    this._eventKey = '2023micmp3';
+    this._eventKey = '2023micmp4';
     this._teamKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
     this._eventTeamsCache = JSON.parse(teamCacheJson);
