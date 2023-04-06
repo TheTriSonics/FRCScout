@@ -385,8 +385,10 @@ def get_scouting_data(secret_team_key=None, event_key=None):
     df = pd.DataFrame(items)
     df = df[df.columns.drop(list(df.filter(regex='^_')))]
     df = df.drop(columns=['id'])
-    bool_to_int_cols = ['auto_engaged', 'auto_docked', 'auto_community',
-                        'endgame_engaged', 'endgame_docked', 'endgame_parked']
+    bool_to_int_cols = ['auto_nothing', 'auto_engaged', 'auto_docked',
+                        'auto_community', 'endgame_nothing', 'endgame_engaged',
+                        'endgame_docked', 'endgame_parked',
+                        'endgame_dead_robot']
     for c in bool_to_int_cols:
         if c in df.columns:
             df[c] = df[c].astype(int)
