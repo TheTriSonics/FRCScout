@@ -35,6 +35,20 @@ def get_opr_data(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+@app.function_name(name="GetRobotData")
+@app.route(route="GetRobotData", auth_level=func.AuthLevel.ANONYMOUS)
+def get_robot_notes(req: func.HttpRequest) -> func.HttpResponse:
+    team_key = req.params.get('team_key')
+    df = get_robot_data(secret_team_key='', team_key=team_key)
+    if df is not None:
+        json_obj = df.to_json(orient='records')
+    else:
+        json_obj = json.dumps([])
+    return func.HttpResponse(
+        json_obj,
+        status_code=200
+    )
+
 @app.function_name(name="GetPitResults")
 @app.route(route="GetPitResults", auth_level=func.AuthLevel.ANONYMOUS)
 def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
@@ -386,10 +400,13 @@ def get_scouting_data(secret_team_key=None, event_key=None):
     if len(df.index) > 0:
         df = df[df.columns.drop(list(df.filter(regex='^_')))]
         df = df.drop(columns=['id'])
+        """
         bool_to_int_cols = ['auto_nothing', 'auto_engaged', 'auto_docked',
                             'auto_community', 'endgame_nothing',
                             'endgame_engaged', 'endgame_docked',
                             'endgame_parked', 'endgame_dead_robot']
+        """
+        bool_to_int_cols = [c for c in df.columns if df[c].dtype == 'bool']
         for c in bool_to_int_cols:
             if c in df.columns:
                 df[c] = df[c].astype(int)
@@ -455,6 +472,32 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
     df = df.drop(columns=['id'])
     # df.drop_duplicates(inplace=True, ignore_index=True, keep='last')
     return df
+
+
+def get_robot_data(secret_team_key=None, team_key=None):
+    container = get_container('MatchResults2023')
+    query = "SELECT * FROM c WHERE c.scouting_team = @team_key ORDER BY c.ts"
+    params = [
+    ]
+    params.append({'name': '@team_key', 'value': int(team_key)})
+    """
+    if (secret_team_key is not None):
+        query += "AND c.secret_team_key = @secret_team_key "
+        params.append({'name': '@secret_team_key', 'value': secret_team_key})
+    """
+
+    print(query)
+    print(params)
+    items = container.query_items(query=query, parameters=params,
+                                  enable_cross_partition_query=True)
+    df = pd.DataFrame(list(items))
+    df = df[df.columns.drop(list(df.filter(regex='^_')))]
+    if df.empty:
+        return None
+    df = df.drop(columns=['id'])
+    # df.drop_duplicates(inplace=True, ignore_index=True, keep='last')
+    return df
+
 
 
 def http_get_opr_data(event_code):
