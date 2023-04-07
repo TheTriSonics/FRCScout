@@ -13,6 +13,10 @@ from azure.storage.blob import BlobClient, ContentSettings
 from azure.cosmos import CosmosClient
 from uuid import uuid4
 
+logging.getLogger(
+    'azure.core.pipeline.policies.http_logging_policy'
+  ).setLevel(logging.WARNING)
+
 app = func.FunctionApp()
 _match_results_container = 'MatchResults2023'
 
@@ -38,8 +42,9 @@ def get_opr_data(req: func.HttpRequest) -> func.HttpResponse:
 @app.function_name(name="GetRobotData")
 @app.route(route="GetRobotData", auth_level=func.AuthLevel.ANONYMOUS)
 def get_robot_notes(req: func.HttpRequest) -> func.HttpResponse:
+    secret_team_key = req.params.get('secret_team_key')
     team_key = req.params.get('team_key')
-    df = get_robot_data(secret_team_key='', team_key=team_key)
+    df = get_robot_data(secret_team_key=secret_team_key, team_key=team_key)
     if df is not None:
         json_obj = df.to_json(orient='records')
     else:
@@ -476,15 +481,15 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
 
 def get_robot_data(secret_team_key=None, team_key=None):
     container = get_container('MatchResults2023')
-    query = "SELECT * FROM c WHERE c.scouting_team = @team_key ORDER BY c.ts"
-    params = [
-    ]
+    query = """
+        SELECT *
+        FROM c
+        WHERE c.scouting_team = @team_key
+          AND c.secret_team_key = @secret_team_key
+        ORDER BY c.ts DESC"""
+    params = []
     params.append({'name': '@team_key', 'value': int(team_key)})
-    """
-    if (secret_team_key is not None):
-        query += "AND c.secret_team_key = @secret_team_key "
-        params.append({'name': '@secret_team_key', 'value': secret_team_key})
-    """
+    params.append({'name': '@secret_team_key', 'value': secret_team_key})
 
     print(query)
     print(params)
