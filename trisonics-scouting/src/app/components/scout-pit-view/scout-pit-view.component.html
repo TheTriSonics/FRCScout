@@ -17,7 +17,7 @@
         <img [src]="img" class="image-container" />
       </div>
     </div>
-    <div class="flex-row" *ngIf="this.matches && this.matchesLoaded">
+    <div class="flex-row notes-container" *ngIf="this.matches && this.matchesLoaded">
       <hr />
       <ul>
         <li *ngFor="let m of this.matchResults">
