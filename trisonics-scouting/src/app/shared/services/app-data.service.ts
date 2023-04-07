@@ -22,7 +22,6 @@ import { OPRData } from 'src/app/shared/models/opr-data-model';
 import { AppSettings } from 'src/app/shared/models/app-settings.model';
 import * as _ from 'lodash';
 import { PitResult } from '../models/pit-result.model';
-import { CloseScrollStrategy } from '@angular/cdk/overlay';
 
 @Injectable({
   providedIn: 'root',
@@ -140,9 +139,9 @@ export class AppDataService {
 
     {
       eventKey: '2023micmp4',
-      eventName: 'States- Consumers',
+      eventName: 'States - Consumers',
       eventDate: new Date(2023, 4, 6),
-    }
+    },
   ];
 
   /*
@@ -177,10 +176,13 @@ export class AppDataService {
   */
   private _teamKey = '';
 
+  // Okay, going to just name it secret and start fixing this.
+  private _secretKey = '';
+
   /*
   A default event that is only set to this because it's a handy spot for testing
   */
-  private _eventKey = '2023micmp3';
+  private _eventKey = '2023micmp4';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
@@ -208,6 +210,15 @@ export class AppDataService {
 
   public set teamKey(v: string) {
     this._teamKey = v;
+    this.saveSettings();
+  }
+
+  public get secretKey(): string {
+    return this._secretKey;
+  }
+
+  public set secretKey(v: string) {
+    this._secretKey = v;
     this.saveSettings();
   }
 
@@ -246,7 +257,7 @@ export class AppDataService {
   private saveSettings(): void {
     const d: AppSettings = {
       scouterName: this.scouterName,
-      secretKey: this.teamKey,
+      secretKey: this.secretKey,
       eventKey: this.eventKey,
     };
     /*
@@ -273,6 +284,7 @@ export class AppDataService {
     this._scouterName = d.scouterName;
     this._eventKey = '2023micmp4';
     this._teamKey = d.secretKey;
+    this._secretKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
     this._eventTeamsCache = JSON.parse(teamCacheJson);
     const scoutDataJson = localStorage.getItem('_heldScoutData') ?? '[]';
@@ -293,21 +305,17 @@ export class AppDataService {
     eventKey: string,
     options?: { force?: boolean },
   ): Observable<TBATeam[]> {
-    console.log('team list for', eventKey);
     const force = options?.force ?? false;
     if (
       !force &&
       this._eventTeamsCache[eventKey] &&
       this._eventTeamsCache[eventKey].length > 0
     ) {
-      console.log('using cache');
       return of(this._eventTeamsCache[eventKey]);
     }
-    console.log('using loookup');
     const url = `${this.baseUrl}/GetTeamsForEvent?event_key=${eventKey}`;
     return this.httpClient.get<TBATeam[]>(url).pipe(
       tap((teams) => {
-        console.log('caching', teams);
         this._eventTeamsCache[eventKey] = teams;
         this.saveSettings();
       }),
@@ -426,6 +434,14 @@ export class AppDataService {
     let url = `${this.baseUrl}/GetResults`;
     if (secretTeamKey) {
       url += `?secret_team_key=${secretTeamKey}`;
+    }
+    return this.httpClient.get<ScoutResult[]>(url);
+  }
+
+  public getRobotData(teamKey: number): Observable<ScoutResult[]> {
+    let url = `${this.baseUrl}/GetRobotData?secret_team_key=${this._secretKey}`;
+    if (teamKey) {
+      url += `&team_key=${teamKey}`;
     }
     return this.httpClient.get<ScoutResult[]>(url);
   }

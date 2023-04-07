@@ -1,7 +1,7 @@
 <div class="flex-row" *ngIf="this.teamsLoaded && this.resultsLoaded">
     <ng-container *ngFor="let t of this.teamList">
         <div *ngFor="let pr of getPits(t.number)">
-            <app-scout-pit-view [pitResult]="pr">
+            <app-scout-pit-view [pitResult]="pr" [matches]="true">
             </app-scout-pit-view>
         </div>
         <div *ngIf="getPits(t.number).length === 0">
@@ -10,10 +10,9 @@
                     {{t.number}} - {{t.name}}
                 </mat-card-title>
                 <mat-card-subtitle>
-                    <strong>No data scouted yet!</strong>
+                    <strong>No data scouted yet</strong>
                 </mat-card-subtitle>
                 <mat-card-content>
-                    Maybe a link here?
                 </mat-card-content>
             </mat-card>
         </div>

@@ -17,5 +17,13 @@
         <img [src]="img" class="image-container" />
       </div>
     </div>
+    <div class="flex-row" *ngIf="this.matches && this.matchesLoaded">
+      <hr />
+      <ul>
+        <li *ngFor="let m of this.matchResults">
+          {{ m.match_notes }} - {{ m.scouter_name }} ({{ m.event_key }})</li>
+      </ul>
+    </div>
+
   </mat-card-content>
 </mat-card>

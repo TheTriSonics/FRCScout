@@ -4,6 +4,7 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
+import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 
 @Component({
   selector: 'app-scout-pit',
@@ -17,6 +18,8 @@ export class ScoutPitComponent implements OnInit {
 
   public pitResultList: PitResult[] = [];
 
+  public matchResultsList: ScoutResult[] = [];
+
   public showExisting = false;
 
   public pitDataLoading = false;
@@ -26,6 +29,8 @@ export class ScoutPitComponent implements OnInit {
   private allPitData: PitResult[] = [];
 
   public allPitDataLoaded = false;
+
+  public matchesLoaded = false;
 
   public fgScoutPit: FormGroup = new FormGroup({
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
@@ -64,6 +69,12 @@ export class ScoutPitComponent implements OnInit {
     });
     this.fgScoutPit.get('scoutingTeam')?.valueChanges.subscribe((teamKey) => {
       this.loadPitData(teamKey);
+      this.appData.getRobotData(teamKey).subscribe((data) => {
+        if (data) {
+          this.matchResultsList.push(...data);
+        }
+        this.matchesLoaded = true;
+      });
     });
   }
 
@@ -207,6 +218,10 @@ export class ScoutPitComponent implements OnInit {
       return '';
     }
     return 'UNSCOUTED';
+  }
+
+  public getMatches(teamNumber: number): ScoutResult[] {
+    return this.matchResultsList.filter((pr) => pr.scouting_team === teamNumber);
   }
 }
 

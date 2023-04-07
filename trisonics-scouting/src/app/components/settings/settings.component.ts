@@ -7,11 +7,10 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.scss']
+  styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
-
-  public teamListLoading: boolean = false;
+  public teamListLoading = false;
 
   public teamList: TBATeam[] = [];
 
@@ -20,6 +19,7 @@ export class SettingsComponent implements OnInit {
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     eventKey: new FormControl(this.appData.eventKey, Validators.required),
   });
+
   constructor(
     public appData: AppDataService,
   ) { }
@@ -28,6 +28,7 @@ export class SettingsComponent implements OnInit {
     this.teamReload();
     this.fgSettings.get('teamKey')?.valueChanges.subscribe((tk) => {
       this.appData.teamKey = tk;
+      this.appData.secretKey = tk;
     });
     this.fgSettings.get('scouterName')?.valueChanges.subscribe((sn) => {
       this.appData.scouterName = sn;
@@ -55,3 +56,5 @@ export class SettingsComponent implements OnInit {
     });
   }
 }
+
+export default SettingsComponent;

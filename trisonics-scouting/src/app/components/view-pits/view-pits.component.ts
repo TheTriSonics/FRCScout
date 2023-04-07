@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
-import { AppDataService} from 'src/app/shared/services/app-data.service';
+import { AppDataService } from 'src/app/shared/services/app-data.service';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import * as _ from 'lodash';
+import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 
 @Component({
   selector: 'app-view-pits',
@@ -15,7 +16,7 @@ export class ViewPitsComponent implements OnInit {
   public pitResultList: PitResult[] = [];
 
   public teamsLoaded = false;
-  
+
   public resultsLoaded = false;
 
   constructor(
