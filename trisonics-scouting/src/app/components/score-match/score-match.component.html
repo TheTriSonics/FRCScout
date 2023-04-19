@@ -151,6 +151,12 @@
       <span class="score">{{ this.appData.teleopConeLow }}</span>
       <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
     </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="teleopHPDouble">Use Double HP</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" formControlName="teleopHPSingle">Use Single HP</mat-checkbox>
+    </div>
 
     <div class="flex-row game-section">
       <h2 class="mat-h2">Endgame</h2>

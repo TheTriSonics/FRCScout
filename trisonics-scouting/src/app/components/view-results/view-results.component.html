@@ -119,7 +119,21 @@
       </th>
       <td mat-cell *matCellDef="let element"> {{element.auto_cones_low | number : '1.2-2'}} </td>
     </ng-container>
-    
+
+    <ng-container matColumnDef="teleop_hp_double">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>
+        Dbl
+      </th>
+      <td mat-cell *matCellDef="let element"> {{element.teleop_hp_double | number : '1.2-2'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="teleop_hp_single">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>
+        Sgl
+      </th>
+      <td mat-cell *matCellDef="let element"> {{element.teleop_hp_single | number : '1.2-2'}} </td>
+    </ng-container>
+
     <ng-container matColumnDef="teleop_cubes_high">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>
         T Cube H
@@ -161,7 +175,7 @@
       </th>
       <td mat-cell *matCellDef="let element"> {{element.teleop_cones_low | number : '1.2-2'}} </td>
     </ng-container>
-    
+
     <ng-container matColumnDef="endgame_engaged">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>
         EE

@@ -23,6 +23,9 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     autoDocked: new FormControl(this.appData.autoDocked),
     autoCommunity: new FormControl(this.appData.autoCommunity),
 
+    teleopHPDouble: new FormControl(this.appData.teleopHPDouble),
+    teleopHPSingle: new FormControl(this.appData.teleopHPSingle),
+
     endNothing: new FormControl(this.appData.endgameNothing),
     endDead: new FormControl(this.appData.endgameDeadRobot),
     endParked: new FormControl(this.appData.endgameParked),
@@ -115,6 +118,14 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       if (val) {
         this.fgMatch.get('autoDocked')?.setValue(false);
       }
+    });
+
+    this.fgMatch.get('teleopHPDouble')?.valueChanges.subscribe((val) => {
+      this.appData.teleopHPDouble = val;
+    });
+
+    this.fgMatch.get('teleopHPSingle')?.valueChanges.subscribe((val) => {
+      this.appData.teleopHPSingle = val;
     });
 
     this.fgMatch.get('endNothing')?.valueChanges.subscribe((val) => {
@@ -354,6 +365,9 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
       teleop_cones_medium: this.appData.teleopConeMedium,
       teleop_cones_low: this.appData.teleopConeLow,
 
+      teleop_hp_double: this.appData.teleopHPDouble,
+      teleop_hp_single: this.appData.teleopHPSingle,
+
       match_notes: this.appData.matchNotes,
     } as ScoutResult;
     return ret;
@@ -420,6 +434,7 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
     this.appData.teleopCubeLow = 0;
     this.appData.buddyBots = 0;
     const bools = ['autoNothing', 'autoCommunity', 'autoEngaged', 'autoDocked',
+      'teleopHPDouble', 'teleopHPSingle',
       'endNothing', 'endDead', 'endEngaged', 'endDocked', 'endParked'];
     bools.forEach((b) => {
       this.fgMatch.get(b)?.setValue(false);

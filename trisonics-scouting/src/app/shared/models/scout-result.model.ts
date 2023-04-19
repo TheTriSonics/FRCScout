@@ -28,6 +28,8 @@ export interface ScoutResult {
   teleop_cones_high: number,
   teleop_cones_medium: number,
   teleop_cones_low: number,
+  teleop_hp_double: boolean | number,
+  teleop_hp_single: boolean | number,
 
   match_notes: string,
 }

@@ -69,6 +69,10 @@ export class AppDataService {
 
   public teleopConeLow = 0;
 
+  public teleopHPDouble = false;
+
+  public teleopHPSingle = false;
+
   public autoNothing = false;
 
   public autoCommunity = false;
