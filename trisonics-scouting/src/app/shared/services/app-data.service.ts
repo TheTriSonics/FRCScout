@@ -110,7 +110,11 @@ export class AppDataService {
   This is a quick hack to avoid using TBA to load evey event and instead
   we just define ones the TriSonics are involved with.
   */
-  public eventList: TBAEvent[] = [
+  get eventList(): TBAEvent[] {
+    return _.orderBy(this._eventList, 'eventDate', 'desc');
+  }
+
+  private _eventList: TBAEvent[] = [
     {
       eventKey: '2023mifor',
       eventName: 'Calvin (Test)',
@@ -136,11 +140,15 @@ export class AppDataService {
       eventName: 'GVSU',
       eventDate: new Date(2023, 3, 23),
     },
-
     {
       eventKey: '2023micmp4',
       eventName: 'States - Consumers',
       eventDate: new Date(2023, 4, 6),
+    },
+    {
+      eventKey: '2023cur',
+      eventName: 'Worlds - Curie',
+      eventDate: new Date(2023, 4, 19),
     },
   ];
 
@@ -182,7 +190,7 @@ export class AppDataService {
   /*
   A default event that is only set to this because it's a handy spot for testing
   */
-  private _eventKey = '2023micmp4';
+  private _eventKey = '2023cur';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
@@ -282,7 +290,7 @@ export class AppDataService {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
     this._scouterName = d.scouterName;
-    this._eventKey = '2023micmp4';
+    this._eventKey = '2023cur';
     this._teamKey = d.secretKey;
     this._secretKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
