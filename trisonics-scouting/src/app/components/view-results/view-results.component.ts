@@ -47,6 +47,8 @@ export class ViewResultsComponent implements AfterViewInit {
     'auto_cones_high',
     'auto_cones_medium',
     'auto_cones_low',
+    'teleop_hp_double',
+    'teleop_hp_single',
     'teleop_cubes_high',
     'teleop_cubes_medium',
     'teleop_cubes_low',
@@ -168,6 +170,8 @@ export class ViewResultsComponent implements AfterViewInit {
         teleop_cones_high: _.meanBy(objs, 'teleop_cones_high'),
         teleop_cones_medium: _.meanBy(objs, 'teleop_cones_medium'),
         teleop_cones_low: _.meanBy(objs, 'teleop_cones_low'),
+        teleop_hp_double: _.meanBy(objs, 'teleop_hp_double'),
+        teleop_hp_single: _.meanBy(objs, 'teleop_hp_single'),
 
         // These cannot be summarized but we'll give them some empty values
         // that won't cause a problem later on in the code if we try and
