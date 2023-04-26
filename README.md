@@ -1,5 +1,5 @@
 # Trisonics Scouting Application Overview
-This repository consists of three related projects. Under the 'api' directory
+This repository consists of three related projects. Under the 'trisonics-api' directory
 you'll find an Azure Function v4 projedct written in Python that acts as the
 data layer for the application. This handles connections back to our Cosmos
 database, Blob storage, and connection to any other API we might want to pull
