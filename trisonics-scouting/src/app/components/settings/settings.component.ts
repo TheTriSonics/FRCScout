@@ -39,21 +39,21 @@ export class SettingsComponent implements OnInit {
     });
   }
 
-  public teamReload(): void {
+  public teamReload(force = false): void {
     const ek = this.appData.eventKey;
     this.teamListLoading = true;
-    this.appData.getEventTeamList(ek).subscribe((tl) => {
+    let params = {};
+    if (force) {
+      params = { force: true };
+    }
+    this.appData.getEventTeamList(ek, params).subscribe((tl) => {
       this.teamListLoading = false;
       this.teamList = tl;
     });
   }
 
   public forceTeamReload(): void {
-    this.teamListLoading = true;
-    this.appData.getEventTeamList(this.appData.eventKey, {force: true}).subscribe((tl) => {
-      this.teamListLoading = false;
-      this.teamList = tl;
-    });
+    this.teamReload(true);
   }
 }
 

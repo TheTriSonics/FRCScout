@@ -1,19 +1,19 @@
 <h1 class="mat-h1">Scout a Match</h1>
 <form [formGroup]="this.fgMatch">
   <div class="flex-row">
+    <mat-form-field class="scout-input">
+      <mat-label>Match</mat-label>
+      <input matInput type="number" placeholder="Match" formControlName="match">
+    </mat-form-field>
+  </div>
+
+  <div class="flex-row">
     <mat-form-field class="team-dropdown">
       <mat-label>Team you are Scouting</mat-label>
       <mat-select formControlName="scoutingTeam" class="team-dropdown">
         <mat-option value="0">Select Team</mat-option>
         <mat-option *ngFor="let t of this.teamList" [value]="t.number">{{t.number}} - {{t.name}}</mat-option>
       </mat-select>
-    </mat-form-field>
-  </div>
-
-  <div class="flex-row">
-    <mat-form-field class="scout-input">
-      <mat-label>Match</mat-label>
-      <input matInput type="number" placeholder="Match" formControlName="match">
     </mat-form-field>
   </div>
 
@@ -66,7 +66,7 @@
       <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
     </div>
 
-    
+
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Cone High Goal</h4>
     </div>
@@ -176,7 +176,7 @@
     <div class="flex-row">
         <mat-checkbox class="dt-checkbox" formControlName="endEngaged">On charge station and balanced</mat-checkbox>
     </div>
-    
+
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element"># of other bots balanced with them</h4>
     </div>
@@ -207,12 +207,12 @@
         <h3 mat-h3 class="upload-error-test">Error uploading data, try again when network improves.</h3>
       </ng-container>
     </div>
-   
+
     <div class="flex-row" *ngIf="!this.sendingData">
       <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
       <button mat-raised-button class="clear-form-button" (click)="this.resetFormConfirm()">Clear Form</button>
     </div>
-    
+
     <div class="flex-row progress-bar" *ngIf="this.sendingData">
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     </div>
