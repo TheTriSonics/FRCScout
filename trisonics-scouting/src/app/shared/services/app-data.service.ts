@@ -41,59 +41,7 @@ export class AppDataService {
   in the event that we need to reload the application entirely.
   */
 
-  public match = '';
-
-  public scoutingTeam = 0;
-
-  public autoCubeHigh = 0;
-
-  public autoCubeMedium = 0;
-
-  public autoCubeLow = 0;
-
-  public autoConeHigh = 0;
-
-  public autoConeMedium = 0;
-
-  public autoConeLow = 0;
-
-  public teleopCubeHigh = 0;
-
-  public teleopCubeMedium = 0;
-
-  public teleopCubeLow = 0;
-
-  public teleopConeHigh = 0;
-
-  public teleopConeMedium = 0;
-
-  public teleopConeLow = 0;
-
-  public teleopHPDouble = false;
-
-  public teleopHPSingle = false;
-
-  public autoNothing = false;
-
-  public autoCommunity = false;
-
-  public autoDocked = false;
-
-  public autoEngaged = false;
-
-  public endgameNothing = false;
-
-  public endgameDeadRobot = false;
-
-  public endgameParked = false;
-
-  public endgameDocked = false;
-
-  public endgameEngaged = false;
-
-  public buddyBots = 0;
-
-  public matchNotes = '';
+  public scoutingData: ScoutResult = {} as ScoutResult;
 
   /*
   Here we create a list of drive trains that we will be able to select

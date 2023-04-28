@@ -35,7 +35,7 @@ export class ScoutPitComponent implements OnInit {
   public fgScoutPit: FormGroup = new FormGroup({
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     teamKey: new FormControl(this.appData.teamKey, Validators.required),
-    scoutingTeam: new FormControl(this.appData.scoutingTeam, [
+    scoutingTeam: new FormControl(this.appData.scoutingData.scouting_team, [
       Validators.required,
       Validators.min(1),
     ]),
