@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { GarvComponent } from './garv.component';
+import { ScoutMatchComponent } from './scout-match.component';
 
-describe('GarvComponent', () => {
-  let component: GarvComponent;
-  let fixture: ComponentFixture<GarvComponent>;
+describe('ScoutMatchComponent', () => {
+  let component: ScoutMatchComponent;
+  let fixture: ComponentFixture<ScoutMatchComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ GarvComponent ]
+      declarations: [ ScoutMatchComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(GarvComponent);
+    fixture = TestBed.createComponent(ScoutMatchComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

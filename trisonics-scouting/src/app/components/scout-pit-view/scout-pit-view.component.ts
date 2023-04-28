@@ -1,7 +1,9 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { PitResult } from 'src/app/shared/models/pit-result.model';
-import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 import { AppDataService } from 'src/app/shared/services/app-data.service';
+import { TBATeam } from 'src/app/shared/models/tba-team.model';
+import * as _ from 'lodash';
+import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 
 @Component({
   selector: 'app-scout-pit-view',
@@ -9,58 +11,32 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
   styleUrls: ['./scout-pit-view.component.scss'],
 })
 export class ScoutPitViewComponent implements OnInit {
-  @Input() public pitResult!: PitResult;
+  public teamList: TBATeam[] = [];
 
-  @Input() public matches = false;
+  public pitResultList: PitResult[] = [];
 
-  public matchesLoaded = false;
+  public teamsLoaded = false;
 
-  public matchResults: ScoutResult[] = [];
-
-  public nickname = '...loading..';
+  public resultsLoaded = false;
 
   constructor(
-    private appData: AppDataService,
+    public appData: AppDataService,
   ) { }
 
-  public ngOnInit(): void {
-    this.appData.getEventTeamList(this.pitResult.event_key).subscribe((teams) => {
-      const team = teams.find((t) => t.number === this.pitResult.scouting_team);
-      if (team) {
-        this.nickname = team.name;
-      } else {
-        console.error('no team found for ', this.pitResult.scouting_team);
-      }
+  ngOnInit(): void {
+    this.appData.getEventTeamList(this.appData.eventKey).subscribe((teams) => {
+      this.teamList = _.sortBy(teams, 'number');
+      this.teamsLoaded = true;
     });
-    if (this.matches) {
-      this.appData.getRobotData(this.pitResult.scouting_team).subscribe((robotData) => {
-        this.matchResults = robotData.filter((rd) => rd.match_notes.length > 1);
-        this.matchResults.forEach((mr) => {
-          console.log('match result: ', mr.match_notes);
-        });
-        this.matchesLoaded = true;
+    this.appData.getPitResults(this.appData.teamKey, this.appData.eventKey, null)
+      .subscribe((pitResults) => {
+        this.pitResultList = _.sortBy(pitResults, 'scouting_team');
+        this.resultsLoaded = true;
       });
-    }
   }
 
-  get wheelType(): string {
-    const pr = this.pitResult;
-    let retVal = 'unknown';
-    if (pr.wheel_inflated) {
-      retVal = 'inflated';
-    } else if (pr.wheel_solid) {
-      retVal = 'solid';
-    } else if (pr.wheel_omni) {
-      retVal = 'omni';
-    } else if (pr.wheel_mec) {
-      retVal = 'mecanum';
-    }
-
-    return retVal;
-  }
-
-  get teamDisplayName(): string {
-    return `${this.pitResult.scouting_team} (${this.nickname})`;
+  public getPits(teamNumber: number): PitResult[] {
+    return this.pitResultList.filter((pr) => pr.scouting_team === teamNumber);
   }
 }
 

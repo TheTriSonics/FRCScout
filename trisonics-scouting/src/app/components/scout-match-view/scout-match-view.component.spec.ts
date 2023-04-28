@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ViewResultsComponent } from './view-results.component';
+import { ScoutMatchViewComponent } from './scout-match-view.component';
 
-describe('ViewResultsComponent', () => {
-  let component: ViewResultsComponent;
-  let fixture: ComponentFixture<ViewResultsComponent>;
+describe('ScoutMatchViewComponent', () => {
+  let component: ScoutMatchViewComponent;
+  let fixture: ComponentFixture<ScoutMatchViewComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ViewResultsComponent ]
+      declarations: [ ScoutMatchViewComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ViewResultsComponent);
+    fixture = TestBed.createComponent(ScoutMatchViewComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

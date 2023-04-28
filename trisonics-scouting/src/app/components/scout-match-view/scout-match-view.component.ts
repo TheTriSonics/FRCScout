@@ -11,11 +11,11 @@ import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { ScoutDetailComponent } from '../dialogs/scout-detail/scout-detail.component';
 
 @Component({
-  selector: 'app-view-results',
-  templateUrl: './view-results.component.html',
-  styleUrls: ['./view-results.component.scss'],
+  selector: 'app-scout-match-view',
+  templateUrl: './scout-match-view.component.html',
+  styleUrls: ['./scout-match-view.component.scss'],
 })
-export class ViewResultsComponent implements AfterViewInit {
+export class ScoutMatchViewComponent implements AfterViewInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   public htmlData = '';
@@ -246,4 +246,4 @@ export class ViewResultsComponent implements AfterViewInit {
   }
 }
 
-export default ViewResultsComponent;
+export default ScoutMatchViewComponent;

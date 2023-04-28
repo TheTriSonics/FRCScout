@@ -6,11 +6,11 @@ import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { AppDataService } from 'src/app/shared/services/app-data.service';
 
 @Component({
-  selector: 'app-score-match',
-  templateUrl: './score-match.component.html',
-  styleUrls: ['./score-match.component.scss'],
+  selector: 'app-scout-match',
+  templateUrl: './scout-match.component.html',
+  styleUrls: ['./scout-match.component.scss'],
 })
-export class ScoreMatchComponent implements OnInit, AfterViewInit {
+export class ScoutMatchComponent implements OnInit, AfterViewInit {
   public uploadError = false;
 
   public teamList: TBATeam[] = [];
@@ -461,4 +461,4 @@ export class ScoreMatchComponent implements OnInit, AfterViewInit {
   }
 }
 
-export default ScoreMatchComponent;
+export default ScoutMatchComponent;

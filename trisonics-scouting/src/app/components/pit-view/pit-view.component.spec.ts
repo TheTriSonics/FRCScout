@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ScoreMatchComponent } from './score-match.component';
+import { PitViewComponent } from './pit-view.component';
 
-describe('ScoreMatchComponent', () => {
-  let component: ScoreMatchComponent;
-  let fixture: ComponentFixture<ScoreMatchComponent>;
+describe('PitViewComponent', () => {
+  let component: PitViewComponent;
+  let fixture: ComponentFixture<PitViewComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ ScoreMatchComponent ]
+      declarations: [ PitViewComponent ]
     })
     .compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ScoreMatchComponent);
+    fixture = TestBed.createComponent(PitViewComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

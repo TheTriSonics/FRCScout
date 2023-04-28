@@ -1,15 +1,15 @@
 /* eslint-disable import/prefer-default-export */
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { ViewResultsComponent } from './components/view-results/view-results.component';
-import { ScoreMatchComponent } from './components/score-match/score-match.component';
+import { ScoutMatchViewComponent } from './components/scout-match-view/scout-match-view.component';
+import { ScoutMatchComponent } from './components/scout-match/scout-match.component';
 import { TeamDetailsComponent } from './components/team-details/team-details.component';
 import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { HeldDataComponent } from './components/held-data/held-data.component';
 import { TimeKeeperComponent } from './components/time-keeper/time-keeper.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
-import { ViewPitsComponent } from './components/view-pits/view-pits.component';
+import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
 
 const routes: Routes = [
   {
@@ -18,7 +18,7 @@ const routes: Routes = [
   },
   {
     path: 'score-match',
-    component: ScoreMatchComponent,
+    component: ScoutMatchComponent,
   },
   {
     path: 'schedule',
@@ -30,11 +30,11 @@ const routes: Routes = [
   },
   {
     path: 'view-results',
-    component: ViewResultsComponent,
+    component: ScoutMatchViewComponent,
   },
   {
     path: 'view-pits',
-    component: ViewPitsComponent,
+    component: ScoutPitViewComponent,
   },
   {
     path: 'team-details',

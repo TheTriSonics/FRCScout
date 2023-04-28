@@ -39,41 +39,39 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { LoginScreenComponent } from './components/login-screen/login-screen.component';
-import { ScoreMatchComponent } from './components/score-match/score-match.component';
-import { ViewResultsComponent } from './components/view-results/view-results.component';
+import { ScoutMatchComponent } from './components/scout-match/scout-match.component';
+import { ScoutMatchViewComponent } from './components/scout-match-view/scout-match-view.component';
 import { environment } from '../environments/environment';
 import { TeamDetailsComponent } from './components/team-details/team-details.component';
 import { ScoutDetailComponent } from './components/dialogs/scout-detail/scout-detail.component';
 import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
 import { SettingsComponent } from './components/settings/settings.component';
-import { GarvComponent } from './components/garv/garv.component';
-import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
+import { PitViewComponent } from './components/pit-view/pit-view.component';
 import { HeldDataComponent } from './components/held-data/held-data.component';
 import { TimeKeeperComponent } from './components/time-keeper/time-keeper.component';
 import { TimeDetailsComponent } from './components/dialogs/time-details/time-details.component';
 import { ErrorCatchingInterceptor } from './interceptors/error-catching.interceptor';
 import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog/http-error-dialog.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
-import { ViewPitsComponent } from './components/view-pits/view-pits.component';
+import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     LoginScreenComponent,
-    ScoreMatchComponent,
-    ViewResultsComponent,
+    ScoutMatchComponent,
+    ScoutMatchViewComponent,
     TeamDetailsComponent,
     ScoutDetailComponent,
     ScoutPitComponent,
     SettingsComponent,
-    GarvComponent,
-    ScoutPitViewComponent,
+    PitViewComponent,
     HeldDataComponent,
     TimeKeeperComponent,
     TimeDetailsComponent,
     HttpErrorDialogComponent,
     DisplayScheduleComponent,
-    ViewPitsComponent,
+    ScoutPitViewComponent,
   ],
   imports: [
     BrowserModule,

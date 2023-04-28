@@ -1,29 +1,20 @@
-<mat-card>
-  <mat-card-title>
-     {{this.teamDisplayName}} by {{this.pitResult.scouter_name}}
-  </mat-card-title>
-  <mat-card-subtitle>
-    <strong>Rating:</strong> {{this.pitResult.robot_rating }}
-  </mat-card-subtitle>
-  <mat-card-content>
-    <div class="flex-row" *ngIf="this.pitResult.robot_notes">
-      {{this.pitResult.robot_notes}}
-    </div>
-    <div class="flex-row" *ngIf="this.pitResult.drive_train">
-      {{this.pitResult.drive_train}} / {{this.wheelType}} wheels.
-    </div>
-    <div class="flex-row">
-      <div *ngFor="let img of this.pitResult.image_names">
-        <img [src]="img" class="image-container" />
-      </div>
-    </div>
-    <div class="flex-row notes-container" *ngIf="this.matches && this.matchesLoaded">
-      <hr />
-      <ul>
-        <li *ngFor="let m of this.matchResults">
-          {{ m.match_notes }} - {{ m.scouter_name }} ({{ m.event_key }} / {{ m.match_key }})</li>
-      </ul>
-    </div>
-
-  </mat-card-content>
-</mat-card>
+<div class="flex-row" *ngIf="this.teamsLoaded && this.resultsLoaded">
+    <ng-container *ngFor="let t of this.teamList">
+        <div *ngFor="let pr of getPits(t.number)">
+            <app-pit-view [pitResult]="pr" [matches]="true">
+            </app-pit-view>
+        </div>
+        <div *ngIf="getPits(t.number).length === 0">
+            <mat-card>
+                <mat-card-title>
+                    {{t.number}} - {{t.name}}
+                </mat-card-title>
+                <mat-card-subtitle>
+                    <strong>No data scouted yet</strong>
+                </mat-card-subtitle>
+                <mat-card-content>
+                </mat-card-content>
+            </mat-card>
+        </div>
+    </ng-container>
+</div>
