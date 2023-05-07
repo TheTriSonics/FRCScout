@@ -54,6 +54,7 @@ import { ErrorCatchingInterceptor } from './interceptors/error-catching.intercep
 import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog/http-error-dialog.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
 import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
+import ConfettiService from './shared/services/confetti.service';
 
 @NgModule({
   declarations: [
@@ -126,6 +127,7 @@ import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-vie
       useClass: ErrorCatchingInterceptor,
       multi: true,
     },
+    ConfettiService,
   ],
   bootstrap: [AppComponent],
 })
