@@ -18,6 +18,7 @@ import { environment } from 'src/environments/environment';
 import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 import { TBAEvent } from 'src/app/shared/models/tba-event.model';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
+import { TBAMatch } from 'src/app/shared/models/tba-match.model';
 import { OPRData } from 'src/app/shared/models/opr-data-model';
 import { AppSettings } from 'src/app/shared/models/app-settings.model';
 import * as _ from 'lodash';
@@ -111,6 +112,8 @@ export class AppDataService {
   lookups.
   */
   private _eventTeamsCache: { [eventKey: string]: TBATeam[] } = {};
+
+  private _eventMatchesCache: { [eventKey: string]: TBAMatch[] } = {};
 
   /*
   The _held variable are used to hold data that needs to tbe sent to the API
@@ -277,6 +280,27 @@ export class AppDataService {
     return this.httpClient.get<TBATeam[]>(url).pipe(
       tap((teams) => {
         this._eventTeamsCache[eventKey] = teams;
+        this.saveSettings();
+      }),
+    );
+  }
+
+  public getEventMatchList(
+    eventKey: string,
+    options?: { force?: boolean },
+  ): Observable<TBAMatch[]> {
+    const force = options?.force ?? false;
+    if (
+      !force &&
+      this._eventMatchesCache[eventKey] &&
+      this._eventMatchesCache[eventKey].length > 0
+    ) {
+      return of(this._eventMatchesCache[eventKey]);
+    }
+    const url = `${this.baseUrl}/GetMatchesForEvent?event_key=${eventKey}`;
+    return this.httpClient.get<TBAMatch[]>(url).pipe(
+      tap((teams) => {
+        this._eventMatchesCache[eventKey] = teams;
         this.saveSettings();
       }),
     );

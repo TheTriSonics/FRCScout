@@ -3,6 +3,7 @@ import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
+import { TBAAlliance, TBAMatch } from 'src/app/shared/models/tba-match.model';
 import { AppDataService } from 'src/app/shared/services/app-data.service';
 
 @Component({
@@ -13,9 +14,19 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 export class ScoutMatchComponent implements OnInit, AfterViewInit {
   public uploadError = false;
 
-  public teamList: TBATeam[] = [];
+  public fullTeamList: TBATeam[] = [];
+
+  public matchList: TBAMatch[] = [];
+
+  public matchNumber: number | undefined = undefined;
+
+  public blueBots: TBATeam[] = [];
+
+  public redBots: TBATeam[] = [];
 
   public sendingData = false;
+
+  public scoutingActive = false;
 
   public fgMatch: FormGroup = new FormGroup({
     scoutingTeam: new FormControl(this.appData.scoutingData.scouting_team, [
@@ -41,14 +52,23 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     console.log('this.app eventkey', this.appData.eventKey);
     this.appData.getEventTeamList(this.appData.eventKey).subscribe((tl) => {
       console.log('team list', tl);
-      this.teamList = tl;
+      this.fullTeamList = tl;
+    });
+    this.appData.getEventMatchList(this.appData.eventKey).subscribe((ml) => {
+      console.log('match list', ml);
+      this.matchList = ml;
     });
   }
 
   public ngAfterViewInit(): void {
     this.fgMatch.get('match')?.valueChanges.subscribe((x) => {
-      console.log('TODO: lookup teams for match');
+      this.matchNumber = +x;
+      console.log('match changed', x);
     });
+  }
+
+  public beginScouting(): void {
+    this.scoutingActive = true;
   }
 
   public autoCubeHighInc(): void {
@@ -178,6 +198,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
         next: (data) => {
           this.uploadError = false;
           this.sendingData = false;
+          this.scoutingActive = false;
           this.snackbar.open(
             'Success! Data uploaded!',
             'Close',
@@ -190,6 +211,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
           console.log('Error uploading data: ', err);
           this.uploadError = true;
           this.sendingData = false;
+          this.scoutingActive = false;
           this.snackbar.open(
             'Error uploading data, please try again.',
             'Close',
@@ -249,6 +271,40 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
 
   get gameJSONFormatted(): string {
     return JSON.stringify(this.appData.scoutingData, null, 4);
+  }
+
+  get teamList(): TBATeam[] {
+    if (this.matchNumber) {
+      const teamList: TBATeam[] = [];
+      const match = this.matchList.find((m) => m.match_number === this.matchNumber) as TBAMatch;
+      match?.alliances.blue.team_keys.forEach((t) => {
+        const team = this.fullTeamList.find((ft) => `frc${ft.number}` === t) as TBATeam;
+        this.blueBots.push(team);
+        teamList.push(team);
+      });
+      match?.alliances.red.team_keys.forEach((t) => {
+        const team = this.fullTeamList.find((ft) => `frc${ft.number}` === t) as TBATeam;
+        this.redBots.push(team);
+        teamList.push(team);
+      });
+      return teamList;
+    }
+    return [] as TBATeam[];
+  }
+
+  public getTeamLabel(t: TBATeam): string {
+    let color = '';
+    let position = 0;
+    if (this.blueBots.includes(t)) {
+      // Blue bot
+      color = 'Blue';
+      position = this.blueBots.indexOf(t) + 1;
+    } else {
+      // Red bot
+      color = 'Red';
+      position = this.redBots.indexOf(t) + 1;
+    }
+    return `${color} ${position}: ${t.number} - ${t.name} `;
   }
 }
 

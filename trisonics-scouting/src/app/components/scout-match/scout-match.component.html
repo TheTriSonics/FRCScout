@@ -1,5 +1,5 @@
 <h1 class="mat-h1">Scout a Match</h1>
-<form [formGroup]="this.fgMatch">
+<form [formGroup]="this.fgMatch" *ngIf="!this.scoutingActive">
   <div class="flex-row">
     <mat-form-field class="scout-input">
       <mat-label>Match</mat-label>
@@ -12,202 +12,205 @@
       <mat-label>Team you are Scouting</mat-label>
       <mat-select class="team-dropdown" formControlName="scoutingTeam">
         <mat-option value="0">Select Team</mat-option>
-        <mat-option *ngFor="let t of this.teamList" [value]="t.number">{{t.number}} - {{t.name}}</mat-option>
+        <mat-option *ngFor="let t of this.teamList" [value]="t.number">{{ getTeamLabel(t) }}</mat-option>
       </mat-select>
     </mat-form-field>
   </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.beginScouting()">Begin Scouting!</button>
+  </div>
 </form>
 
-<div class="flex-col">
-      <!-- Auton Controls -->
-    <div class="flex-row game-section">
-      <h2 class="mat-h2">Autonomous</h2>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Nothing</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_community">Left Community</mat-checkbox>
-    </div>
-    <div class="flex-row" style="margin-top: 1em;">
-      <h2 class="mat-h2">Auto Charge Station</h2>
-    </div>
-
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_engaged">Balanced!</mat-checkbox>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube High Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cubes_high }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cubes_medium }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube Low Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cubes_low }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
-    </div>
-
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone High Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cones_high }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cones_medium }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone Low Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.auto_cones_low }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowInc()">+</button>
-    </div>
-
-    <div class="flex-row game-section">
-      <h2 class="mat-h2">Teleop</h2>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube High Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cubes_high }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cubes_medium }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cube Low Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cubes_low }}</span>
-      <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone High Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cones_high }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cones_medium }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumInc()">+</button>
-    </div>
-
-    <div class="flex-row score-label">
-      <h4 class="mat-h4 game-element">Cone Low Goal</h4>
-    </div>
-    <div class="flex-row">
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
-      <span class="score">{{ this.appData.scoutingData.teleop_cones_low }}</span>
-      <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
-    </div>
-
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_double">Use Double HP</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_single">Use Single HP</mat-checkbox>
-    </div>
-
-    <div class="flex-row game-section">
-      <h2 class="mat-h2">Endgame</h2>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_nothing">Nothing</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_dead_robot">Couldn't drive</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_parked">Parked in Community</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
-    </div>
-    <div class="flex-row">
-        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_engaged">On charge station and balanced</mat-checkbox>
-    </div>
-
-
-    <div class="flex-row game-section">
-      <h2 class="mat-h2">Match Notes</h2>
-    </div>
-    <div class="flex-row">
-      <mat-form-field class="scout-input">
-        <mat-label>Notes</mat-label>
-        <textarea matInput
-                  cdkTextareaAutosize
-                  #autosize="cdkTextareaAutosize"
-                  cdkAutosizeMinRows="2"
-                  cdkAutosizeMaxRows="10"
-                   [(ngModel)]="this.appData.scoutingData.match_notes"></textarea>
-      </mat-form-field>
-    </div>
-
-    <div class="flex-row">
-      <ng-container *ngIf="this.uploadError">
-        <h3 mat-h3 class="upload-error-test">Error uploading data, try again when network improves.</h3>
-      </ng-container>
-    </div>
-
-    <div class="flex-row" *ngIf="!this.sendingData">
-      <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
-      <button mat-raised-button class="clear-form-button" (click)="this.resetFormConfirm()">Clear Form</button>
-    </div>
-
-    <div class="flex-row progress-bar" *ngIf="this.sendingData">
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    </div>
-
+<div class="flex-col" *ngIf="this.scoutingActive">
+    <!-- Auton Controls -->
+  <div class="flex-row game-section">
+    <h2 class="mat-h2">Autonomous</h2>
   </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Nothing</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_community">Left Community</mat-checkbox>
+  </div>
+  <div class="flex-row" style="margin-top: 1em;">
+    <h2 class="mat-h2">Auto Charge Station</h2>
+  </div>
+
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_engaged">Balanced!</mat-checkbox>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube High Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cubes_high }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cubes_medium }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube Low Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cubes_low }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
+  </div>
+
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone High Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cones_high }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cones_medium }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone Low Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.auto_cones_low }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowInc()">+</button>
+  </div>
+
+  <div class="flex-row game-section">
+    <h2 class="mat-h2">Teleop</h2>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube High Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cubes_high }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube Medium Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cubes_medium }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cube Low Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cubes_low }}</span>
+    <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone High Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cones_high }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone Medium Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cones_medium }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Cone Low Goal</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_cones_low }}</span>
+    <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
+  </div>
+
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_double">Use Double HP</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_single">Use Single HP</mat-checkbox>
+  </div>
+
+  <div class="flex-row game-section">
+    <h2 class="mat-h2">Endgame</h2>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_nothing">Nothing</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_dead_robot">Couldn't drive</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_parked">Parked in Community</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
+  </div>
+  <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_engaged">On charge station and balanced</mat-checkbox>
+  </div>
+
+
+  <div class="flex-row game-section">
+    <h2 class="mat-h2">Match Notes</h2>
+  </div>
+  <div class="flex-row">
+    <mat-form-field class="scout-input">
+      <mat-label>Notes</mat-label>
+      <textarea matInput
+                cdkTextareaAutosize
+                #autosize="cdkTextareaAutosize"
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="10"
+                  [(ngModel)]="this.appData.scoutingData.match_notes"></textarea>
+    </mat-form-field>
+  </div>
+
+  <div class="flex-row">
+    <ng-container *ngIf="this.uploadError">
+      <h3 mat-h3 class="upload-error-test">Error uploading data, try again when network improves.</h3>
+    </ng-container>
+  </div>
+
+  <div class="flex-row" *ngIf="!this.sendingData">
+    <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.uploadData()">Upload Data</button>
+    <button mat-raised-button class="clear-form-button" (click)="this.resetFormConfirm()">Clear Form</button>
+  </div>
+
+  <div class="flex-row progress-bar" *ngIf="this.sendingData">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
+
+</div>

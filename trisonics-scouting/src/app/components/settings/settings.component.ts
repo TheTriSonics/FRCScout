@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { TBAEvent } from 'src/app/shared/models/tba-event.model';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
+import { TBAMatch } from 'src/app/shared/models/tba-match.model';
 import { AppDataService } from 'src/app/shared/services/app-data.service';
 
 @Component({
@@ -12,7 +13,11 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 export class SettingsComponent implements OnInit {
   public teamListLoading = false;
 
+  public matchListLoading = false;
+
   public teamList: TBATeam[] = [];
+
+  public matchList: TBAMatch[] = [];
 
   public fgSettings: FormGroup = new FormGroup({
     teamKey: new FormControl(this.appData.teamKey),
@@ -50,10 +55,19 @@ export class SettingsComponent implements OnInit {
       this.teamListLoading = false;
       this.teamList = tl;
     });
+    this.appData.getEventMatchList(ek, params).subscribe((ml) => {
+      this.matchListLoading = false;
+      this.matchList = ml;
+      console.log(this.matchList);
+    });
   }
 
   public forceTeamReload(): void {
     this.teamReload(true);
+  }
+
+  get dataLoading(): boolean {
+    return this.teamListLoading || this.matchListLoading;
   }
 }
 

@@ -20,18 +20,25 @@
       </mat-select>
     </mat-form-field>
   </div>
-  <div class="flex-row" *ngIf="this.teamListLoading">
+  <div class="flex-row" *ngIf="this.dataLoading">
     <p class="mat-body">
-      Loading teams from The Blue Alliance...
+      Loading data from The Blue Alliance...
     </p>
     <!-- why isn't this showing? -->
     <mat-progress-spinner class="team-list-spinner">
     </mat-progress-spinner>
   </div>
-  <ng-container *ngIf="!this.teamListLoading">
+  <ng-container *ngIf="!this.dataLoading">
     <div class="flex-row">
       <p class="mat-body">
         Teams found for this event: {{ this.teamList.length }}
+      </p>
+      <div class="flex-row" *ngIf="!this.teamListLoading">
+      </div>
+    </div>
+    <div class="flex-row">
+      <p class="mat-body">
+        Matches found for this event: {{ this.matchList.length }}
       </p>
       <div class="flex-row" *ngIf="!this.teamListLoading">
       </div>
