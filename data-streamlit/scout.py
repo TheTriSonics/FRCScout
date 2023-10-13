@@ -1,16 +1,31 @@
 import streamlit as st
 import pandas as pd
 
-dataurl = "https://trisonics-scouting-api.azurewebsites.net/api/GetResults?secret_team_key=##TEAMKEY##&event_key=##EVENTKEY##"
+base_url = 'https://trisonics-scouting-api.azurewebsites.net/api'
+
+
+def get_scouted_data_url(secret_key, event_key):
+    return f'{base_url}/GetResults?secret_team_key={secret_key}&event_key={event_key}'  # noqa
+
+
+def get_pit_data_url(secret_key, event_key, team_key):
+    return f'{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}'  # noqa
 
 
 @st.cache_data
-def load_data(secreT_key, event_key):
-    url = (dataurl.replace('##TEAMKEY##', secret_key)
-                  .replace('##EVENTKEY##', event_key))
+def load_event_data(secret_key, event_key):
+    url = get_scouted_data_url(secret_key, event_key)
     print(url)
-    data = pd.read_json(url)
-    return data
+    scouted_data = pd.read_json(url)
+    return scouted_data
+
+
+@st.cache_data
+def load_pit_data(secret_key, event_key, team_key):
+    url = get_pit_data_url(secret_key, event_key, team_key)
+    print(url)
+    pit_data = pd.read_json(url)
+    return pit_data
 
 
 st.set_page_config(layout='wide')
@@ -25,7 +40,7 @@ team = None
 
 if secret_key and event_key:
     data_load_state = st.text("Loading data...")
-    data = load_data(secret_key, event_key)
+    data = load_event_data(secret_key, event_key)
     data_load_state.text("Done! (using st.cache_data)")
     team = st.selectbox("Team", sorted(data.scouting_team.unique()))
 
@@ -37,7 +52,11 @@ if show_raw:
 
 
 if team:
+    # Trim team data down from the full event data to just theirs
     tdf = data.loc[data.scouting_team == team]
+    # Load in pit data
+    print('Loading', team)
+    pdf = load_pit_data(secret_key, event_key, team)
     allcols = tdf.columns
     auton_cols = [c for c in allcols if c.startswith('auto')]
     auton_df = tdf[auton_cols]
@@ -46,11 +65,23 @@ if team:
     endgame_cols = [c for c in allcols if c.startswith('endgame')]
     endgame_df = tdf[endgame_cols]
     if show_raw:
-        st.subheader("Team Raw Data")
-        st.write(auton_df)
+        st.subheader("Team Raw Scouting Data")
+        st.write(tdf)
+        st.subheader("Team Raw Pit Data")
+        st.write(pdf)
 
+    st.header("Pit Scouting")
+    if len(pdf.index) == 0:
+        st.subheader('No pit scouting data')
+    for idx, row in pdf.iterrows():
+        st.subheader(row.scouter_name)
+        st.info(row.robot_notes or 'no notes')
+        for i in row.image_names:
+            st.image(i)
+
+    st.header("Scouted Data")
     st.subheader("Auton")
-    st.altair_chart(auton_df)
+    st.bar_chart(auton_df)
 
     st.subheader("Teleop")
     st.bar_chart(teleop_df)
