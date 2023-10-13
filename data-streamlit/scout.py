@@ -21,6 +21,8 @@ event_key_list = ['2023micmp4', '2023miwmi']
 secret_key = st.text_input('Secret key')
 event_key = st.selectbox('Event key', event_key_list)
 
+team = None
+
 if secret_key and event_key:
     data_load_state = st.text("Loading data...")
     data = load_data(secret_key, event_key)
