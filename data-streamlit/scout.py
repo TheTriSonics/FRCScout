@@ -101,17 +101,17 @@ if secret_key and event_key:
     data_load_state = st.text("Loading data...")
     scouted_data = load_event_data(secret_key, event_key)
     data_load_state = st.text("Data loaded!")
+    show_raw = st.checkbox("Show raw data")
+    if show_raw:
+        show_raw_grid_panel(scouted_data)
+
+    show_clusters = st.checkbox("Show clusters")
+    cluster_count = st.text_input("Cluster Count", 4)
+    if show_clusters and len(cluster_count) > 0 and int(cluster_count) > 0:
+        show_cluster_panel(scouted_data)
 
 team = None
 
-show_raw = st.checkbox("Show raw data")
-if show_raw:
-    show_raw_grid_panel()
-
-show_clusters = st.checkbox("Show clusters")
-cluster_count = st.text_input("Cluster Count", 4)
-if show_clusters and len(cluster_count) > 0 and int(cluster_count) > 0:
-    show_cluster_panel(scouted_data)
 
 # This only runs when the user has entered a key and selected an event
 if secret_key and event_key:
