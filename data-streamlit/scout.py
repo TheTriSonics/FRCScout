@@ -40,17 +40,17 @@ def show_raw_grid_panel(df):
 
 def pick_panel(team_data):
     st.header('Pick Lists')
-    st.subheader('Do NOT Pick')
-    teamlist = [f'{num} ({teamname})' for num, teamname in zip(
+    teamlist = zip(
         team_data.number, team_data.name
-    )]
-    dnp_teams = st.multiselect('DNP Teams', teamlist, default=[])
+    )
+    dnp_teams = st.multiselect('Do NOT Pick Teams', teamlist, default=[],
+                               format_func=lambda x: f'{x[0]} ({x[1]})')
     return dnp_teams
 
 
 def show_cluster_panel(df, opr, dnp):
     print(dnp)
-    dnp_nums = [int(x.split(' ', 2)[0]) for x in dnp]
+    dnp_nums = [x[0] for x in dnp]
     print(dnp_nums)
     df = df[~df.scouting_team.isin(dnp_nums)]
     st.subheader("KMeans clusters")
@@ -73,13 +73,14 @@ def show_cluster_panel(df, opr, dnp):
     variances_by_val = sorted(variances.items(), key=lambda x: x[1],
                               reverse=True)
     variances = dict(variances_by_val)
-    avail_cols = list(variances.keys())
+    avail_cols = list(zip(variances.keys(), variances.values()))
     st.subheader("Variance of each column")
     col1 = variances.keys()
     col2 = variances.values()
     var_df = pd.DataFrame({'measure': col1, 'var': col2})
     st.dataframe(var_df, hide_index=True)
     data_cols = st.multiselect('Considered data', avail_cols,
+                               format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
                                default=avail_cols[:8])
 
     if len(data_cols) == 0:
@@ -90,7 +91,7 @@ def show_cluster_panel(df, opr, dnp):
                    init='random',
                    n_init=10,
                    max_iter=100)
-    v = score_vectors.loc[:, data_cols]
+    v = score_vectors.loc[:, [x[0] for x in data_cols]]
     if False:
         print(
             v.to_numpy()
@@ -126,12 +127,14 @@ def show_cluster_panel(df, opr, dnp):
         st.header(f"{cluster['display_name']} ({opr_avg:0.2f} OPR Avg)")
         st.info(', '.join(cluster['teams']))
 
+
 @st.cache_data
 def load_team_data(event_key):
     url = get_team_list_url(event_key)
     print(url)
     df = pd.read_json(url)
     return df
+
 
 @st.cache_data
 def load_event_data(secret_key, event_key):
@@ -214,9 +217,9 @@ if team:
     # dataframes
     if show_raw:
         st.subheader("Team Raw Scouting Data")
-        st.write(tdf)
+        st.dataframe(tdf, hide_index=True)
         st.subheader("Team Raw Pit Data")
-        st.write(pdf)
+        st.dataframe(pdf, hide_index=True)
 
     # Show the pit scouting data
     st.header("Pit Scouting")
@@ -240,8 +243,6 @@ if team:
            .sum(numeric_only=True)
            .reset_index()
     )
-    print(team_breakdown.columns)
-    print(team_breakdown.head())
     ap = (
         ggplot(team_breakdown,
                aes('match_key', 'value')) + geom_point()
