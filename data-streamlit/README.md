@@ -18,5 +18,5 @@ techniques are also easily implemented. Advaned graphing or datagrids can also
 be implemented with, compared to most frameworks, very little effort.
 
 Code published to this location, in the ```release``` branch is published to
-```https://frcscout.streamlit.app/``` and will connect to the same datasource
+https://frcscout.streamlit.app/ and will connect to the same datasource
 that the scouting application records to.
