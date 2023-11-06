@@ -108,6 +108,7 @@ def show_cluster_panel(df, opr, dnp):
             'teams': [],
             'centroid_mag': norm(centroid),
             'opr_total': 0,
+            'opr_avg': 0,
             'display_name': f'Group {idx}',
         }
         idx += 1
@@ -119,13 +120,19 @@ def show_cluster_panel(df, opr, dnp):
             clusters[label]['opr_total'] += (
                 teamopr.totalPoints.values[0]
             )
+            clusters[label]['opr_avg'] = (
+                clusters[label]['opr_total'] / len(clusters[label]['teams'])
+            )
         else:
             print(f'{row.scouting_team}: {len(teamopr)}')
     idx = 1
-    for cname, cluster in clusters.items():
+    for cname, cluster in sorted(clusters.items(),
+                                 key=lambda x: x[1]['opr_avg'],
+                                 reverse=True):
         opr_avg = cluster['opr_total'] / len(cluster['teams'])
-        st.header(f"{cluster['display_name']} ({opr_avg:0.2f} OPR Avg)")
+        st.header(f"Group {idx} ({opr_avg:0.2f} OPR Avg)")
         st.info(', '.join(cluster['teams']))
+        idx += 1
 
 
 @st.cache_data
