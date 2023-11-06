@@ -57,12 +57,30 @@ def show_cluster_panel(df, opr, dnp):
     score_vectors = (
         df
         .groupby("scouting_team")
-        .sum(numeric_only=True)
+        .mean(numeric_only=True)
         .reset_index()
     )
 
+    score_vectors['comp_teleop_piece_points'] = (
+        (score_vectors['teleop_cubes_high'] +
+         score_vectors['teleop_cones_high']) * 5 +
+        (score_vectors['teleop_cubes_medium'] +
+         score_vectors['teleop_cones_medium']) * 3 +
+        (score_vectors['teleop_cubes_low'] +
+         score_vectors['teleop_cones_low']) * 2
+    )
+
+    score_vectors['comp_auto_piece_points'] = (
+        (score_vectors['auto_cubes_high'] +
+         score_vectors['auto_cones_high']) * 6 +
+        (score_vectors['auto_cubes_medium'] +
+         score_vectors['auto_cones_medium']) * 4 +
+        (score_vectors['auto_cubes_low'] +
+         score_vectors['auto_cones_low']) * 3
+    )
+
     score_cols = [x for x in score_vectors.columns
-                  if x.startswith(('auto', 'tele', 'endgame'))]
+                  if x.startswith(('auto', 'tele', 'endgame', 'comp'))]
     variances = {}
     # Okay, we could do this with linear algebra. Might change it out
     # Have code in kmeans.ipynb notebook in project, but this gives the same
@@ -102,19 +120,16 @@ def show_cluster_panel(df, opr, dnp):
     labels, centers = zip(
         *sorted(zip(set(model.labels_), model.cluster_centers_),
                 reverse=True))
-    idx = 1
     for label, centroid in zip(labels, centers):
         clusters[label] = {
             'teams': [],
             'centroid_mag': norm(centroid),
             'opr_total': 0,
             'opr_avg': 0,
-            'display_name': f'Group {idx}',
         }
-        idx += 1
 
     for (idx, row), label in zip(score_vectors.iterrows(), model.labels_):
-        clusters[label]['teams'].append(str(row.scouting_team))
+        clusters[label]['teams'].append(str(int(row.scouting_team)))
         teamopr = opr_data[opr_data.teamNumber == row.scouting_team]
         if len(teamopr == 1):
             clusters[label]['opr_total'] += (
