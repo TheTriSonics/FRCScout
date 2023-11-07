@@ -6,15 +6,14 @@ from sklearn.cluster import KMeans
 
 from scout import (
     load_event_data, load_opr_data, get_event_key, get_secret_key,
-    get_dnp,
+    get_dnp_list, fix_session,
 )
 
 norm = np.linalg.norm
 
 
-def show_cluster_panel(df, opr, dnp):
+def show_cluster_panel(df, opr, dnp_nums):
     cluster_count = st.text_input("Cluster Count", 4)
-    dnp_nums = [x[0] for x in dnp]
     df = df[~df.scouting_team.isin(dnp_nums)]
     st.subheader("KMeans clusters")
     score_vectors = (
@@ -96,7 +95,8 @@ def show_cluster_panel(df, opr, dnp):
         idx += 1
 
 
+fix_session()
 scouted_data = load_event_data(get_secret_key(), get_event_key())
 opr_data = load_opr_data(get_secret_key(), get_event_key())
-dnp = []  # TODO
+dnp = get_dnp_list()
 show_cluster_panel(scouted_data, opr_data, dnp)

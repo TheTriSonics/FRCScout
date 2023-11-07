@@ -10,6 +10,10 @@ from plotnine import ggplot, aes, geom_point
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 
 
+def fix_session():
+    st.session_state.update(st.session_state)
+
+
 def get_team_list_url(event_key):
     return f"{base_url}/GetTeamsForEvent?event_key={event_key}"
 
@@ -37,6 +41,7 @@ stp.show_pages(
         stp.Page('pages/clusters.py', 'Clustering'),
         stp.Page('pages/picklist.py', 'Pick Lists'),
         stp.Page('pages/what_if.py', 'What If'),
+        stp.Page('pages/app_status.py', 'Workspace'),
     ]
 )
 
@@ -103,10 +108,8 @@ def get_dnp():
 
 
 def get_secret_key():
-    dead_code = """
     if 'secret_key' in st.session_state:
         return st.session_state.secret_key
-    """
     import os
     secret_key = os.environ.get('FRC_SECRET_KEY')
     return secret_key
@@ -115,7 +118,12 @@ def get_secret_key():
 def get_event_key():
     if 'event_key' in st.session_state:
         return st.session_state.event_key
-    return '2023micmp4'  # TODO: Ugh. Figure out session state issues
+    return None
+
+
+def get_dnp_list():
+    if 'pick_list_dnp' in st.session_state:
+        return [x[0] for x in st.session_state.pick_list_dnp]
 
 
 def main():
@@ -192,4 +200,5 @@ def main():
 
 
 if __name__ == '__main__':
+    fix_session()
     main()

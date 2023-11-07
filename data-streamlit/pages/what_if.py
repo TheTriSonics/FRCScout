@@ -1,7 +1,9 @@
 import streamlit as st
 
-from scout import load_team_data, get_event_key
+from scout import load_team_data, get_event_key, fix_session
 
+
+fix_session()
 
 td = load_team_data(get_event_key())
 

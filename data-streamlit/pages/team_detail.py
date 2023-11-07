@@ -3,9 +3,10 @@ import pandas as pd
 import streamlit as st
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
-    load_pit_data,
+    load_pit_data, fix_session,
 )
 
+fix_session()
 # This only runs when the user has entered a key and selected an event
 team = None
 scout_data = load_event_data(get_secret_key(), get_event_key())
