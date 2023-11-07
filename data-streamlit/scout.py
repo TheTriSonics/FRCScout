@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+import st_pages as stp
 import pygwalker as pyg
 import streamlit.components.v1 as components
 
@@ -10,7 +11,6 @@ from sklearn.cluster import KMeans
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 
 norm = np.linalg.norm
-
 
 def get_team_list_url(event_key):
     return f"{base_url}/GetTeamsForEvent?event_key={event_key}"
@@ -26,6 +26,14 @@ def get_opr_data_url(secret_key, event_key):
 
 def get_pit_data_url(secret_key, event_key, team_key):
     return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
+
+
+stp.show_pages(
+    [
+        stp.Page('scout.py', 'Investigate'),
+        stp.Page('pages/what_if.py', 'What If'),
+    ]
+)
 
 
 def show_raw_grid_panel(df):
@@ -182,7 +190,12 @@ def load_opr_data(secret_key, event_key):
     return opr_data
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_title="Investigate",
+)
+
+
 st.title("Trisonics FRC Scouting")
 
 # List of competitions to offer in select box
