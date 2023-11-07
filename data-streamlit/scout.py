@@ -110,9 +110,7 @@ def get_dnp():
 def get_secret_key():
     if 'secret_key' in st.session_state:
         return st.session_state.secret_key
-    import os
-    secret_key = os.environ.get('FRC_SECRET_KEY')
-    return secret_key
+    return None
 
 
 def get_event_key():
@@ -138,8 +136,9 @@ def main():
     event_key_list = ["2023micmp4", "2023miwmi"]
 
     if 'secret_key' not in st.session_state:
-        import os
-        st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
+        # import os
+        # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
+        st.session_state['secret_key'] = ''
 
     secret_key = st.text_input("Secret key", key='secret_key')
     event_key = st.selectbox("Event key", event_key_list, key='event_key')

@@ -14,7 +14,9 @@ norm = np.linalg.norm
 
 def show_cluster_panel(df, opr, dnp_nums):
     cluster_count = st.text_input("Cluster Count", 4)
-    df = df[~df.scouting_team.isin(dnp_nums)]
+    # Filter out any team we are NOT picking from custering
+    if dnp_nums is not None:
+        df = df[~df.scouting_team.isin(dnp_nums)]
     st.subheader("KMeans clusters")
     score_vectors = (
         df
