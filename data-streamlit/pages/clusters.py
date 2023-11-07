@@ -5,7 +5,8 @@ import streamlit as st
 from sklearn.cluster import KMeans
 
 from scout import (
-    load_event_data, load_opr_data, load_team_data, get_event_key, get_secret_key
+    load_event_data, load_opr_data, get_event_key, get_secret_key,
+    get_dnp,
 )
 
 norm = np.linalg.norm

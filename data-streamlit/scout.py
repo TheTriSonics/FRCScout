@@ -94,6 +94,14 @@ def load_opr_data(secret_key, event_key):
     return opr_data
 
 
+def get_dnp():
+    if 'pick_list_dnp' in st.session_state:
+        data = st.session_state.pick_list_dnp
+        return [x[0] for x in data]
+    else:
+        return []
+
+
 def get_secret_key():
     dead_code = """
     if 'secret_key' in st.session_state:
@@ -137,22 +145,6 @@ def main():
 
     # As earlier, this only runs when a team has been selected
     if False:
-        # Trim team data down from the full event data to just theirs w/ Pandas
-        tdf = scouted_data.loc[scouted_data.scouting_team == team]
-        # Load in pit data
-        print("Loading", team)
-        pdf = load_pit_data(secret_key, event_key, team)
-        # Gets a list of every column name in the dataframe
-        allcols = tdf.columns
-        # Now we can create new dataframes where we only see the auto columns
-        auton_cols = [c for c in allcols if c.startswith("auto")]
-        auton_df = tdf[auton_cols]
-        # And then teleop...
-        teleop_cols = [c for c in allcols if c.startswith("tele")]
-        teleop_df = tdf[teleop_cols]
-        # And endgame.
-        endgame_cols = [c for c in allcols if c.startswith("endgame")]
-        endgame_df = tdf[endgame_cols]
 
         # Use the earlier select box to determine if we're showing the raw
         # dataframes

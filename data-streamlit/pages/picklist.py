@@ -13,7 +13,8 @@ def pick_panel(team_data):
         team_data.number, team_data.name
     )
     dnp_teams = st.multiselect('Do NOT Pick Teams', teamlist, default=[],
-                               format_func=lambda x: f'{x[0]} ({x[1]})')
+                               format_func=lambda x: f'{x[0]} ({x[1]})',
+                               key='pick_list_dnp')
     return dnp_teams
 
 
