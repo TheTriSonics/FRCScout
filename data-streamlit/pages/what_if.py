@@ -1,11 +1,9 @@
 import streamlit as st
 
-from scout import load_team_data, event_key
+from scout import load_team_data, get_event_key
 
 
-st.set_page_config(page_title='What If')
-
-td = load_team_data(event_key)
+td = load_team_data(get_event_key())
 
 
 def avail_teams():
