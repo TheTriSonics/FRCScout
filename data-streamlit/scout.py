@@ -12,6 +12,7 @@ base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 
 norm = np.linalg.norm
 
+
 def get_team_list_url(event_key):
     return f"{base_url}/GetTeamsForEvent?event_key={event_key}"
 
@@ -31,6 +32,9 @@ def get_pit_data_url(secret_key, event_key, team_key):
 stp.show_pages(
     [
         stp.Page('scout.py', 'Investigate'),
+        stp.Page('pages/team_detail.py', 'Team Details'),
+        stp.Page('pages/clusters.py', 'Clustering'),
+        stp.Page('pages/picklist.py', 'Pick Lists'),
         stp.Page('pages/what_if.py', 'What If'),
     ]
 )
@@ -38,7 +42,6 @@ stp.show_pages(
 
 def show_raw_grid_panel(df):
     st.subheader("Raw")
-    # st.write(data)
 
     # Generate the HTML using Pygwalker, a charting tool
     pyg_html = pyg.to_html(df)
