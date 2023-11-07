@@ -8,17 +8,12 @@ from scout import (
     load_event_data, load_opr_data, load_team_data, get_event_key, get_secret_key
 )
 
-print('sk')
-print(get_secret_key())
-
 norm = np.linalg.norm
 
 
 def show_cluster_panel(df, opr, dnp):
     cluster_count = st.text_input("Cluster Count", 4)
-    print(dnp)
     dnp_nums = [x[0] for x in dnp]
-    print(dnp_nums)
     df = df[~df.scouting_team.isin(dnp_nums)]
     st.subheader("KMeans clusters")
     score_vectors = (
@@ -87,7 +82,9 @@ def show_cluster_panel(df, opr, dnp):
                 clusters[label]['opr_total'] / len(clusters[label]['teams'])
             )
         else:
-            print(f'{row.scouting_team}: {len(teamopr)}')
+            # Ignore team that's not in the tournament
+            # print(f'{row.scouting_team}: {len(teamopr)}')
+            pass
     idx = 1
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],

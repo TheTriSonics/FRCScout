@@ -122,10 +122,10 @@ def main():
     event_key_list = ["2023micmp4", "2023miwmi"]
 
     if 'secret_key' not in st.session_state:
-        st.session_state['secret_key'] = ''
+        import os
+        st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
 
-    secret_key = st.text_input("Secret key", key='secret_key',
-                               value=get_secret_key())
+    secret_key = st.text_input("Secret key", key='secret_key')
     event_key = st.selectbox("Event key", event_key_list, key='event_key')
 
     if secret_key and event_key:
@@ -133,7 +133,7 @@ def main():
         scouted_data = load_event_data(secret_key, event_key)
         team_data = load_team_data(event_key)
         opr_data = load_opr_data(secret_key, event_key)
-        data_load_state = st.text("Data loaded!")
+        data_load_state = st.text("Data loaded! Proceed!")
 
     # As earlier, this only runs when a team has been selected
     if False:
