@@ -12,12 +12,16 @@ team = None
 scout_data = load_event_data(get_secret_key(), get_event_key())
 td = load_team_data(get_event_key())
 all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
+st.header("Team Details")
+with st.expander('Instructions'):
+    st.write("""
+    Select a team to see their detailed data.
+    """)
 team = st.selectbox("Team", all_teams,
                     format_func=lambda x: f'{x[0]} ({x[1]})')
 if team:
     scouted_data = load_event_data(get_secret_key(), get_event_key())
     (team_number, team_name) = team
-    st.info(f'Details on {team_number}')
     # Trim team data down from the full event data to just theirs w/ Pandas
     tdf = scouted_data.loc[scouted_data.scouting_team == team_number]
     # Load in pit data
@@ -33,7 +37,6 @@ if team:
     # And endgame.
     endgame_cols = [c for c in allcols if c.startswith("endgame")]
     endgame_df = tdf[endgame_cols]
-
     # And our computed ones
     comp_cols = [c for c in allcols if c.startswith("comp")]
     comp_df = tdf[comp_cols]
@@ -50,3 +53,15 @@ if team:
     st.subheader("Endgame")
     st.bar_chart(endgame_df)
 
+    # Show the pit scouting data
+    st.header("Pit Scouting")
+    if len(pdf.index) == 0:
+        # If we don't have data let the user know
+        st.subheader("No pit scouting data")
+    # Iterate through the pit scouting results (likely only one) and show
+    # them on the UI.
+    for idx, row in pdf.iterrows():
+        st.subheader(row.scouter_name)
+        st.info(row.robot_notes or "no notes")
+        for i in row.image_names:
+            st.image(i)

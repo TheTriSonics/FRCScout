@@ -46,7 +46,8 @@ stp.show_pages(
 )
 
 
-@st.cache_data(persist=True)
+p=True
+@st.cache_data(persist=p)
 def load_team_data(event_key):
     url = get_team_list_url(event_key)
     print(url)
@@ -54,7 +55,7 @@ def load_team_data(event_key):
     return df
 
 
-@st.cache_data(persist=True)
+@st.cache_data(persist=p)
 def load_event_data(secret_key, event_key):
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
@@ -83,7 +84,7 @@ def load_event_data(secret_key, event_key):
     return df
 
 
-@st.cache_data(persist=True)
+@st.cache_data(persist=p)
 def load_pit_data(secret_key, event_key, team_key):
     url = get_pit_data_url(secret_key, event_key, team_key)
     print(url)
@@ -91,7 +92,7 @@ def load_pit_data(secret_key, event_key, team_key):
     return pit_data
 
 
-@st.cache_data(persist=True)
+@st.cache_data(persist=p)
 def load_opr_data(secret_key, event_key):
     url = get_opr_data_url(secret_key, event_key)
     print(url)
@@ -124,6 +125,22 @@ def get_dnp_list():
         return [x[0] for x in st.session_state.pick_list_dnp]
 
 
+def load_data():
+    secret_key = get_secret_key()
+    event_key = get_event_key()
+
+    try:
+        _ = load_event_data(secret_key, event_key)
+        st.success("Scouted data loaded!")
+        _ = load_team_data(event_key)
+        st.success("Event team list loaded!")
+        _ = load_opr_data(secret_key, event_key)
+        st.success("OPR calculations loaded")
+        st.success("All data loaded! Proceed!")
+    except BaseException as e:
+        st.error(e)
+
+
 def main():
     st.set_page_config(
         layout="wide",
@@ -140,15 +157,20 @@ def main():
         # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
         st.session_state['secret_key'] = ''
 
+    with st.expander('Instructions'):
+        st.write("""
+Use this screen to enter your team's secret key. This is used to keep
+different team's data seperate. If you want to pool efforts with
+another team just use the same key.
+
+Once you've entered that and selected an event data will be loaded for
+the event.
+        """)
     secret_key = st.text_input("Secret key", key='secret_key')
     event_key = st.selectbox("Event key", event_key_list, key='event_key')
 
     if secret_key and event_key:
-        data_load_state = st.text("Loading data...")
-        scouted_data = load_event_data(secret_key, event_key)
-        team_data = load_team_data(event_key)
-        opr_data = load_opr_data(secret_key, event_key)
-        data_load_state = st.text("Data loaded! Proceed!")
+        st.button('Load Data', on_click=load_data)
 
     # As earlier, this only runs when a team has been selected
     if False:
@@ -161,41 +183,6 @@ def main():
             st.subheader("Team Raw Pit Data")
             st.dataframe(pdf, hide_index=True)
 
-        # Show the pit scouting data
-        st.header("Pit Scouting")
-        if len(pdf.index) == 0:
-            # If we don't have data let the user know
-            st.subheader("No pit scouting data")
-        # Iterate through the pit scouting results (likely only one) and show
-        # them on the UI.
-        for idx, row in pdf.iterrows():
-            st.subheader(row.scouter_name)
-            st.info(row.robot_notes or "no notes")
-            for i in row.image_names:
-                st.image(i)
-
-        # Now show our auton, teleop, and endgame dataframes in bar chart form
-        st.header("Scouted Data")
-        cdf = tdf[['match_key'] + teleop_cols]
-        team_breakdown = (
-            cdf.melt(id_vars=['match_key'])
-            .groupby(['match_key', 'variable'])['value']
-            .sum(numeric_only=True)
-            .reset_index()
-        )
-        ap = (
-            ggplot(team_breakdown,
-                aes('match_key', 'value')) + geom_point()
-        )
-        st.pyplot(ggplot.draw(ap))
-        st.subheader("Auton")
-        st.bar_chart(auton_df)
-
-        st.subheader("Teleop")
-        st.bar_chart(teleop_df)
-
-        st.subheader("Endgame")
-        st.bar_chart(endgame_df)
 
 
 if __name__ == '__main__':
