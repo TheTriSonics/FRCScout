@@ -63,25 +63,26 @@ def load_event_data(secret_key, event_key):
     print(url)
     df = pd.read_json(url)
 
-    # Create some computed columns out of our scouted data
+    if len(df.index) > 0:
+        # Create some computed columns out of our scouted data
 
-    df['comp_teleop_piece_points'] = (
-        (df['teleop_cubes_high'] +
-         df['teleop_cones_high']) * 5 +
-        (df['teleop_cubes_medium'] +
-         df['teleop_cones_medium']) * 3 +
-        (df['teleop_cubes_low'] +
-         df['teleop_cones_low']) * 2
-    )
+        df['comp_teleop_piece_points'] = (
+            (df['teleop_cubes_high'] +
+             df['teleop_cones_high']) * 5 +
+            (df['teleop_cubes_medium'] +
+             df['teleop_cones_medium']) * 3 +
+            (df['teleop_cubes_low'] +
+             df['teleop_cones_low']) * 2
+        )
 
-    df['comp_auto_piece_points'] = (
-        (df['auto_cubes_high'] +
-         df['auto_cones_high']) * 6 +
-        (df['auto_cubes_medium'] +
-         df['auto_cones_medium']) * 4 +
-        (df['auto_cubes_low'] +
-         df['auto_cones_low']) * 3
-    )
+        df['comp_auto_piece_points'] = (
+            (df['auto_cubes_high'] +
+             df['auto_cones_high']) * 6 +
+            (df['auto_cubes_medium'] +
+             df['auto_cones_medium']) * 4 +
+            (df['auto_cubes_low'] +
+             df['auto_cones_low']) * 3
+        )
 
     return df
 
@@ -131,16 +132,30 @@ def load_data():
     secret_key = get_secret_key()
     event_key = get_event_key()
 
-    try:
-        _ = load_event_data(secret_key, event_key)
+    all_loaded = True
+    _ = load_event_data(secret_key, event_key)
+
+    if len(_.index) > 0:
         st.success("Scouted data loaded!")
-        _ = load_team_data(event_key)
+    else:
+        st.error("Scouting data not found.")
+        all_loaded = False
+    _ = load_team_data(event_key)
+
+    if len(_.index) > 0:
         st.success("Event team list loaded!")
-        _ = load_opr_data(secret_key, event_key)
+    else:
+        st.error("Event team list failed.")
+        all_loaded = False
+
+    _ = load_opr_data(secret_key, event_key)
+    if len(_.index) > 0:
         st.success("OPR calculations loaded")
+    else:
+        st.success("OPR calculation load failed.")
+        all_loaded = False
+    if all_loaded:
         st.success("All data loaded! Proceed!")
-    except BaseException as e:
-        st.error(e)
 
 
 def main():
@@ -168,23 +183,9 @@ another team just use the same key.
 Once you've entered that and selected an event data will be loaded for
 the event.
         """)
-    secret_key = st.text_input("Secret key", key='secret_key')
-    event_key = st.selectbox("Event key", event_key_list, key='event_key')
-
-    if secret_key and event_key:
-        st.button('Load Data', on_click=load_data)
-
-    # As earlier, this only runs when a team has been selected
-    if False:
-
-        # Use the earlier select box to determine if we're showing the raw
-        # dataframes
-        if show_raw:
-            st.subheader("Team Raw Scouting Data")
-            st.dataframe(tdf, hide_index=True)
-            st.subheader("Team Raw Pit Data")
-            st.dataframe(pdf, hide_index=True)
-
+    st.text_input("Secret key", key='secret_key')
+    st.selectbox("Event key", event_key_list, key='event_key')
+    st.button('Load Data', on_click=load_data)
 
 
 if __name__ == '__main__':

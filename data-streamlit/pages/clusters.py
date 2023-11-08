@@ -13,11 +13,18 @@ norm = np.linalg.norm
 
 
 def show_cluster_panel(df, opr, dnp_nums):
+    st.header("KMeans clusters")
+    with st.expander('Instructions'):
+        st.write("""
+        This allows us to break teams into groups that share similar
+        attributes with one another.
+
+        Also a topic that likely needs a link to details.
+        """)
     cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from custering
     if dnp_nums is not None:
         df = df[~df.scouting_team.isin(dnp_nums)]
-    st.subheader("KMeans clusters")
     score_vectors = (
         df
         .groupby("scouting_team")

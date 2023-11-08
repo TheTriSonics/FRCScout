@@ -11,7 +11,13 @@ from scout import (
 
 
 def show_raw_grid_panel(df):
-    st.subheader("Pivot Table (PygWalker -- Pig Walker)")
+    st.header("Pivot Table (PygWalker -- Pig Walker)")
+
+    with st.expander('Instructions'):
+        st.write("""
+        This is a pivot table. Kind of a big topic; might link to
+        something here.
+        """)
 
     # Generate the HTML using Pygwalker, a charting tool
     pyg_html = pyg.to_html(df)

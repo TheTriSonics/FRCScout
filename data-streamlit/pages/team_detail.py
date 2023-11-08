@@ -19,6 +19,7 @@ with st.expander('Instructions'):
     """)
 team = st.selectbox("Team", all_teams,
                     format_func=lambda x: f'{x[0]} ({x[1]})')
+show_raw = st.checkbox('Show raw data')
 if team:
     scouted_data = load_event_data(get_secret_key(), get_event_key())
     (team_number, team_name) = team
@@ -26,6 +27,13 @@ if team:
     tdf = scouted_data.loc[scouted_data.scouting_team == team_number]
     # Load in pit data
     pdf = load_pit_data(get_secret_key(), get_event_key(), team_number)
+
+    if show_raw:
+        st.subheader("Team Raw Scouting Data")
+        st.dataframe(tdf, hide_index=True)
+        st.subheader("Team Raw Pit Data")
+        st.dataframe(pdf, hide_index=True)
+
     # Gets a list of every column name in the dataframe
     allcols = tdf.columns
     # Now we can create new dataframes where we only see the auto columns
