@@ -1,12 +1,9 @@
-import pandas as pd
-import numpy as np
 import streamlit as st
 import pygwalker as pyg
 import streamlit.components.v1 as components
 
 from scout import (
-    load_event_data, load_opr_data, load_team_data, get_event_key,
-    get_secret_key, fix_session
+    load_event_data, get_event_key, get_secret_key, fix_session,
 )
 
 

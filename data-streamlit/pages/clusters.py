@@ -6,13 +6,13 @@ from sklearn.cluster import KMeans
 
 from scout import (
     load_event_data, load_opr_data, get_event_key, get_secret_key,
-    get_dnp_list, fix_session,
+    get_dnp, get_fsp, fix_session,
 )
 
 norm = np.linalg.norm
 
 
-def show_cluster_panel(df, opr, dnp_nums):
+def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
     st.header("KMeans clusters")
     with st.expander('Instructions'):
         st.write("""
@@ -21,10 +21,14 @@ def show_cluster_panel(df, opr, dnp_nums):
 
         Also a topic that likely needs a link to details.
         """)
+    exclude_dnp = st.checkbox('Exclude do not pick teams')
+    exclude_fsp = st.checkbox('Exclude first pick teams')
     cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from custering
-    if dnp_nums is not None:
+    if dnp_nums is not None and exclude_dnp:
         df = df[~df.scouting_team.isin(dnp_nums)]
+    if fsp_nums is not None and exclude_fsp:
+        df = df[~df.scouting_team.isin(fsp_nums)]
     score_vectors = (
         df
         .groupby("scouting_team")
@@ -44,14 +48,14 @@ def show_cluster_panel(df, opr, dnp_nums):
                               reverse=True)
     variances = dict(variances_by_val)
     avail_cols = list(zip(variances.keys(), variances.values()))
-    st.subheader("Variance of each column")
-    col1 = variances.keys()
-    col2 = variances.values()
-    var_df = pd.DataFrame({'measure': col1, 'var': col2})
-    st.dataframe(var_df, hide_index=True)
+    with st.expander("Variance of each column"):
+        col1 = variances.keys()
+        col2 = variances.values()
+        var_df = pd.DataFrame({'measure': col1, 'var': col2})
+        st.dataframe(var_df, hide_index=True)
     data_cols = st.multiselect('Considered data', avail_cols,
                                format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-                               default=avail_cols[:8])
+                               default=avail_cols[:2])
 
     if len(data_cols) == 0:
         return  # Can't go on. Just abort
@@ -107,5 +111,6 @@ def show_cluster_panel(df, opr, dnp_nums):
 fix_session()
 scouted_data = load_event_data(get_secret_key(), get_event_key())
 opr_data = load_opr_data(get_secret_key(), get_event_key())
-dnp = get_dnp_list()
-show_cluster_panel(scouted_data, opr_data, dnp)
+dnp = get_dnp()
+fsp = get_fsp()
+show_cluster_panel(scouted_data, opr_data, dnp, fsp)

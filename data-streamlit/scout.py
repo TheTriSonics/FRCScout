@@ -1,12 +1,7 @@
 import os
-import numpy as np
 import pandas as pd
 import streamlit as st
 import st_pages as stp
-import pygwalker as pyg
-import streamlit.components.v1 as components
-
-from plotnine import ggplot, aes, geom_point
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 
@@ -48,7 +43,9 @@ stp.show_pages(
 )
 
 
-p=True
+p = True
+
+
 @st.cache_data(persist=p)
 def load_team_data(event_key):
     url = get_team_list_url(event_key)
@@ -111,6 +108,14 @@ def get_dnp():
         return []
 
 
+def get_fsp():
+    if 'pick_list_fsp' in st.session_state:
+        data = st.session_state.pick_list_fsp
+        return [x[0] for x in data]
+    else:
+        return []
+
+
 def get_secret_key():
     if 'secret_key' in st.session_state:
         return st.session_state.secret_key
@@ -121,11 +126,6 @@ def get_event_key():
     if 'event_key' in st.session_state:
         return st.session_state.event_key
     return None
-
-
-def get_dnp_list():
-    if 'pick_list_dnp' in st.session_state:
-        return [x[0] for x in st.session_state.pick_list_dnp]
 
 
 def load_data():
@@ -176,12 +176,12 @@ def main():
 
     with st.expander('Instructions'):
         st.write("""
-Use this screen to enter your team's secret key. This is used to keep
-different team's data seperate. If you want to pool efforts with
-another team just use the same key.
+        Use this screen to enter your team's secret key. This is used to keep
+        different team's data seperate. If you want to pool efforts with
+        another team just use the same key.
 
-Once you've entered that and selected an event data will be loaded for
-the event.
+        Once you've entered that and selected an event data will be loaded for
+        the event.
         """)
     st.text_input("Secret key", key='secret_key')
     st.selectbox("Event key", event_key_list, key='event_key')
