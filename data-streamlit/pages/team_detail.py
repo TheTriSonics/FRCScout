@@ -1,5 +1,3 @@
-import numpy as np
-import pandas as pd
 import streamlit as st
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
@@ -7,7 +5,7 @@ from scout import (
 )
 
 fix_session()
-# This only runs when the user has entered a key and selected an event
+
 team = None
 scout_data = load_event_data(get_secret_key(), get_event_key())
 td = load_team_data(get_event_key())
@@ -71,5 +69,20 @@ if team:
     for idx, row in pdf.iterrows():
         st.subheader(row.scouter_name)
         st.info(row.robot_notes or "no notes")
+        wheel_types = []
+        if row.wheel_omni:
+            wheel_types.append('Omni')
+        if row.wheel_inflated:
+            wheel_types.append('Inflated')
+        if row.wheel_mec:
+            wheel_types.append('Mecanum')
+        if row.wheel_solid:
+            wheel_types.append('Solid')
+        if len(wheel_types) == 0:
+            wheel_types = ['N/A']
+        rating = f'{row.robot_rating}/10' if row.robot_rating else 'N/A'
+        st.write(f"#### Wheel type(s): {', '.join(wheel_types)}  ")
+        st.write(f"#### Drive Train: {row.drive_train}  ")
+        st.write(f"#### Rating: {rating}  ")
         for i in row.image_names:
             st.image(i)
