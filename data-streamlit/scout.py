@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -33,15 +34,16 @@ def get_pit_data_url(secret_key, event_key, team_key):
     return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
 
 
+stp_dir = os.environ.get('STP_DIR')
 stp.show_pages(
     [
-        stp.Page('scout.py', 'Config'),
-        stp.Page('pages/explore.py', 'Explore Data'),
-        stp.Page('pages/team_detail.py', 'Team Details'),
-        stp.Page('pages/clusters.py', 'Clustering'),
-        stp.Page('pages/picklist.py', 'Pick Lists'),
-        stp.Page('pages/what_if.py', 'What If'),
-        stp.Page('pages/app_status.py', 'Workspace'),
+        stp.Page(f'{stp_dir}/scout.py', 'Config'),
+        stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
+        stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
+        stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
+        stp.Page(f'{stp_dir}/pages/picklist.py', 'Pick Lists'),
+        stp.Page(f'{stp_dir}/pages/what_if.py', 'What If'),
+        stp.Page(f'{stp_dir}/pages/app_status.py', 'Workspace'),
     ]
 )
 
