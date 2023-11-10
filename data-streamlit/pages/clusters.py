@@ -104,7 +104,19 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
                                  reverse=True):
         opr_avg = cluster['opr_total'] / len(cluster['teams'])
         st.header(f"Group {idx} ({opr_avg:0.2f} OPR Avg)")
-        st.info(', '.join(cluster['teams']))
+        main_teams = cluster['teams']
+        dnp_in_cluster = [t for t in main_teams if int(t) in dnp_nums]
+        fsp_in_cluster = [t for t in main_teams if int(t) in fsp_nums]
+        if not exclude_dnp:
+            main_teams = [t for t in main_teams if t not in dnp_nums]
+        if not exclude_fsp:
+            main_teams = [t for t in main_teams if t not in fsp_nums]
+        info_md = ', '.join(main_teams) + '  \n'
+        if len(dnp_in_cluster) > 0:
+            info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
+        if len(fsp_in_cluster) > 0:
+            info_md += f"1st pick members: {', '.join(fsp_in_cluster)}  \n"
+        st.info(info_md)
         idx += 1
 
 
