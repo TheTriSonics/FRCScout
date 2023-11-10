@@ -1,7 +1,10 @@
 import os
+import json
 import pandas as pd
 import streamlit as st
 import st_pages as stp
+
+from os.path import exists
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 
@@ -189,5 +192,10 @@ def main():
 
 
 if __name__ == '__main__':
+    cfg = 'config.json'
+    if exists(cfg):
+        with open(cfg) as f:
+            obj = json.load(f)
+            st.session_state.update(obj)
     fix_session()
     main()

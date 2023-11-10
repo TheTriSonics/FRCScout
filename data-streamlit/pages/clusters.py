@@ -21,8 +21,10 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
 
         Also a topic that likely needs a link to details.
         """)
-    exclude_dnp = st.checkbox('Exclude do not pick teams')
-    exclude_fsp = st.checkbox('Exclude first pick teams')
+    dnp_show = 'none' if len(dnp_nums) == 0 else ', '.join(map(str, dnp_nums))
+    fsp_show = 'none' if len(fsp_nums) == 0 else ', '.join(map(str, fsp_nums))
+    exclude_dnp = st.checkbox(f'Exclude do not pick teams ({dnp_show})')
+    exclude_fsp = st.checkbox(f'Exclude first pick teams ({fsp_show})')
     cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from custering
     if dnp_nums is not None and exclude_dnp:
