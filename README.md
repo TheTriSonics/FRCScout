@@ -108,3 +108,5 @@ The toolchain is very command-line centric and the Terminal window at the bottom
 If you do not plan on developing the Python API side and Angular side at the same time there's no reason to load both into two copies of Visual Studio Code. You can just run then project you're not developing from a terminal window just fine.
 
 If you do plan on developing both the api and application at the same time I recommend the Peacock extension (https://marketplace.visualstudio.com/items?itemName=johnpapa.vscode-peacock) which lets you set a border color around Visual Studio Code that makes it easier to see which project you're in.
+
+Testing update
