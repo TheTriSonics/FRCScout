@@ -21,8 +21,10 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
 
         Also a topic that likely needs a link to details.
         """)
-    exclude_dnp = st.checkbox('Exclude do not pick teams')
-    exclude_fsp = st.checkbox('Exclude first pick teams')
+    dnp_show = 'none' if len(dnp_nums) == 0 else ', '.join(map(str, dnp_nums))
+    fsp_show = 'none' if len(fsp_nums) == 0 else ', '.join(map(str, fsp_nums))
+    exclude_dnp = st.checkbox(f'Exclude do not pick teams ({dnp_show})')
+    exclude_fsp = st.checkbox(f'Exclude first pick teams ({fsp_show})')
     cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from custering
     if dnp_nums is not None and exclude_dnp:
@@ -104,7 +106,19 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
                                  reverse=True):
         opr_avg = cluster['opr_total'] / len(cluster['teams'])
         st.header(f"Group {idx} ({opr_avg:0.2f} OPR Avg)")
-        st.info(', '.join(cluster['teams']))
+        main_teams = cluster['teams']
+        dnp_in_cluster = [t for t in main_teams if int(t) in dnp_nums]
+        fsp_in_cluster = [t for t in main_teams if int(t) in fsp_nums]
+        if not exclude_dnp:
+            main_teams = [t for t in main_teams if t not in dnp_nums]
+        if not exclude_fsp:
+            main_teams = [t for t in main_teams if t not in fsp_nums]
+        info_md = ', '.join(main_teams) + '  \n'
+        if len(dnp_in_cluster) > 0:
+            info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
+        if len(fsp_in_cluster) > 0:
+            info_md += f"1st pick members: {', '.join(fsp_in_cluster)}  \n"
+        st.info(info_md)
         idx += 1
 
 

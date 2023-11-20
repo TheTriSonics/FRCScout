@@ -1,13 +1,42 @@
 import os
+import json
 import pandas as pd
 import streamlit as st
 import st_pages as stp
 
+from os.path import exists
+
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
+
+
+instructions = """
+        Use this screen to enter your team's secret key. This is used to keep
+        different team's data seperate. If you want to pool efforts with
+        another team just use the same key.
+
+        Once you've entered that and selected an event data will be loaded for
+        the event.
+"""
 
 
 def fix_session():
     st.session_state.update(st.session_state)
+
+
+def fix_page_names():
+    stp_dir = os.environ.get('STP_DIR')
+    stp.show_pages(
+        [
+            stp.Page(f'{stp_dir}/scout.py', 'Config'),
+            stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
+            stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
+            stp.Page(f'{stp_dir}/pages/pca.py', 'PCA'),
+            stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
+            stp.Page(f'{stp_dir}/pages/picklist.py', 'Pick Lists'),
+            stp.Page(f'{stp_dir}/pages/what_if.py', 'What If'),
+            stp.Page(f'{stp_dir}/pages/app_status.py', 'Workspace'),
+        ]
+    )
 
 
 def get_team_list_url(event_key):
@@ -29,6 +58,7 @@ def get_pit_data_url(secret_key, event_key, team_key):
     return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
 
 
+<<<<<<< HEAD
 stp_dir = os.environ.get('STP_DIR')
 stp.show_pages(
     [
@@ -46,7 +76,6 @@ stp.show_pages(
 
 
 p = True
-
 
 @st.cache_data(persist=p)
 def load_team_data(event_key):
@@ -177,19 +206,22 @@ def main():
         st.session_state['secret_key'] = ''
 
     with st.expander('Instructions'):
-        st.write("""
-        Use this screen to enter your team's secret key. This is used to keep
-        different team's data seperate. If you want to pool efforts with
-        another team just use the same key.
-
-        Once you've entered that and selected an event data will be loaded for
-        the event.
-        """)
+        st.write(instructions)
     st.text_input("Secret key", key='secret_key')
     st.selectbox("Event key", event_key_list, key='event_key')
     st.button('Load Data', on_click=load_data)
 
 
+def load_dev_config():
+    cfg = 'config.json'
+    if exists(cfg):
+        with open(cfg) as f:
+            obj = json.load(f)
+            st.session_state.update(obj)
+
+
 if __name__ == '__main__':
+    load_dev_config()
     fix_session()
+    fix_page_names()
     main()
