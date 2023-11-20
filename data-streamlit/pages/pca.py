@@ -1,14 +1,16 @@
 import numpy as np
+from pandas import DataFrame
 import streamlit as st
+import altair as alt
 
 from scout import (
-    load_team_data, load_event_data, get_event_key,
-    get_secret_key, fix_session
+    load_event_data, get_event_key, get_secret_key, fix_session
 )
 
 
 fix_session()
 st.header('Principal Component Analysis')
+
 scouted_data = load_event_data(get_secret_key(), get_event_key())
 score_vectors = (
     scouted_data
@@ -16,16 +18,65 @@ score_vectors = (
     .mean(numeric_only=True)
     .reset_index()
 )
+orig_score_vectors = score_vectors.copy()
 st.dataframe(score_vectors)
 
-A = score_vectors
-N = A.shape[1]
-C = 1/N*(A@A.T)
-r = np.linalg.eigh(C)
-eigens = [np.real(x) for x in r.eigenvalues]
-norm = np.linalg.norm
-Q = np.array([
-    r.eigenvectors[0],
-    r.eigenvectors[1],
-]).T
-proj = Q.T @ A
+simp = alt.Chart(orig_score_vectors).mark_circle().encode(
+    x='comp_teleop_piece_points', y='comp_auto_piece_points',  # color='pca3',
+    tooltip='scouting_team',
+).interactive()
+
+
+simp_text = simp.mark_text(
+    align='left',
+    baseline='top',
+    color='blue',
+    dx=5,
+).encode(
+    text='scouting_team'
+)
+st.altair_chart(simp_text + simp, use_container_width=True)
+
+
+dims = 2
+dropcols = [x for x in score_vectors.columns if x.startswith('comp')]
+score_vectors.drop(dropcols, axis=1, inplace=True)
+A = np.matrix(score_vectors.drop('scouting_team', axis=1).to_numpy())
+st.write("A shape")
+st.write(A.shape)
+A -= A.mean(axis=0)
+U, Σ, V = np.linalg.svd(A)
+U2 = U[:, :dims]
+Σ2 = np.zeros((dims, dims), float)
+np.fill_diagonal(Σ2, Σ[:dims])
+V2 = V[:, :dims]
+
+# Add the team name back in here somewhere
+
+proj = (Σ2*V2.T).T
+
+st.write(
+    proj.shape
+)
+
+cols = [f'pca{x+1}' for x in range(dims)]
+proj = DataFrame(data=proj, columns=cols)
+proj['team_number'] = orig_score_vectors.scouting_team
+st.dataframe(proj)
+
+proj_chart = alt.Chart(proj).mark_circle().encode(
+    x='pca1', y='pca2',  # color='pca3',
+    tooltip='team_number',
+).interactive()
+
+proj_text = proj_chart.mark_text(
+    align='left',
+    baseline='top',
+    color='blue',
+    dx=5,
+).encode(
+    text='team_number'
+)
+
+st.altair_chart(proj_chart+proj_text, use_container_width=True)
+# st.scatter_chart(proj, x='pca1', y='pca2', tooltip='team_number')

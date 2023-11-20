@@ -24,7 +24,7 @@ def fix_session():
 
 
 def fix_page_names():
-    stp_dir = os.environ.get('STP_DIR')
+    stp_dir = os.environ.get('STP_DIR') or '.'
     stp.show_pages(
         [
             stp.Page(f'{stp_dir}/scout.py', 'Config'),
@@ -58,13 +58,10 @@ def get_pit_data_url(secret_key, event_key, team_key):
     return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
 
 
-<<<<<<< HEAD
-stp_dir = os.environ.get('STP_DIR')
+stp_dir = os.environ.get('STP_DIR') or '.'
 stp.show_pages(
     [
         stp.Page(f'{stp_dir}/scout.py', 'Config'),
-        stp.Page(f'{stp_dir}/pages/scout_match.py', 'Scout Match'),
-        stp.Page(f'{stp_dir}/pages/scout_pit.py', 'Scout Pit'),
         stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
         stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
         stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
@@ -76,6 +73,7 @@ stp.show_pages(
 
 
 p = True
+
 
 @st.cache_data(persist=p)
 def load_team_data(event_key):
