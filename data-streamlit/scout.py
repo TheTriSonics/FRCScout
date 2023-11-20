@@ -33,6 +33,8 @@ stp_dir = os.environ.get('STP_DIR')
 stp.show_pages(
     [
         stp.Page(f'{stp_dir}/scout.py', 'Config'),
+        stp.Page(f'{stp_dir}/pages/scout_match.py', 'Scout Match'),
+        stp.Page(f'{stp_dir}/pages/scout_pit.py', 'Scout Pit'),
         stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
         stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
         stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
