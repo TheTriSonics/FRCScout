@@ -43,12 +43,13 @@ mat-sidenav-content {
 }
 
 .menu-link {
-  color: white;
   overflow: hidden;
+  color: white !important;
 }
 
 .menu-icon {
   margin-right: 0.25em;
+  color: white;
 }
 
 .data-key-header {
@@ -63,4 +64,8 @@ mat-sidenav-content {
 .app-version {
   margin-left: 3em;
   font-size: 14px;
+}
+
+.a {
+  color: white;
 }

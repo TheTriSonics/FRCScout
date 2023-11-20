@@ -1,23 +1,20 @@
-/* eslint-disable import/prefer-default-export */
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { ScoutMatchViewComponent } from './components/scout-match-view/scout-match-view.component';
 import { ScoutMatchComponent } from './components/scout-match/scout-match.component';
-import { TeamDetailsComponent } from './components/team-details/team-details.component';
 import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
-import { SettingsComponent } from './components/settings/settings.component';
-import { HeldDataComponent } from './components/held-data/held-data.component';
-import { TimeKeeperComponent } from './components/time-keeper/time-keeper.component';
+import { PitViewComponent } from './components/pit-view/pit-view.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
-import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 const routes: Routes = [
+  /*
   {
     path: 'time-keeper',
     component: TimeKeeperComponent,
   },
+  */
   {
-    path: 'score-match',
+    path: 'scout-match',
     component: ScoutMatchComponent,
   },
   {
@@ -29,12 +26,17 @@ const routes: Routes = [
     component: ScoutPitComponent,
   },
   {
-    path: 'view-results',
-    component: ScoutMatchViewComponent,
+    path: 'view-pits',
+    component: PitViewComponent,
   },
   {
-    path: 'view-pits',
-    component: ScoutPitViewComponent,
+    path: 'settings',
+    component: SettingsComponent,
+  },
+  /*
+  {
+    path: 'view-results',
+    component: ScoutMatchViewComponent,
   },
   {
     path: 'team-details',
@@ -45,10 +47,6 @@ const routes: Routes = [
     component: TeamDetailsComponent,
   },
   {
-    path: 'settings',
-    component: SettingsComponent,
-  },
-  {
     path: '',
     component: SettingsComponent,
   },
@@ -56,12 +54,12 @@ const routes: Routes = [
     path: 'helddata',
     component: HeldDataComponent,
   },
+  */
 
 ];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule],
+  exports: [RouterModule]
 })
-
 export class AppRoutingModule { }

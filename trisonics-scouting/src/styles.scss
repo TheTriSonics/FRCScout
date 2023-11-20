@@ -1,25 +1,26 @@
-/* You can add global styles to this file, and also import other style files */
-@import "~@angular/material/prebuilt-themes/indigo-pink.css";
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 .mat-ts-red {
-  background-color: #972123;
-  color: white;
+  background-color: #972123 !important;
+  color: white !important;
 }
+
 .mat-ts-cube {
-  background-color: purple;
-  color: white;
+  background-color: purple !important;
+  color: white !important;
 }
 .mat-ts-cone {
-  background-color: darkgoldenrod;
-  color: white;
+  background-color: darkgoldenrod !important;
+  color: white !important;
 }
 
 .mat-row:nth-child(even){
-  background-color: white;
+  background-color: white !important;
 }
 
 .mat-row:nth-child(odd){
-  background-color: lightgray;
+  background-color: lightgray !important;
 }
 
 .flex-col {
@@ -42,7 +43,6 @@
 .mat-card-title {
   font-size: 14px;
 }
-
 
 app-scout-pit-view {
   margin: 2em;

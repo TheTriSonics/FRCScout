@@ -1,19 +1,16 @@
-/* eslint-disable import/prefer-default-export */
-import { NgModule } from '@angular/core';
+import { NgModule, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { CdkTableModule } from '@angular/cdk/table';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { QRCodeModule } from 'angularx-qrcode';
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { FlexLayoutModule } from '@angular/flex-layout';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatInputModule } from '@angular/material/input';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
@@ -27,7 +24,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTableModule } from '@angular/material/table';
@@ -35,62 +31,39 @@ import { MatSortModule } from '@angular/material/sort';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ServiceWorkerModule } from '@angular/service-worker';
-import { AppRoutingModule } from './app-routing.module';
-import { AppComponent } from './app.component';
-import { LoginScreenComponent } from './components/login-screen/login-screen.component';
+
 import { ScoutMatchComponent } from './components/scout-match/scout-match.component';
-import { ScoutMatchViewComponent } from './components/scout-match-view/scout-match-view.component';
-import { environment } from '../environments/environment';
-import { TeamDetailsComponent } from './components/team-details/team-details.component';
-import { ScoutDetailComponent } from './components/dialogs/scout-detail/scout-detail.component';
 import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
-import { SettingsComponent } from './components/settings/settings.component';
 import { PitViewComponent } from './components/pit-view/pit-view.component';
-import { HeldDataComponent } from './components/held-data/held-data.component';
-import { TimeKeeperComponent } from './components/time-keeper/time-keeper.component';
-import { TimeDetailsComponent } from './components/dialogs/time-details/time-details.component';
+import { SettingsComponent } from './components/settings/settings.component';
+
 import { ErrorCatchingInterceptor } from './interceptors/error-catching.interceptor';
-import { HttpErrorDialogComponent } from './components/dialogs/http-error-dialog/http-error-dialog.component';
-import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
-import { ScoutPitViewComponent } from './components/scout-pit-view/scout-pit-view.component';
-import ConfettiService from './shared/services/confetti.service';
 
 @NgModule({
   declarations: [
-    AppComponent,
-    LoginScreenComponent,
     ScoutMatchComponent,
-    ScoutMatchViewComponent,
-    TeamDetailsComponent,
-    ScoutDetailComponent,
     ScoutPitComponent,
-    SettingsComponent,
     PitViewComponent,
-    HeldDataComponent,
-    TimeKeeperComponent,
-    TimeDetailsComponent,
-    HttpErrorDialogComponent,
-    DisplayScheduleComponent,
-    ScoutPitViewComponent,
+    SettingsComponent,
+    AppComponent
   ],
   imports: [
     BrowserModule,
-    CdkTableModule,
-    FlexLayoutModule,
-    HttpClientModule,
-    QRCodeModule,
-    MatProgressSpinnerModule,
-    MatProgressBarModule,
-    BrowserAnimationsModule,
-    FormsModule,
+    AppRoutingModule,
     ReactiveFormsModule,
     HttpClientModule,
     MatFormFieldModule,
+    BrowserAnimationsModule,
+    MatProgressSpinnerModule,
+    MatProgressBarModule,
+    FormsModule,
     MatCheckboxModule,
     MatInputModule,
     MatDividerModule,
-    MatSlideToggleModule,
     MatDatepickerModule,
     MatNativeDateModule,
     MatCardModule,
@@ -98,27 +71,26 @@ import ConfettiService from './shared/services/confetti.service';
     MatListModule,
     MatSliderModule,
     MatButtonModule,
-    MatSelectModule,
-    MatTabsModule,
     MatToolbarModule,
     MatTooltipModule,
+    MatSelectModule,
+    MatTabsModule,
     MatDialogModule,
     MatRadioModule,
-    MatSidenavModule,
     MatExpansionModule,
-    MatProgressSpinnerModule,
     MatChipsModule,
     MatTableModule,
     MatSortModule,
     MatBadgeModule,
     MatSnackBarModule,
     MatAutocompleteModule,
-    AppRoutingModule,
+    MatSidenavModule,
+    MatSlideToggleModule,
     ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: environment.production,
-      // Register the ServiceWorker as soon as the app is stable
+      enabled: !isDevMode(),
+      // Register the ServiceWorker as soon as the application is stable
       // or after 30 seconds (whichever comes first).
-      registrationStrategy: 'registerWhenStable:30000',
+      registrationStrategy: 'registerWhenStable:30000'
     }),
   ],
   providers: [
@@ -127,9 +99,7 @@ import ConfettiService from './shared/services/confetti.service';
       useClass: ErrorCatchingInterceptor,
       multi: true,
     },
-    ConfettiService,
   ],
-  bootstrap: [AppComponent],
+  bootstrap: [AppComponent]
 })
-
 export class AppModule { }

@@ -1,9 +1,8 @@
-<mat-sidenav-container [hasBackdrop]="!media.isActive('gt-sm')"
-     fxLayout="row" fxLayoutAlign="start stretch" fxFlexFill autosize
+<mat-sidenav-container [hasBackdrop]="this.sidenavOpen" autosize
      role="main" class="main-container">
-  <mat-sidenav [mode]="media.isActive('gt-sm') ? 'side' : 'over'"
-               [opened]="media.isActive('gt-sm')"
-               [disableClose]="media.isActive('gt-sm')"
+  <mat-sidenav [mode]="this.fullDisplay ? 'side' : 'over'"
+               [opened]="this.fullDisplay || this.sidenavOpen"
+               [disableClose]="this.fullDisplay"
                class="main-sidenav"
                #sidenav>
     <div class="menu-container">
@@ -19,35 +18,38 @@
       -->
         <a routerLink="/schedule" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">work_history</mat-icon>Schedule
+          <mat-icon class="menu-icon">work_history</mat-icon><span class="menu-link">Schedule</span>
         </a>
-        <a routerLink="/score-match" mat-list-item routerLinkActive="active" class="menu-link"
+        <a routerLink="/scout-match" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">dashboard</mat-icon>Scout Match
+          <mat-icon class="menu-icon">dashboard</mat-icon><span class="menu-link">Scout Match</span>
         </a>
         <a routerLink="/scout-pit" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">topic</mat-icon>Scout Pit
+          <mat-icon class="menu-icon">topic</mat-icon><span class="menu-link">Scout Pit</span>
         </a>
+        <!--
+
         <a routerLink="/view-results" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">verified</mat-icon>Match Data
+          <mat-icon class="menu-icon">verified</mat-icon><span class="menu-link">Match Data</span>
         </a>
         <a routerLink="/view-pits" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">newspaper</mat-icon>Pit Data
+          <mat-icon class="menu-icon">newspaper</mat-icon><span class="menu-link">Pit Data</span>
         </a>
         <a routerLink="/team-details" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">query_stats</mat-icon>OPR Data
+          <mat-icon class="menu-icon">query_stats</mat-icon><span class="menu-link">OPR Data</span>
         </a>
+        -->
         <a routerLink="/settings" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">settings</mat-icon>Settings
+          <mat-icon class="menu-icon">settings</mat-icon><span class="menu-link">Settings</span>
         </a>
         <a routerLink="/helddata" mat-list-item routerLinkActive="active" class="menu-link"
           (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
-          <mat-icon class="menu-icon">markunread</mat-icon>Held Data
+          <mat-icon class="menu-icon">markunread</mat-icon><span class="menu-link">Held Data</span>
         </a>
       </mat-nav-list>
    </div>
@@ -55,7 +57,7 @@
   <mat-sidenav-content>
     <mat-toolbar>
       <mat-toolbar-row class="main-toolbar">
-        <button mat-icon-button [fxShow]="!media.isActive('gt-sm')"
+        <button mat-icon-button
                 (click)="this.displaySidenavMenu()"><mat-icon aria-label="Menu">menu</mat-icon></button>
         <div class="data-key-header">
           <span class="mat-body">Data Key:</span>
@@ -69,8 +71,8 @@
 
         <span class="toolbar-spacer"></span>
         <body class="mat-body">
-          <span *ngIf="this.appData.scouterName">
-            {{this.appData.scouterName}} scouting {{this.appData.eventName}}
+          <span *ngIf="this.userData.scouterName">
+            {{this.userData.scouterName}} scouting {{this.userData.eventName}}
           </span>
         </body>
         <mat-icon (click)="this.goToSettings()">settings</mat-icon>

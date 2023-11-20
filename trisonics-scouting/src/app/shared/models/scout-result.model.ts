@@ -1,3 +1,4 @@
+
 export interface ScoutResult {
   scouter_name: string,
   secret_team_key: string,

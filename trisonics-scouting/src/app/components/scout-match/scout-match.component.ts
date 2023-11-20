@@ -4,8 +4,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { TBAAlliance, TBAMatch } from 'src/app/shared/models/tba-match.model';
-import { ConfettiService } from 'src/app/shared/services/confetti.service';
-import { AppDataService } from 'src/app/shared/services/app-data.service';
+import { UserDataService } from '../../services/user-data.service';
 
 @Component({
   selector: 'app-scout-match',
@@ -30,20 +29,19 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   public scoutingActive = false;
 
   public fgMatch: FormGroup = new FormGroup({
-    scoutingTeam: new FormControl(this.appData.scoutingData.scouting_team, [
+    scoutingTeam: new FormControl(1, [
       Validators.required,
       Validators.min(1),
     ]),
-    match: new FormControl(this.appData.scoutingData.match_key, [
+    match: new FormControl(1, [
       Validators.required,
       Validators.pattern('^[1-9][0-9]*$'), // Fun with regex to force only numbers as valid input
     ]),
   });
 
   constructor(
-    public appData: AppDataService,
+    public userData: UserDataService,
     public snackbar: MatSnackBar,
-    public confetti: ConfettiService,
   ) {}
 
   public ngOnInit(): void {
@@ -51,15 +49,17 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   private loadData(): void {
-    console.log('this.app eventkey', this.appData.eventKey);
-    this.appData.getEventTeamList(this.appData.eventKey).subscribe((tl) => {
+    /*
+    console.log('this.app eventkey', this.userData.eventKey);
+    this.userData.getEventTeamList(this.userData.eventKey).subscribe((tl) => {
       console.log('team list', tl);
       this.fullTeamList = tl;
     });
-    this.appData.getEventMatchList(this.appData.eventKey).subscribe((ml) => {
+    this.userData.getEventMatchList(this.userData.eventKey).subscribe((ml) => {
       console.log('match list', ml);
       this.matchList = ml;
     });
+    */
   }
 
   public ngAfterViewInit(): void {
@@ -71,162 +71,162 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
 
   public beginScouting(): void {
     this.scoutingActive = true;
-    this.confetti.canon();
   }
 
   public autoCubeHighInc(): void {
-    this.appData.scoutingData.auto_cubes_high += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cubes_high += 1;
+    //this.confetti.canon();
   }
 
   public autoCubeHighDec(): void {
-    if (this.appData.scoutingData.auto_cubes_high > 0) {
-      this.appData.scoutingData.auto_cubes_high -= 1;
+    if (this.userData.scoutingData.auto_cubes_high > 0) {
+      this.userData.scoutingData.auto_cubes_high -= 1;
     }
-    this.confetti.canon();
+    //this.confetti.canon();
   }
 
   public autoCubeMediumInc(): void {
-    this.appData.scoutingData.auto_cubes_medium += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cubes_medium += 1;
+    //this.confetti.canon();
   }
 
   public autoCubeMediumDec(): void {
-    if (this.appData.scoutingData.auto_cubes_medium > 0) {
-      this.appData.scoutingData.auto_cubes_medium -= 1;
+    if (this.userData.scoutingData.auto_cubes_medium > 0) {
+      this.userData.scoutingData.auto_cubes_medium -= 1;
     }
-    this.confetti.canon();
+    //this.confetti.canon();
   }
 
   public autoCubeLowInc(): void {
-    this.appData.scoutingData.auto_cubes_low += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cubes_low += 1;
+    //this.confetti.canon();
   }
 
   public autoCubeLowDec(): void {
-    if (this.appData.scoutingData.auto_cubes_low > 0) {
-      this.appData.scoutingData.auto_cubes_low -= 1;
+    if (this.userData.scoutingData.auto_cubes_low > 0) {
+      this.userData.scoutingData.auto_cubes_low -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public autoConeHighInc(): void {
-    this.appData.scoutingData.auto_cones_high += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cones_high += 1;
+    // this.confetti.canon();
   }
 
   public autoConeHighDec(): void {
-    if (this.appData.scoutingData.auto_cones_high > 0) {
-      this.appData.scoutingData.auto_cones_high -= 1;
+    if (this.userData.scoutingData.auto_cones_high > 0) {
+      this.userData.scoutingData.auto_cones_high -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public autoConeMediumInc(): void {
-    this.appData.scoutingData.auto_cones_medium += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cones_medium += 1;
+    // this.confetti.canon();
   }
 
   public autoConeMediumDec(): void {
-    if (this.appData.scoutingData.auto_cones_medium > 0) {
-      this.appData.scoutingData.auto_cones_medium -= 1;
+    if (this.userData.scoutingData.auto_cones_medium > 0) {
+      this.userData.scoutingData.auto_cones_medium -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public autoConeLowInc(): void {
-    this.appData.scoutingData.auto_cones_low += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.auto_cones_low += 1;
+    // this.confetti.canon();
   }
 
   public autoConeLowDec(): void {
-    if (this.appData.scoutingData.auto_cones_low > 0) {
-      this.appData.scoutingData.auto_cones_low -= 1;
+    if (this.userData.scoutingData.auto_cones_low > 0) {
+      this.userData.scoutingData.auto_cones_low -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopCubeHighInc(): void {
-    this.appData.scoutingData.teleop_cubes_high += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cubes_high += 1;
+    // this.confetti.canon();
   }
 
   public teleopCubeHighDec(): void {
-    if (this.appData.scoutingData.teleop_cubes_high > 0) {
-      this.appData.scoutingData.teleop_cubes_high -= 1;
+    if (this.userData.scoutingData.teleop_cubes_high > 0) {
+      this.userData.scoutingData.teleop_cubes_high -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopCubeMediumInc(): void {
-    this.appData.scoutingData.teleop_cubes_medium += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cubes_medium += 1;
+    // this.confetti.canon();
   }
 
   public teleopCubeMediumDec(): void {
-    if (this.appData.scoutingData.teleop_cubes_medium > 0) {
-      this.appData.scoutingData.teleop_cubes_medium -= 1;
+    if (this.userData.scoutingData.teleop_cubes_medium > 0) {
+      this.userData.scoutingData.teleop_cubes_medium -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopCubeLowInc(): void {
-    this.appData.scoutingData.teleop_cubes_low += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cubes_low += 1;
+    // this.confetti.canon();
   }
 
   public teleopCubeLowDec(): void {
-    if (this.appData.scoutingData.teleop_cubes_low > 0) {
-      this.appData.scoutingData.teleop_cubes_low -= 1;
+    if (this.userData.scoutingData.teleop_cubes_low > 0) {
+      this.userData.scoutingData.teleop_cubes_low -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopConeHighInc(): void {
-    this.appData.scoutingData.teleop_cones_high += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cones_high += 1;
+    // this.confetti.canon();
   }
 
   public teleopConeHighDec(): void {
-    if (this.appData.scoutingData.teleop_cones_high > 0) {
-      this.appData.scoutingData.teleop_cones_high -= 1;
+    if (this.userData.scoutingData.teleop_cones_high > 0) {
+      this.userData.scoutingData.teleop_cones_high -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopConeMediumInc(): void {
-    this.appData.scoutingData.teleop_cones_medium += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cones_medium += 1;
+    // this.confetti.canon();
   }
 
   public teleopConeMediumDec(): void {
-    if (this.appData.scoutingData.teleop_cones_medium > 0) {
-      this.appData.scoutingData.teleop_cones_medium -= 1;
+    if (this.userData.scoutingData.teleop_cones_medium > 0) {
+      this.userData.scoutingData.teleop_cones_medium -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public teleopConeLowInc(): void {
-    this.appData.scoutingData.teleop_cones_low += 1;
-    this.confetti.canon();
+    this.userData.scoutingData.teleop_cones_low += 1;
+    // this.confetti.canon();
   }
 
   public teleopConeLowDec(): void {
-    if (this.appData.scoutingData.teleop_cones_low > 0) {
-      this.appData.scoutingData.teleop_cones_low -= 1;
+    if (this.userData.scoutingData.teleop_cones_low > 0) {
+      this.userData.scoutingData.teleop_cones_low -= 1;
     }
-    this.confetti.canon();
+    // this.confetti.canon();
   }
 
   public uploadData(): void {
     if (this.fgMatch.valid) {
       this.sendingData = true;
-      this.appData.postResults(this.appData.scoutingData).subscribe({
+      /*
+      this.userData.postResults(this.userData.scoutingData).subscribe({
         next: (data) => {
           this.uploadError = false;
           this.sendingData = false;
           this.scoutingActive = false;
-          this.confetti.canon();
+          // this.confetti.canon();
           this.snackbar.open(
             'Success! Data uploaded!',
             'Close',
@@ -247,6 +247,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
           );
         },
       });
+      */
     } else {
       const fields: string[] = [];
       if (!this.fgMatch.get('scoutingTeam')?.valid) {
@@ -262,18 +263,18 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public resetForm(): void {
-    this.appData.scoutingData.auto_cones_high = 0;
-    this.appData.scoutingData.auto_cones_medium = 0;
-    this.appData.scoutingData.auto_cones_low = 0;
-    this.appData.scoutingData.auto_cubes_high = 0;
-    this.appData.scoutingData.auto_cubes_medium = 0;
-    this.appData.scoutingData.auto_cubes_low = 0;
-    this.appData.scoutingData.teleop_cones_high = 0;
-    this.appData.scoutingData.teleop_cones_medium = 0;
-    this.appData.scoutingData.teleop_cones_low = 0;
-    this.appData.scoutingData.teleop_cubes_high = 0;
-    this.appData.scoutingData.teleop_cubes_medium = 0;
-    this.appData.scoutingData.teleop_cubes_low = 0;
+    this.userData.scoutingData.auto_cones_high = 0;
+    this.userData.scoutingData.auto_cones_medium = 0;
+    this.userData.scoutingData.auto_cones_low = 0;
+    this.userData.scoutingData.auto_cubes_high = 0;
+    this.userData.scoutingData.auto_cubes_medium = 0;
+    this.userData.scoutingData.auto_cubes_low = 0;
+    this.userData.scoutingData.teleop_cones_high = 0;
+    this.userData.scoutingData.teleop_cones_medium = 0;
+    this.userData.scoutingData.teleop_cones_low = 0;
+    this.userData.scoutingData.teleop_cubes_high = 0;
+    this.userData.scoutingData.teleop_cubes_medium = 0;
+    this.userData.scoutingData.teleop_cubes_low = 0;
     const bools = ['autoNothing', 'autoCommunity', 'autoEngaged', 'autoDocked',
       'teleopHPDouble', 'teleopHPSingle',
       'endNothing', 'endDead', 'endEngaged', 'endDocked', 'endParked'];
@@ -291,14 +292,6 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     if (resp) {
       this.resetForm();
     }
-  }
-
-  get gameJSON(): string {
-    return JSON.stringify(this.appData.scoutingData);
-  }
-
-  get gameJSONFormatted(): string {
-    return JSON.stringify(this.appData.scoutingData, null, 4);
   }
 
   get teamList(): TBATeam[] {

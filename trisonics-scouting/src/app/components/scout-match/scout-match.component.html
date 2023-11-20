@@ -1,6 +1,7 @@
 <h1 class="mat-h1">Scout a Match</h1>
 <form [formGroup]="this.fgMatch" *ngIf="!this.scoutingActive">
   <div class="flex-row">
+
     <mat-form-field class="scout-input">
       <mat-label>Match</mat-label>
       <input matInput type="number" placeholder="Match" formControlName="match">
@@ -27,20 +28,20 @@
     <h2 class="mat-h2">Autonomous</h2>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Nothing</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.auto_nothing">Nothing</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_community">Left Community</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.auto_community">Left Community</mat-checkbox>
   </div>
   <div class="flex-row" style="margin-top: 1em;">
     <h2 class="mat-h2">Auto Charge Station</h2>
   </div>
 
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.auto_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_engaged">Balanced!</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.auto_engaged">Balanced!</mat-checkbox>
   </div>
 
   <div class="flex-row score-label">
@@ -48,7 +49,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cubes_high }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cubes_high }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeHighInc()">+</button>
   </div>
 
@@ -57,7 +58,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cubes_medium }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cubes_medium }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeMediumInc()">+</button>
   </div>
 
@@ -66,7 +67,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cubes_low }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cubes_low }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.autoCubeLowInc()">+</button>
   </div>
 
@@ -76,7 +77,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cones_high }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cones_high }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeHighInc()">+</button>
   </div>
 
@@ -85,7 +86,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cones_medium }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cones_medium }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeMediumInc()">+</button>
   </div>
 
@@ -94,7 +95,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_cones_low }}</span>
+    <span class="score">{{ this.userData.scoutingData.auto_cones_low }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.autoConeLowInc()">+</button>
   </div>
 
@@ -107,7 +108,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cubes_high }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cubes_high }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeHighInc()">+</button>
   </div>
 
@@ -116,7 +117,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cubes_medium }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cubes_medium }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeMediumInc()">+</button>
   </div>
 
@@ -125,7 +126,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cubes_low }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cubes_low }}</span>
     <button mat-raised-button color="ts-cube" class="pm-button" (click)="this.teleopCubeLowInc()">+</button>
   </div>
 
@@ -134,7 +135,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cones_high }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cones_high }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeHighInc()">+</button>
   </div>
 
@@ -143,7 +144,7 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cones_medium }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cones_medium }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeMediumInc()">+</button>
   </div>
 
@@ -152,34 +153,34 @@
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_cones_low }}</span>
+    <span class="score">{{ this.userData.scoutingData.teleop_cones_low }}</span>
     <button mat-raised-button color="ts-cone" class="pm-button" (click)="this.teleopConeLowInc()">+</button>
   </div>
 
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_double">Use Double HP</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.teleop_hp_double">Use Double HP</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.teleop_hp_single">Use Single HP</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.teleop_hp_single">Use Single HP</mat-checkbox>
   </div>
 
   <div class="flex-row game-section">
     <h2 class="mat-h2">Endgame</h2>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_nothing">Nothing</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.endgame_nothing">Nothing</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_dead_robot">Couldn't drive</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.endgame_dead_robot">Couldn't drive</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_parked">Parked in Community</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.endgame_parked">Parked in Community</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.endgame_docked">Docked (not balanced, not touching carpet)</mat-checkbox>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_engaged">On charge station and balanced</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.userData.scoutingData.endgame_engaged">On charge station and balanced</mat-checkbox>
   </div>
 
 
@@ -194,7 +195,7 @@
                 #autosize="cdkTextareaAutosize"
                 cdkAutosizeMinRows="2"
                 cdkAutosizeMaxRows="10"
-                  [(ngModel)]="this.appData.scoutingData.match_notes"></textarea>
+                  [(ngModel)]="this.userData.scoutingData.match_notes"></textarea>
     </mat-form-field>
   </div>
 
