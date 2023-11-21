@@ -13,6 +13,19 @@ from scout import (
 norm = np.linalg.norm
 
 
+# TODO: Clean this up so we're not duplicating code
+def get_cluster_name(clusters, team_number):
+    team_number = str(team_number)
+    idx = 1
+    for cname, cluster in sorted(clusters.items(),
+                                 key=lambda x: x[1]['opr_avg'],
+                                 reverse=True):
+        if team_number in cluster['teams']:
+            return str(idx)
+        idx += 1
+    return 'bob'
+
+
 def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
     st.header("KMeans clusters")
     with st.expander('Instructions'):
@@ -75,26 +88,6 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
             v.to_numpy()
         )
     model.fit(v.to_numpy())
-    score_vectors['group_label'] = list(map(str, model.labels_))
-
-    if len(data_cols) >= 2:
-        simp = alt.Chart(score_vectors).mark_circle().encode(
-            x=data_cols[0][0], y=data_cols[1][0],
-            color='group_label',
-            tooltip='scouting_team',
-        ).interactive()
-
-        simp_text = simp.mark_text(
-            align='left',
-            baseline='top',
-            color='blue',
-            dx=5,
-        ).encode(
-            text='scouting_team'
-        )
-        st.altair_chart(simp_text + simp,
-                        theme="streamlit",
-                        use_container_width=True)
 
     clusters = {}
 
@@ -124,6 +117,29 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
             # print(f'{row.scouting_team}: {len(teamopr)}')
             pass
     idx = 1
+
+    score_vectors['group_label'] = [
+        get_cluster_name(clusters, x) for x in score_vectors.scouting_team
+    ]
+
+    if len(data_cols) >= 2:
+        simp = alt.Chart(score_vectors).mark_circle().encode(
+            x=data_cols[0][0], y=data_cols[1][0],
+            color='group_label',
+            tooltip='scouting_team',
+        ).interactive()
+
+        simp_text = simp.mark_text(
+            align='left',
+            baseline='top',
+            color='blue',
+            dx=5,
+        ).encode(
+            text='scouting_team'
+        )
+        st.altair_chart(simp_text + simp,
+                        theme="streamlit",
+                        use_container_width=True)
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],
                                  reverse=True):
