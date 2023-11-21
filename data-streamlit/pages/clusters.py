@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+import altair as alt
 
 from sklearn.cluster import KMeans
 
@@ -67,12 +68,34 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
                    init='random',
                    n_init=10,
                    max_iter=100)
+
     v = score_vectors.loc[:, [x[0] for x in data_cols]]
     if False:
         print(
             v.to_numpy()
         )
     model.fit(v.to_numpy())
+    score_vectors['group_label'] = list(map(str, model.labels_))
+
+    if len(data_cols) >= 2:
+        simp = alt.Chart(score_vectors).mark_circle().encode(
+            x=data_cols[0][0], y=data_cols[1][0],
+            color='group_label',
+            tooltip='scouting_team',
+        ).interactive()
+
+        simp_text = simp.mark_text(
+            align='left',
+            baseline='top',
+            color='blue',
+            dx=5,
+        ).encode(
+            text='scouting_team'
+        )
+        st.altair_chart(simp_text + simp,
+                        theme="streamlit",
+                        use_container_width=True)
+
     clusters = {}
 
     labels, centers = zip(
