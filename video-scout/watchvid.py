@@ -44,6 +44,26 @@ mode_sh = 50
 mode_br = (mode_tl[0]+mode_sw, mode_tl[1]+mode_sh)
 
 
+def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
+    """
+    Draws bounding boxes on the input image based on the provided arguments.
+
+    Args:
+        img (numpy.ndarray): The input image to draw the bounding box on.
+        class_id (int): Class ID of the detected object.
+        confidence (float): Confidence score of the detected object.
+        x (int): X-coordinate of the top-left corner of the bounding box.
+        y (int): Y-coordinate of the top-left corner of the bounding box.
+        x_plus_w (int): X-coordinate of the bottom-right corner of the bounding box.
+        y_plus_h (int): Y-coordinate of the bottom-right corner of the bounding box.
+    """
+    # label = f'{CLASSES[class_id]} ({confidence:.2f})'
+    label = ''
+    color = (255, 0, 255)
+    cv2.rectangle(img, (x, y), (x_plus_w, y_plus_h), color, 2)
+    cv2.putText(img, label, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
 def draw_label(im, label, x, y):
     """Draw text onto image at location."""
     # Get text size.
@@ -63,57 +83,57 @@ def pre_process(input_image, net):
     net.setInput(blob)
 
     # Run the forward pass to get output of the output layers.
-    outputs = net.forward(net.getUnconnectedOutLayersNames())
+    # outputs = net.forward(net.getUnconnectedOutLayersNames())
+    outputs = net.forward()
     return outputs
 
 
 def post_process(input_image, outputs):
-    # Lists to hold respective values while unwrapping.
-    class_ids = []
-    confidences = []
+    # Prepare output array
+    outputs = np.array([cv2.transpose(outputs[0])])
+    rows = outputs.shape[1]
+
     boxes = []
-    # Rows.
-    rows = outputs[0].shape[1]
-    image_height, image_width = input_image.shape[:2]
-    # Resizing factor.
-    x_factor = image_width / INPUT_WIDTH
-    y_factor = image_height / INPUT_HEIGHT
-    # Iterate through detections.
-    for r in range(rows):
-        row = outputs[0][0][r]
-        confidence = row[4]
-        # Discard bad detections and continue.
-        if confidence >= CONFIDENCE_THRESHOLD:
-            classes_scores = row[5:]
-            # Get the index of max class score.
-            class_id = np.argmax(classes_scores)
-            print('class_id', class_id)
-            #  Continue if the class score is above threshold.
-            if (classes_scores[class_id] > SCORE_THRESHOLD):
-                confidences.append(confidence)
-                class_ids.append(class_id)
-                cx, cy, w, h = row[0], row[1], row[2], row[3]
-                left = int((cx - w/2) * x_factor)
-                top = int((cy - h/2) * y_factor)
-                width = int(w * x_factor)
-                height = int(h * y_factor)
-                box = np.array([left, top, width, height])
-                boxes.append(box)
-    # Perform non maximum suppression to eliminate redundant, overlapping boxes with lower confidences.
-    indices = cv2.dnn.NMSBoxes(boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD)
-    for i in indices:
-        box = boxes[i]
-        left = box[0]
-        top = box[1]
-        width = box[2]
-        height = box[3]
-        # Draw bounding box.
-        cv2.rectangle(input_image, (left, top), (left + width, top + height), BLUE, 3*THICKNESS)
-        # Class label.
-        # label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
-        label = "{}:{:.2f}".format(i, confidences[i])
-        # Draw label.
-        draw_label(input_image, label, left, top)
+    scores = []
+    class_ids = []
+
+    # Iterate through output to collect bounding boxes, confidence scores, and class IDs
+    for i in range(rows):
+        classes_scores = outputs[0][i][4:]
+        (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv2.minMaxLoc(classes_scores)
+        if maxScore >= 0.25:
+            box = [
+                outputs[0][i][0] - (0.5 * outputs[0][i][2]), outputs[0][i][1] - (0.5 * outputs[0][i][3]),
+                outputs[0][i][2], outputs[0][i][3]]
+            boxes.append(box)
+            scores.append(maxScore)
+            class_ids.append(maxClassIndex)
+
+    # Apply NMS (Non-maximum suppression)
+    result_boxes = cv2.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
+
+    detections = []
+
+    # Iterate through NMS results to draw bounding boxes and labels
+    for i in range(len(result_boxes)):
+        index = result_boxes[i]
+        box = boxes[index]
+        height, width, _ = input_image.shape
+        xscale = width / 640
+        yscale = height / 640
+        detection = {
+            'class_id': class_ids[index],
+            'class_name': 'frcrobot',  # CLASSES[class_ids[index]],
+            'confidence': scores[index],
+            'box': box,
+            'scale': xscale
+        }
+        detections.append(detection)
+        draw_bounding_box(input_image, class_ids[index], scores[index],
+                          round(box[0] * xscale),
+                          round(box[1] * yscale),
+                          round((box[0] + box[2]) * xscale),
+                          round((box[1] + box[3]) * yscale))
     return input_image
 
 
@@ -157,7 +177,7 @@ def forward_to_next_mode(cap):
             break
         if not _frame_mode_empty(frame):
             mode_area = _get_mode_area(frame)
-            # cv2.imshow('next', mode_area)
+            #cv2.imshow('next', mode_area)
             # We have a pure white spot in the 'mode' section of the scoreboard
             return True, frame
     return False, None
@@ -188,8 +208,9 @@ if False:  # Hot mess
 
 
 def main():
-    net = cv2.dnn.readNet('best.onnx')
-    rootfile = 'qm03'
+    # net = cv2.dnn.readNet('yolov5s.onnx')
+    net = cv2.dnn.readNet('frcv8.onnx')
+    rootfile = 'qm04'
     vidfile = f'videos/2023micmp4_{rootfile}.mkv'
     print(vidfile)
     # pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
@@ -204,16 +225,10 @@ def main():
     ticker = 2
     _, frame = cap.read()
     while True:
-        cv2.rectangle(frame, mode_tl, mode_br, (0, 255, 0), 2)
-        cv2.polylines(frame, [field_pts], True, (0, 255, 255), 8)
-        ftl_x = 2
-        ftl_y = 450
-        fbr_x = 1920
-        fbr_y = 820
-        field_area = frame[ftl_y:fbr_y, ftl_x:fbr_x]
-        detections = pre_process(field_area, net)
-        # print(detections)
-        img = post_process(field_area.copy(), detections)
+        detections = pre_process(frame, net)
+        img = post_process(frame.copy(), detections)
+        cv2.rectangle(img, mode_tl, mode_br, (0, 255, 0), 2)
+        cv2.polylines(img, [field_pts], True, (0, 255, 255), 8)
         scale = 2/3
         scaled = cv2.resize(img, (0, 0), fx=scale, fy=scale)
         cv2.imshow(mode, scaled)
