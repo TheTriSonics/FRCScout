@@ -185,7 +185,12 @@ def post_process(input_image, outputs, ocr):
                                   text_threshold=0.2,
                                   link_threshold=0.2,
                                   low_text=0.15,
-                                  canvas_size=bot.size)
+                                  canvas_size=bot.size,
+                                  slope_ths=0.5,
+                                  ycenter_ths=1,
+                                  height_ths=1,
+                                  width_ths=1,
+                                  )
         if len(ocr_result) > 0:
             print(ocr_result)
             cv2.putText(bot, ', '.join(ocr_result),
@@ -285,6 +290,14 @@ def main():
     counter = 0
     ticker = 2
     _, frame = cap.read()
+    detections = pre_process(frame, net)
+    for d in detections[0]:
+        print(d)
+        print('-----')
+    print(len(detections[0]))
+    import sys
+    sys.exit()
+
     while True:
         detections = pre_process(frame, net)
         img, bots = post_process(frame.copy(), detections, ocr)
