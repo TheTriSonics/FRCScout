@@ -1,9 +1,9 @@
 import { Component, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { UserDataService } from './services/user-data.service';
 import { distinctUntilChanged, tap } from 'rxjs/operators';
 import { MatSidenav } from '@angular/material/sidenav';
+import AppDataService from './shared/services/app-data.service';
 
 
 @Component({
@@ -17,7 +17,7 @@ export class AppComponent {
   @ViewChild('sidenav', { static: true })
   public sidenav!: MatSidenav;
 
-  public displayTeamKey: boolean = false;
+  public teamKeyVisible: boolean = false;
 
   public fullDisplay: boolean = true;
 
@@ -34,7 +34,7 @@ export class AppComponent {
   );
 
   constructor(
-    public userData: UserDataService,
+    public appData: AppDataService,
     public media: BreakpointObserver,
     public breakpointObserver: BreakpointObserver,
     public router: Router,
@@ -54,7 +54,7 @@ export class AppComponent {
         this.fullDisplay = true;
       }
       if (this.breakpointObserver.isMatched(Breakpoints.Tablet)) {
-        this.fullDisplay = false;
+        this.fullDisplay = true;
       }
       if (this.breakpointObserver.isMatched(Breakpoints.Small)) {
         this.fullDisplay = false;
@@ -68,11 +68,33 @@ export class AppComponent {
     });
   }
 
+  public sidenavClick(): void {
+    if (this.sidenav.mode !== 'side') {
+      this.sidenav.close();
+      this.sidenavOpen = false;
+    }
+  }
+
  public displaySidenavMenu(): void {
   this.sidenav.toggle();
  }
 
   public enableDisplayTeamKey(): void {
+    this.teamKeyVisible = true;
+    setTimeout(() => {
+      this.teamKeyVisible = false;
+    }, 5000);
+  }
+
+  get displayTeamKey(): string {
+    if (this.teamKeyVisible) {
+      return this.appData.teamKey;
+    }
+    if (this.appData.teamKey) {
+      return '********';
+    }
+
+    return 'none set!';
   }
 
   public goToSettings(): void {

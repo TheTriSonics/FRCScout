@@ -4,7 +4,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ScoutResult } from 'src/app/shared/models/scout-result.model';
 import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { TBAAlliance, TBAMatch } from 'src/app/shared/models/tba-match.model';
-import { UserDataService } from '../../services/user-data.service';
+import { AppDataService } from 'src/app/shared/services/app-data.service';
+import * as _ from 'lodash';
 
 @Component({
   selector: 'app-scout-match',
@@ -28,6 +29,10 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
 
   public scoutingActive = false;
 
+  public loadingTeams = true;
+
+  public loadingMatches = true;
+
   public fgMatch: FormGroup = new FormGroup({
     scoutingTeam: new FormControl(1, [
       Validators.required,
@@ -35,31 +40,36 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     ]),
     match: new FormControl(1, [
       Validators.required,
-      Validators.pattern('^[1-9][0-9]*$'), // Fun with regex to force only numbers as valid input
     ]),
   });
 
   constructor(
-    public userData: UserDataService,
+    public appData: AppDataService,
     public snackbar: MatSnackBar,
   ) {}
 
   public ngOnInit(): void {
+    this.matchNumber = 1;
     this.loadData();
   }
 
   private loadData(): void {
-    /*
-    console.log('this.app eventkey', this.userData.eventKey);
-    this.userData.getEventTeamList(this.userData.eventKey).subscribe((tl) => {
+    console.log('this.app eventkey', this.appData.eventKey);
+    this.appData.getEventTeamList(this.appData.eventKey).subscribe((tl) => {
       console.log('team list', tl);
       this.fullTeamList = tl;
+      this.loadingTeams = false;
     });
-    this.userData.getEventMatchList(this.userData.eventKey).subscribe((ml) => {
+    this.appData.getEventMatchList(this.appData.eventKey).subscribe((ml) => {
       console.log('match list', ml);
-      this.matchList = ml;
+      let qm = ml.filter((m) => m.comp_level === 'qm');
+      this.matchList = _.sortBy(qm, (m) => +m.match_number);
+      this.loadingMatches = false;
     });
-    */
+  }
+
+  get loadingData(): boolean {
+    return this.loadingTeams && this.loadingMatches;
   }
 
   public ngAfterViewInit(): void {
@@ -73,159 +83,84 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     this.scoutingActive = true;
   }
 
-  public autoCubeHighInc(): void {
-    this.userData.scoutingData.auto_cubes_high += 1;
-    //this.confetti.canon();
-  }
-
-  public autoCubeHighDec(): void {
-    if (this.userData.scoutingData.auto_cubes_high > 0) {
-      this.userData.scoutingData.auto_cubes_high -= 1;
+  public autoAmpInc(): void {
+    if (!this.appData.scoutingData.auto_amp) {
+      this.appData.scoutingData.auto_amp = 0;
     }
-    //this.confetti.canon();
+    this.appData.scoutingData.auto_amp += 1;
   }
 
-  public autoCubeMediumInc(): void {
-    this.userData.scoutingData.auto_cubes_medium += 1;
-    //this.confetti.canon();
-  }
-
-  public autoCubeMediumDec(): void {
-    if (this.userData.scoutingData.auto_cubes_medium > 0) {
-      this.userData.scoutingData.auto_cubes_medium -= 1;
+  public autoAmpDec(): void {
+    if (this.appData.scoutingData.auto_amp > 0) {
+      this.appData.scoutingData.auto_amp -= 1;
     }
-    //this.confetti.canon();
   }
 
-  public autoCubeLowInc(): void {
-    this.userData.scoutingData.auto_cubes_low += 1;
-    //this.confetti.canon();
-  }
-
-  public autoCubeLowDec(): void {
-    if (this.userData.scoutingData.auto_cubes_low > 0) {
-      this.userData.scoutingData.auto_cubes_low -= 1;
+  public autoSpeakerInc(): void {
+    if (!this.appData.scoutingData.auto_speaker) {
+      this.appData.scoutingData.auto_speaker = 0;
     }
-    // this.confetti.canon();
+    this.appData.scoutingData.auto_speaker += 1;
   }
 
-  public autoConeHighInc(): void {
-    this.userData.scoutingData.auto_cones_high += 1;
-    // this.confetti.canon();
-  }
-
-  public autoConeHighDec(): void {
-    if (this.userData.scoutingData.auto_cones_high > 0) {
-      this.userData.scoutingData.auto_cones_high -= 1;
+  public autoSpeakerDec(): void {
+    if (this.appData.scoutingData.auto_speaker > 0) {
+      this.appData.scoutingData.auto_speaker -= 1;
     }
-    // this.confetti.canon();
   }
 
-  public autoConeMediumInc(): void {
-    this.userData.scoutingData.auto_cones_medium += 1;
-    // this.confetti.canon();
-  }
-
-  public autoConeMediumDec(): void {
-    if (this.userData.scoutingData.auto_cones_medium > 0) {
-      this.userData.scoutingData.auto_cones_medium -= 1;
+  public teleopAmpInc(): void {
+    if (!this.appData.scoutingData.teleop_amp) {
+      this.appData.scoutingData.teleop_amp = 0;
     }
-    // this.confetti.canon();
+    this.appData.scoutingData.teleop_amp += 1;
   }
 
-  public autoConeLowInc(): void {
-    this.userData.scoutingData.auto_cones_low += 1;
-    // this.confetti.canon();
-  }
-
-  public autoConeLowDec(): void {
-    if (this.userData.scoutingData.auto_cones_low > 0) {
-      this.userData.scoutingData.auto_cones_low -= 1;
+  public teleopAmpDec(): void {
+    if (this.appData.scoutingData.teleop_amp > 0) {
+      this.appData.scoutingData.teleop_amp -= 1;
     }
-    // this.confetti.canon();
   }
 
-  public teleopCubeHighInc(): void {
-    this.userData.scoutingData.teleop_cubes_high += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopCubeHighDec(): void {
-    if (this.userData.scoutingData.teleop_cubes_high > 0) {
-      this.userData.scoutingData.teleop_cubes_high -= 1;
+  public teleopSpeakerInc(): void {
+    if (!this.appData.scoutingData.teleop_speaker) {
+      this.appData.scoutingData.teleop_speaker = 0;
     }
-    // this.confetti.canon();
+    this.appData.scoutingData.teleop_speaker += 1;
   }
 
-  public teleopCubeMediumInc(): void {
-    this.userData.scoutingData.teleop_cubes_medium += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopCubeMediumDec(): void {
-    if (this.userData.scoutingData.teleop_cubes_medium > 0) {
-      this.userData.scoutingData.teleop_cubes_medium -= 1;
+  public teleopSpeakerDec(): void {
+    if (this.appData.scoutingData.teleop_speaker > 0) {
+      this.appData.scoutingData.teleop_speaker -= 1;
     }
-    // this.confetti.canon();
   }
 
-  public teleopCubeLowInc(): void {
-    this.userData.scoutingData.teleop_cubes_low += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopCubeLowDec(): void {
-    if (this.userData.scoutingData.teleop_cubes_low > 0) {
-      this.userData.scoutingData.teleop_cubes_low -= 1;
+  public endgameTrapInc(): void {
+    if (!this.appData.scoutingData.endgame_trap) {
+      this.appData.scoutingData.endgame_trap = 0;
     }
-    // this.confetti.canon();
+    this.appData.scoutingData.endgame_trap += 1;
   }
 
-  public teleopConeHighInc(): void {
-    this.userData.scoutingData.teleop_cones_high += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopConeHighDec(): void {
-    if (this.userData.scoutingData.teleop_cones_high > 0) {
-      this.userData.scoutingData.teleop_cones_high -= 1;
+  public endgameTrapDec(): void {
+    if (this.appData.scoutingData.endgame_trap > 0) {
+      this.appData.scoutingData.endgame_trap -= 1;
     }
-    // this.confetti.canon();
-  }
-
-  public teleopConeMediumInc(): void {
-    this.userData.scoutingData.teleop_cones_medium += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopConeMediumDec(): void {
-    if (this.userData.scoutingData.teleop_cones_medium > 0) {
-      this.userData.scoutingData.teleop_cones_medium -= 1;
-    }
-    // this.confetti.canon();
-  }
-
-  public teleopConeLowInc(): void {
-    this.userData.scoutingData.teleop_cones_low += 1;
-    // this.confetti.canon();
-  }
-
-  public teleopConeLowDec(): void {
-    if (this.userData.scoutingData.teleop_cones_low > 0) {
-      this.userData.scoutingData.teleop_cones_low -= 1;
-    }
-    // this.confetti.canon();
   }
 
   public uploadData(): void {
     if (this.fgMatch.valid) {
+      this.appData.scoutingData.scouter_name = this.appData.scouterName;
+      this.appData.scoutingData.secret_team_key = this.appData.secretKey;
+      this.appData.scoutingData.scouting_team = this.fgMatch.get('scoutingTeam')?.value;
+      this.appData.scoutingData.match_key = this.fgMatch.get('match')?.value;
       this.sendingData = true;
-      /*
-      this.userData.postResults(this.userData.scoutingData).subscribe({
-        next: (data) => {
+      this.appData.postResults(this.appData.scoutingData).subscribe({
+        next: (data: any) => {
           this.uploadError = false;
           this.sendingData = false;
           this.scoutingActive = false;
+          this.matchNumber = 1;
           // this.confetti.canon();
           this.snackbar.open(
             'Success! Data uploaded!',
@@ -235,7 +170,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
           // Reset form controls that should be reset between matches
           this.resetForm();
         },
-        error: (err) => {
+        error: (err: any) => {
           console.log('Error uploading data: ', err);
           this.uploadError = true;
           this.sendingData = false;
@@ -247,7 +182,6 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
           );
         },
       });
-      */
     } else {
       const fields: string[] = [];
       if (!this.fgMatch.get('scoutingTeam')?.valid) {
@@ -263,28 +197,17 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public resetForm(): void {
-    this.userData.scoutingData.auto_cones_high = 0;
-    this.userData.scoutingData.auto_cones_medium = 0;
-    this.userData.scoutingData.auto_cones_low = 0;
-    this.userData.scoutingData.auto_cubes_high = 0;
-    this.userData.scoutingData.auto_cubes_medium = 0;
-    this.userData.scoutingData.auto_cubes_low = 0;
-    this.userData.scoutingData.teleop_cones_high = 0;
-    this.userData.scoutingData.teleop_cones_medium = 0;
-    this.userData.scoutingData.teleop_cones_low = 0;
-    this.userData.scoutingData.teleop_cubes_high = 0;
-    this.userData.scoutingData.teleop_cubes_medium = 0;
-    this.userData.scoutingData.teleop_cubes_low = 0;
-    const bools = ['autoNothing', 'autoCommunity', 'autoEngaged', 'autoDocked',
-      'teleopHPDouble', 'teleopHPSingle',
-      'endNothing', 'endDead', 'endEngaged', 'endDocked', 'endParked'];
-    bools.forEach((b) => {
-      this.fgMatch.get(b)?.setValue(false);
-    });
-    const strs = ['scoutingTeam', 'match', 'matchNotes'];
-    strs.forEach((s) => {
-      this.fgMatch.get(s)?.setValue('');
-    });
+    this.appData.scoutingData.auto_amp = 0;
+    this.appData.scoutingData.auto_speaker = 0;
+    this.appData.scoutingData.teleop_amp = 0;
+    this.appData.scoutingData.teleop_speaker = 0;
+    this.appData.scoutingData.endgame_trap = 0;
+    this.appData.scoutingData.auto_zone = false;
+    this.appData.scoutingData.auto_nothing = false;
+    this.appData.scoutingData.endgame_harmony = false;
+    this.appData.scoutingData.endgame_onstage = false;
+    this.appData.scoutingData.endgame_park = false;
+    this.appData.scoutingData.match_notes = '';
   }
 
   public resetFormConfirm(): void {
@@ -294,10 +217,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
+  // TODO: Tie into match number like I wanted to
   get teamList(): TBATeam[] {
-    if (this.matchNumber) {
+    if (true) {
       const teamList: TBATeam[] = [];
-      const match = this.matchList.find((m) => m.match_number === this.matchNumber) as TBAMatch;
+      this.blueBots = [] as TBATeam[]
+      this.redBots = [] as TBATeam[]
+      const match = this.matchList.find((m) => m.match_number == this.matchNumber) as TBAMatch;
+      console.log(match)
       match?.alliances.blue.team_keys.forEach((t) => {
         const team = this.fullTeamList.find((ft) => `frc${ft.number}` === t) as TBATeam;
         this.blueBots.push(team);
@@ -308,9 +235,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
         this.redBots.push(team);
         teamList.push(team);
       });
-      return teamList;
+      console.log('returning', teamList);
+      return teamList
     }
     return [] as TBATeam[];
+  }
+
+  public getMatchLabel(m: TBAMatch): string {
+    return `${m.match_number}`;
   }
 
   public getTeamLabel(t: TBATeam): string {

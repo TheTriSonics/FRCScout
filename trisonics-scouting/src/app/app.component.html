@@ -2,7 +2,6 @@
      role="main" class="main-container">
   <mat-sidenav [mode]="this.fullDisplay ? 'side' : 'over'"
                [opened]="this.fullDisplay || this.sidenavOpen"
-               [disableClose]="this.fullDisplay"
                class="main-sidenav"
                #sidenav>
     <div class="menu-container">
@@ -17,7 +16,7 @@
         </a>
       -->
         <a routerLink="/schedule" mat-list-item routerLinkActive="active" class="menu-link"
-          (click)="this.sidenav.mode === 'side' || this.sidenav.close()">
+          (click)="this.sidenavClick();">
           <mat-icon class="menu-icon">work_history</mat-icon><span class="menu-link">Schedule</span>
         </a>
         <a routerLink="/scout-match" mat-list-item routerLinkActive="active" class="menu-link"
@@ -71,8 +70,8 @@
 
         <span class="toolbar-spacer"></span>
         <body class="mat-body">
-          <span *ngIf="this.userData.scouterName">
-            {{this.userData.scouterName}} scouting {{this.userData.eventName}}
+          <span *ngIf="this.appData.scouterName">
+            {{this.appData.scouterName}} scouting {{this.appData.eventName}}
           </span>
         </body>
         <mat-icon (click)="this.goToSettings()">settings</mat-icon>
