@@ -1,4 +1,4 @@
-name: Azure Static Web Apps CI/CD
+name: Angular App
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
     name: Build and Deploy Job
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/node@v3
+      - uses: actions/node@v2
         with:
           submodules: true
       - name: Build And Deploy
