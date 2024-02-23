@@ -69,39 +69,9 @@ export class AppDataService {
 
   private _eventList: TBAEvent[] = [
     {
-      eventKey: '2023mifor',
-      eventName: 'Calvin (Test)',
-      eventDate: new Date(2023, 3, 2),
-    },
-    {
-      eventKey: '2023mimil',
-      eventName: 'Milford (Test)',
-      eventDate: new Date(2023, 3, 2),
-    },
-    {
-      eventKey: '2023misjo',
-      eventName: 'St. Joe (Test)',
-      eventDate: new Date(2023, 3, 10),
-    },
-    {
-      eventKey: '2023mista',
-      eventName: 'Standish',
-      eventDate: new Date(2023, 3, 16),
-    },
-    {
-      eventKey: '2023miwmi',
-      eventName: 'GVSU',
-      eventDate: new Date(2023, 3, 23),
-    },
-    {
-      eventKey: '2023micmp4',
-      eventName: 'States - Consumers',
-      eventDate: new Date(2023, 4, 6),
-    },
-    {
-      eventKey: '2023cur',
-      eventName: 'Worlds - Curie',
-      eventDate: new Date(2023, 4, 19),
+      eventKey: '2024week0',
+      eventName: 'Week 0 (Test)',
+      eventDate: new Date(2024, 2, 17),
     },
   ];
 
@@ -145,7 +115,7 @@ export class AppDataService {
   /*
   A default event that is only set to this because it's a handy spot for testing
   */
-  private _eventKey = '2023cur';
+  private _eventKey = '2024week0';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
@@ -245,7 +215,7 @@ export class AppDataService {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
     this._scouterName = d.scouterName;
-    this._eventKey = '2023cur';
+    this._eventKey = '2024week0';
     this._teamKey = d.secretKey;
     this._secretKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
