@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "trisonics-scouting-ng17": {
+    "trisonics-scouting": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -24,7 +24,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/trisonics-scouting-ng17",
+            "outputPath": "dist/trisonics-scouting",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -73,10 +73,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "trisonics-scouting-ng17:build:production"
+              "buildTarget": "trisonics-scouting:build:production"
             },
             "development": {
-              "buildTarget": "trisonics-scouting-ng17:build:development"
+              "buildTarget": "trisonics-scouting:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -84,7 +84,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "trisonics-scouting-ng17:build"
+            "buildTarget": "trisonics-scouting:build"
           }
         },
         "test": {
