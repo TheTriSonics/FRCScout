@@ -36,8 +36,6 @@ export class SettingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.teamReload();
-    this.appData.eventKey = '';
-    this.teamReload();
     this.fgSettings.get('teamKey')?.valueChanges.subscribe((tk) => {
       this.appData.teamKey = tk;
       this.appData.secretKey = tk;

@@ -215,7 +215,7 @@ export class AppDataService {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
     this._scouterName = d.scouterName;
-    this._eventKey = '2024week0';
+    this._eventKey = d.eventKey;
     this._teamKey = d.secretKey;
     this._secretKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';

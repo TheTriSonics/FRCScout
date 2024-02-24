@@ -67,14 +67,9 @@
         <div class="app-version">
           <span>v.Offseason</span>
         </div>
-
         <span class="toolbar-spacer"></span>
-        <body class="mat-body">
-          <span *ngIf="this.appData.scouterName">
-            {{this.appData.scouterName}} scouting {{this.appData.eventName}}
-          </span>
-        </body>
-        <mat-icon (click)="this.goToSettings()">settings</mat-icon>
+        <div class="mat-body">
+        </div>
       </mat-toolbar-row>
     </mat-toolbar>
     <main class="main-router-outlet">

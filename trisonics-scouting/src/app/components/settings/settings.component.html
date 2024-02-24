@@ -43,14 +43,19 @@
   <ng-container *ngIf="!this.dataLoading">
     <div class="flex-row">
       <p class="mat-body">
-        Teams found for this event: {{ this.teamList.length }}
+        Matches found for this event: {{ this.matchList.length }}
+      </p>
+      <p class="mat-body" *ngIf="this.matchList.length == 0">
+        We've loaded zero matches for this event which means they are not yet
+        scheduled.  You can still use this app to pit scout but the match
+        scouting will not be available until matches are scheduled.
       </p>
       <div class="flex-row" *ngIf="!this.teamListLoading">
       </div>
     </div>
     <div class="flex-row">
       <p class="mat-body">
-        Matches found for this event: {{ this.matchList.length }}
+        Teams found for this event: {{ this.teamList.length }}
       </p>
       <div class="flex-row" *ngIf="!this.teamListLoading">
       </div>
