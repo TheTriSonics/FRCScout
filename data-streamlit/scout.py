@@ -195,9 +195,6 @@ def main():
 
     st.title("Trisonics FRC Scouting")
 
-    # List of competitions to offer in select box
-    event_key_list = ["2023micmp4", "2023miwmi"]
-
     if 'secret_key' not in st.session_state:
         # import os
         # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
@@ -206,7 +203,7 @@ def main():
     with st.expander('Instructions'):
         st.write(instructions)
     st.text_input("Secret key", key='secret_key')
-    st.selectbox("Event key", event_key_list, key='event_key')
+    st.text_input("Event key", key='event_key')
     st.button('Load Data', on_click=load_data)
 
 
