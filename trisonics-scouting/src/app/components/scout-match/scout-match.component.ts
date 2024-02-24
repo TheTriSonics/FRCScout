@@ -152,6 +152,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     if (this.fgMatch.valid) {
       this.appData.scoutingData.scouter_name = this.appData.scouterName;
       this.appData.scoutingData.secret_team_key = this.appData.secretKey;
+      this.appData.scoutingData.event_key = this.appData.eventKey;
       this.appData.scoutingData.scouting_team = this.fgMatch.get('scoutingTeam')?.value;
       this.appData.scoutingData.match_key = this.fgMatch.get('match')?.value;
       this.sendingData = true;
