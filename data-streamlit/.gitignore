@@ -1,2 +1,3 @@
 venv
 setenv.sh
+__pycache__
