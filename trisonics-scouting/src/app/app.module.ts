@@ -93,6 +93,7 @@ import { ErrorCatchingInterceptor } from './interceptors/error-catching.intercep
       registrationStrategy: 'registerWhenStable:30000'
     }),
   ],
+  /*
   providers: [
     {
       provide: HTTP_INTERCEPTORS,
@@ -100,6 +101,7 @@ import { ErrorCatchingInterceptor } from './interceptors/error-catching.intercep
       multi: true,
     },
   ],
+  */
   bootstrap: [AppComponent]
 })
 export class AppModule { }

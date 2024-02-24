@@ -15,14 +15,26 @@
   <div class="flex-row">
     <mat-form-field>
       <mat-label>Event</mat-label>
+      <input matInput [placeholder]="this.suggestedEventKey" formControlName="eventKey">
+      <!--
+
       <mat-select formControlName="eventKey">
         <mat-option *ngFor="let e of this.appData.eventList" [value]="e.eventKey">{{e.eventName}}</mat-option>
       </mat-select>
+      -->
     </mat-form-field>
   </div>
-  <div class="flex-row" *ngIf="this.dataLoading">
+  <div class="flex-row" *ngIf="this.dataLoading && !this.dualLoadingFailure">
     <p class="mat-body">
       Loading data from The Blue Alliance...
+    </p>
+    <!-- why isn't this showing? -->
+    <mat-progress-spinner class="team-list-spinner">
+    </mat-progress-spinner>
+  </div>
+  <div class="flex-row" *ngIf="this.dualLoadingFailure">
+    <p class="mat-body">
+      Error loading data. You likely have an invalid event key.
     </p>
     <!-- why isn't this showing? -->
     <mat-progress-spinner class="team-list-spinner">
@@ -43,9 +55,12 @@
       <div class="flex-row" *ngIf="!this.teamListLoading">
       </div>
     </div>
+    <!--
+    The force button doesn't seem to be needed right now, so we'll hide it.
     <div class="flex-row" *ngIf="!this.teamListLoading">
       <button mat-raised-button color="ts-red" (click)="this.forceTeamReload()">Force Update</button>
     </div>
+    -->
     <div class="flex-row" *ngIf="!this.teamListLoading">
       <ul>
         <li *ngFor="let t of this.teamList">
