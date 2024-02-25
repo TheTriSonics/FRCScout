@@ -88,28 +88,6 @@ def load_event_data(secret_key, event_key):
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
     df = pd.read_json(url)
-
-    if len(df.index) > 0:
-        # Create some computed columns out of our scouted data
-
-        df['comp_teleop_piece_points'] = (
-            (df['teleop_cubes_high'] +
-             df['teleop_cones_high']) * 5 +
-            (df['teleop_cubes_medium'] +
-             df['teleop_cones_medium']) * 3 +
-            (df['teleop_cubes_low'] +
-             df['teleop_cones_low']) * 2
-        )
-
-        df['comp_auto_piece_points'] = (
-            (df['auto_cubes_high'] +
-             df['auto_cones_high']) * 6 +
-            (df['auto_cubes_medium'] +
-             df['auto_cones_medium']) * 4 +
-            (df['auto_cubes_low'] +
-             df['auto_cones_low']) * 3
-        )
-
     return df
 
 
