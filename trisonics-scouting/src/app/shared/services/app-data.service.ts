@@ -154,9 +154,7 @@ export class AppDataService {
 
   public set eventKey(v: string) {
     this._eventKey = v;
-    this._eventName = this._eventList.find((e) => e.key === v)?.name ?? '';
-    console.log('setting event name', v);
-    console.log('setting event name', this._eventName);
+    this._eventName = this._eventList.find((e) => e.key === v)?.short_name ?? '';
     this.saveSettings();
   }
 
@@ -207,7 +205,7 @@ export class AppDataService {
       console.log('events', JSON.stringify(events));
       console.log(events);
       this._eventList = events;
-      this._eventName = this._eventList.find((e) => e.key === this._eventKey)?.name ?? '';
+      this._eventName = this._eventList.find((e) => e.key === this._eventKey)?.short_name ?? '';
       console.log('event name', this._eventName);
       this.saveSettings();
     });
