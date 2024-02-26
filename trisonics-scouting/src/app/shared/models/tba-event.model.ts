@@ -1,5 +1,5 @@
 export interface TBAEvent {
-  eventKey: string;
-  eventName: string;
-  eventDate: Date | null;
+  key: string;
+  name: string;
+  start_date: Date | null;
 }

@@ -198,13 +198,13 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public resetForm(): void {
+    this.appData.scoutingData.auto_zone = false;
+    this.appData.scoutingData.auto_nothing = false;
     this.appData.scoutingData.auto_amp = 0;
     this.appData.scoutingData.auto_speaker = 0;
     this.appData.scoutingData.teleop_amp = 0;
     this.appData.scoutingData.teleop_speaker = 0;
     this.appData.scoutingData.endgame_trap = 0;
-    this.appData.scoutingData.auto_zone = false;
-    this.appData.scoutingData.auto_nothing = false;
     this.appData.scoutingData.endgame_harmony = false;
     this.appData.scoutingData.endgame_onstage = false;
     this.appData.scoutingData.endgame_park = false;

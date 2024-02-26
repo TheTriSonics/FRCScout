@@ -67,13 +67,7 @@ export class AppDataService {
     return _.orderBy(this._eventList, 'eventDate', 'desc');
   }
 
-  private _eventList: TBAEvent[] = [
-    {
-      eventKey: '2024week0',
-      eventName: 'Week 0 (Test)',
-      eventDate: new Date(2024, 2, 17),
-    },
-  ];
+  private _eventList: TBAEvent[] = [];
 
   /*
   This is a 'Dictionary' type object that maps an 'eventKey' property of
@@ -112,10 +106,9 @@ export class AppDataService {
   // Okay, going to just name it secret and start fixing this.
   private _secretKey = '';
 
-  /*
-  A default event that is only set to this because it's a handy spot for testing
-  */
-  private _eventKey = '2024week0';
+  private _eventKey = '';
+
+  private _eventName = '';
 
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
@@ -161,13 +154,14 @@ export class AppDataService {
 
   public set eventKey(v: string) {
     this._eventKey = v;
+    this._eventName = this._eventList.find((e) => e.key === v)?.name ?? '';
+    console.log('setting event name', v);
+    console.log('setting event name', this._eventName);
     this.saveSettings();
   }
 
   public get eventName(): string {
-    return (
-      this.eventList.find((e) => e.eventKey === this._eventKey)?.eventName ?? ''
-    );
+    return this._eventName;
   }
 
   constructor(private httpClient: HttpClient) {
@@ -176,6 +170,7 @@ export class AppDataService {
     this is where we load our data from disk as the app starts.
     */
     this.loadSettings();
+    this.loadEvents();
   }
 
   /*
@@ -204,6 +199,18 @@ export class AppDataService {
     );
     localStorage.setItem('_heldScoutData', JSON.stringify(this._heldScoutData));
     localStorage.setItem('_heldPitData', JSON.stringify(this._heldPitData));
+    localStorage.setItem('_eventList', JSON.stringify(this._eventList));
+  }
+
+  private loadEvents(): void {
+    this.getEvents(2024).subscribe((events) => {
+      console.log('events', JSON.stringify(events));
+      console.log(events);
+      this._eventList = events;
+      this._eventName = this._eventList.find((e) => e.key === this._eventKey)?.name ?? '';
+      console.log('event name', this._eventName);
+      this.saveSettings();
+    });
   }
 
   /*
@@ -224,6 +231,8 @@ export class AppDataService {
     this._heldScoutData = JSON.parse(scoutDataJson);
     const pitDataJson = localStorage.getItem('_heldPitData') ?? '[]';
     this._heldPitData = JSON.parse(pitDataJson).splice(0, 1);
+    const eventListJson = localStorage.getItem('_eventList') ?? '[]';
+    this._eventList = JSON.parse(eventListJson).splice(0, 1);
   }
 
   /*
@@ -276,6 +285,19 @@ export class AppDataService {
     );
   }
 
+  /* Get all events for a year */
+  public getEvents(
+    year: number,
+  ): Observable<TBAEvent[]> {
+    const url = `${this.baseUrl}/GetEvents?year=${year}`;
+    return this.httpClient.get<TBAEvent[]>(url).pipe(
+      tap((events) => {
+        this._eventList = events;
+        this.saveSettings();
+      }),
+    );
+  }
+
   /*
   Inside the API there is a HelloWorld example and this show how we would
   call it from our service.
@@ -291,6 +313,7 @@ export class AppDataService {
   get heldPitData(): PitResult[] {
     return this._heldPitData;
   }
+
 
   /*
   Here we store our match scouting results in a local memory cache (array)
