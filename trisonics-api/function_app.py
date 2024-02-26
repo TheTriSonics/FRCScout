@@ -133,6 +133,30 @@ def get_matches_for_event(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+@app.function_name(name="GetEvents")
+@app.route(route="GetEvents", auth_level=func.AuthLevel.ANONYMOUS)
+def get_matches_for_event(req: func.HttpRequest) -> func.HttpResponse:
+    year = req.params.get('year')
+    df = get_events_df(year)
+
+    """
+    df.sort_values(by=['team_number'], inplace=True, ascending=True)
+    ret = []
+    for idx, row in df.iterrows():
+        ret.append({
+            'number': row['team_number'],
+            'name': row['nickname'],
+            'locaton': row['school_name']
+        })
+    json_obj = json.dumps(ret)
+    """
+    json_obj = df.to_json(orient='records')
+    return func.HttpResponse(
+        json_obj,
+        status_code=200
+    )
+
+
 @app.function_name(name="GetTimeEntries")
 @app.route(route="GetTimeEntries", auth_level=func.AuthLevel.ANONYMOUS)
 def get_time_entries(req: func.HttpRequest) -> func.HttpResponse:
