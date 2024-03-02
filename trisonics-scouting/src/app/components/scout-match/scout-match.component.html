@@ -36,7 +36,7 @@
     <h2 class="mat-h2">Autonomous</h2>
   </div>
   <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Nothing</mat-checkbox>
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Did Nothing</mat-checkbox>
   </div>
   <div class="flex-row">
       <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_zone">Left Zone</mat-checkbox>
@@ -92,13 +92,13 @@
     <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameTrapInc()">+</button>
   </div>
   <div class="flex-row">
-    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_park">Park</mat-checkbox>
+    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_park">Parked - Bumpers Under the Stage</mat-checkbox>
 </div>
 <div class="flex-row">
-    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_onstage">Stage</mat-checkbox>
+    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_onstage">Hanging</mat-checkbox>
 </div>
 <div class="flex-row">
-  <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_harmony">Harmony</mat-checkbox>
+  <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_harmony">Harmony - Two or More Robots Hanging</mat-checkbox>
 </div>
 
   <div class="flex-row game-section">
