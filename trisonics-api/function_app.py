@@ -427,7 +427,7 @@ def get_container(container_name=_match_results_container):
     # Some hard-coded values for our datbase name and container for match
     # results
     db_name = 'ScoutingData'
-    client = CosmosClient(endpoint, key)
+    client = CosmosClient(endpoint, key, consistency_level='Session')
     db = client.get_database_client(db_name)
     container = db.get_container_client(container_name)
     return container
