@@ -72,7 +72,7 @@ stp.show_pages(
 )
 
 
-p = True
+p = False
 
 
 @st.cache_data(persist=p)
