@@ -140,6 +140,7 @@ def load_data():
     event_key = get_event_key()
 
     all_loaded = True
+    st.cache_data.clear()
     _ = load_event_data(secret_key, event_key)
 
     if len(_.index) > 0:
