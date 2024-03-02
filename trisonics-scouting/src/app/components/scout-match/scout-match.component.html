@@ -91,6 +91,14 @@
     <span class="score">{{ this.appData.scoutingData.endgame_trap }}</span>
     <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameTrapInc()">+</button>
   </div>
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Microphone - Human Player</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameMicrophoneDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.endgame_microphone }}</span>
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.endgameMicrophoneInc()">+</button>
+  </div>
   <div class="flex-row">
     <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_park">Parked - Bumpers Under the Stage</mat-checkbox>
 </div>

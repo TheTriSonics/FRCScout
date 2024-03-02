@@ -148,6 +148,19 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
+  public endgameMicrophoneInc(): void {
+    if (!this.appData.scoutingData.endgame_microphone) {
+      this.appData.scoutingData.endgame_microphone = 0;
+    }
+    this.appData.scoutingData.endgame_microphone += 1;
+  }
+
+  public endgameMicrophoneDec(): void {
+    if (this.appData.scoutingData.endgame_microphone > 0) {
+      this.appData.scoutingData.endgame_microphone -= 1;
+    }
+  }
+
   public uploadData(): void {
     if (this.fgMatch.valid) {
       this.appData.scoutingData.scouter_name = this.appData.scouterName;
@@ -205,6 +218,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     this.appData.scoutingData.teleop_amp = 0;
     this.appData.scoutingData.teleop_speaker = 0;
     this.appData.scoutingData.endgame_trap = 0;
+    this.appData.scoutingData.endgame_microphone = 0;
     this.appData.scoutingData.endgame_harmony = false;
     this.appData.scoutingData.endgame_onstage = false;
     this.appData.scoutingData.endgame_park = false;

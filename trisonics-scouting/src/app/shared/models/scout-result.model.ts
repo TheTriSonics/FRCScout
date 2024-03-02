@@ -19,6 +19,7 @@ export interface ScoutResult {
   endgame_onstage: boolean,
   endgame_harmony: boolean,
   endgame_trap: number,
+  endgame_microphone: number,
 
   match_notes: string,
 }
