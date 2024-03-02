@@ -6,6 +6,7 @@ import { TBATeam } from 'src/app/shared/models/tba-team.model';
 import { TBAAlliance, TBAMatch } from 'src/app/shared/models/tba-match.model';
 import { AppDataService } from 'src/app/shared/services/app-data.service';
 import * as _ from 'lodash';
+import ConfettiService from 'src/app/shared/services/confetti.service';
 
 @Component({
   selector: 'app-scout-match',
@@ -46,6 +47,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   constructor(
     public appData: AppDataService,
     public snackbar: MatSnackBar,
+    public confetti: ConfettiService,
   ) {}
 
   public ngOnInit(): void {
@@ -83,7 +85,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     this.scoutingActive = true;
   }
 
+  public launchConfetti(): void {
+    this.confetti.canon(45, 0.1);
+    this.confetti.canon(135, 0.9);
+  }
+
+
   public autoAmpInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.auto_amp) {
       this.appData.scoutingData.auto_amp = 0;
     }
@@ -91,12 +100,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public autoAmpDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.auto_amp > 0) {
       this.appData.scoutingData.auto_amp -= 1;
     }
   }
 
   public autoSpeakerInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.auto_speaker) {
       this.appData.scoutingData.auto_speaker = 0;
     }
@@ -104,12 +115,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public autoSpeakerDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.auto_speaker > 0) {
       this.appData.scoutingData.auto_speaker -= 1;
     }
   }
 
   public teleopAmpInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.teleop_amp) {
       this.appData.scoutingData.teleop_amp = 0;
     }
@@ -117,12 +130,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public teleopAmpDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.teleop_amp > 0) {
       this.appData.scoutingData.teleop_amp -= 1;
     }
   }
 
   public teleopSpeakerInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.teleop_speaker) {
       this.appData.scoutingData.teleop_speaker = 0;
     }
@@ -130,12 +145,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public teleopSpeakerDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.teleop_speaker > 0) {
       this.appData.scoutingData.teleop_speaker -= 1;
     }
   }
 
   public endgameTrapInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.endgame_trap) {
       this.appData.scoutingData.endgame_trap = 0;
     }
@@ -143,12 +160,14 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public endgameTrapDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.endgame_trap > 0) {
       this.appData.scoutingData.endgame_trap -= 1;
     }
   }
 
   public endgameMicrophoneInc(): void {
+    this.launchConfetti();
     if (!this.appData.scoutingData.endgame_microphone) {
       this.appData.scoutingData.endgame_microphone = 0;
     }
@@ -156,6 +175,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public endgameMicrophoneDec(): void {
+    this.launchConfetti();
     if (this.appData.scoutingData.endgame_microphone > 0) {
       this.appData.scoutingData.endgame_microphone -= 1;
     }

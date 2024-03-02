@@ -12,12 +12,12 @@ import confetti from 'canvas-confetti';
 export class ConfettiService {
   constructor() { }
 
-  public canon(): void {
+  public canon(angle: number, xorigin: number): void {
     confetti({
-      angle: this.randomInRange(55, 125),
+      angle: angle,
       spread: this.randomInRange(50, 70),
       particleCount: this.randomInRange(50, 100),
-      origin: { y: 0.6 },
+      origin: {x: xorigin, y: 0.5 },
     });
   }
 

@@ -4,6 +4,7 @@ import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { distinctUntilChanged, tap } from 'rxjs/operators';
 import { MatSidenav } from '@angular/material/sidenav';
 import AppDataService from './shared/services/app-data.service';
+import ConfettiService from './shared/services/confetti.service';
 
 
 @Component({
@@ -38,6 +39,7 @@ export class AppComponent {
     public media: BreakpointObserver,
     public breakpointObserver: BreakpointObserver,
     public router: Router,
+    public confetti: ConfettiService,
   ) { }
 
   public checkSettingsValid(): void {
