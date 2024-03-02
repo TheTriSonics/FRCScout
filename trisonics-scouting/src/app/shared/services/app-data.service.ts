@@ -159,7 +159,7 @@ export class AppDataService {
   }
 
   public get eventName(): string {
-    return this._eventName;
+    return this._eventName || 'undefined';
   }
 
   constructor(private httpClient: HttpClient) {
@@ -205,8 +205,8 @@ export class AppDataService {
       console.log('events', JSON.stringify(events));
       console.log(events);
       this._eventList = events;
-      this._eventName = this._eventList.find((e) => e.key === this._eventKey)?.short_name ?? '';
-      console.log('event name', this._eventName);
+      // Force an update to the name property by doing this assignment
+      this.eventKey = this._eventKey
       this.saveSettings();
     });
   }
@@ -219,10 +219,6 @@ export class AppDataService {
   private loadSettings(): void {
     const rawJson = localStorage.getItem('appSettings') ?? '{}';
     const d: AppSettings = JSON.parse(rawJson);
-    this._scouterName = d.scouterName;
-    this._eventKey = d.eventKey;
-    this._teamKey = d.secretKey;
-    this._secretKey = d.secretKey;
     const teamCacheJson = localStorage.getItem('_eventTeamsCache') ?? '[]';
     this._eventTeamsCache = JSON.parse(teamCacheJson);
     const scoutDataJson = localStorage.getItem('_heldScoutData') ?? '[]';
@@ -231,6 +227,10 @@ export class AppDataService {
     this._heldPitData = JSON.parse(pitDataJson).splice(0, 1);
     const eventListJson = localStorage.getItem('_eventList') ?? '[]';
     this._eventList = JSON.parse(eventListJson).splice(0, 1);
+    this._scouterName = d.scouterName;
+    this.eventKey = d.eventKey;
+    this._teamKey = d.secretKey;
+    this._secretKey = d.secretKey;
   }
 
   /*

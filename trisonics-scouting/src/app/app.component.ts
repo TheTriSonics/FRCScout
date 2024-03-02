@@ -40,7 +40,19 @@ export class AppComponent {
     public router: Router,
   ) { }
 
+  public checkSettingsValid(): void {
+    if (this.appData.teamKey.length == 0
+        ||
+        this.appData.scouterName.length == 0
+        ||
+        this.appData.eventKey.length == 0
+    ) {
+      this.goToSettings();
+    }
+  }
+
   public ngOnInit(): void {
+    this.checkSettingsValid();
     this.breakpoint$.subscribe(() => {
       console.log('something');
       this.fullDisplay = false;
@@ -98,5 +110,6 @@ export class AppComponent {
   }
 
   public goToSettings(): void {
+    this.router.navigate(['/settings'])
   }
 }

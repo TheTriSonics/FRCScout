@@ -5,6 +5,7 @@ import { ScoutPitComponent } from './components/scout-pit/scout-pit.component';
 import { PitViewComponent } from './components/pit-view/pit-view.component';
 import { DisplayScheduleComponent } from './components/display-schedule/display-schedule.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import HeldDataComponent from './components/held-data/held-data.component';
 
 const routes: Routes = [
   /*
@@ -33,6 +34,10 @@ const routes: Routes = [
     path: 'settings',
     component: SettingsComponent,
   },
+  {
+    path: 'helddata',
+    component: HeldDataComponent,
+  },
   /*
   {
     path: 'view-results',
@@ -49,10 +54,6 @@ const routes: Routes = [
   {
     path: '',
     component: SettingsComponent,
-  },
-  {
-    path: 'helddata',
-    component: HeldDataComponent,
   },
   */
 
