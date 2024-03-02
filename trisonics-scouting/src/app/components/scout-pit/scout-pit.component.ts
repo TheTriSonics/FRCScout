@@ -129,7 +129,7 @@ export class ScoutPitComponent implements OnInit {
   }
 
   public resetForm(): void {
-    this.fgScoutPit.get('scoutingTeam')?.setValue('');
+    this.fgScoutPit.get('scoutingTeam')?.setValue(0);
     this.imageList = [];
   }
 

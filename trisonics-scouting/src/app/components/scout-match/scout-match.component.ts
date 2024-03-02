@@ -20,7 +20,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
 
   public matchList: TBAMatch[] = [];
 
-  public matchNumber: number | undefined = undefined;
+  public matchNumber: number = 0;
 
   public blueBots: TBATeam[] = [];
 
@@ -37,7 +37,6 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   public fgMatch: FormGroup = new FormGroup({
     scoutingTeam: new FormControl(1, [
       Validators.required,
-      Validators.min(1),
     ]),
     match: new FormControl(1, [
       Validators.required,
@@ -181,6 +180,12 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
+  get scoutingTeamSelected(): boolean {
+    const val = this.fgMatch.get('scoutingTeam')?.value;
+    console.log('scouting team value', val);
+    return val > 1;
+  }
+
   public uploadData(): void {
     if (this.fgMatch.valid) {
       this.appData.scoutingData.scouter_name = this.appData.scouterName;
@@ -259,7 +264,6 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
       this.blueBots = [] as TBATeam[]
       this.redBots = [] as TBATeam[]
       const match = this.matchList.find((m) => m.match_number == this.matchNumber) as TBAMatch;
-      console.log(match)
       match?.alliances.blue.team_keys.forEach((t) => {
         const team = this.fullTeamList.find((ft) => `frc${ft.number}` === t) as TBATeam;
         this.blueBots.push(team);
@@ -270,7 +274,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
         this.redBots.push(team);
         teamList.push(team);
       });
-      console.log('returning', teamList);
+      // console.log('returning', teamList);
       return teamList
     }
     return [] as TBATeam[];

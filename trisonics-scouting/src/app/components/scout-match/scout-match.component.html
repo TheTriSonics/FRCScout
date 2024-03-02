@@ -24,8 +24,10 @@
       </mat-select>
     </mat-form-field>
   </div>
-  <div class="flex-row" *ngIf="this.matchNumber != 0">
-    <button mat-raised-button color="ts-red" class="upload-data-button" (click)="this.beginScouting()">Begin Scouting!</button>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-red" class="upload-data-button"
+    *ngIf="this.scoutingTeamSelected"
+    (click)="this.beginScouting()">Begin Scouting!</button>
   </div>
   </ng-container>
 </form>
@@ -33,8 +35,9 @@
 <div class="flex-col" *ngIf="this.scoutingActive">
     <!-- Auton Controls -->
   <div class="flex-row game-section">
-    <h2 class="mat-h2">Autonomous</h2>
+    <h1 class="mat-h1 game-section">Autonomous</h1>
   </div>
+
   <div class="flex-row">
       <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Did Nothing</mat-checkbox>
   </div>
