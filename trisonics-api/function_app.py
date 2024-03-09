@@ -463,7 +463,7 @@ def get_scouting_data(secret_team_key=None, event_key=None):
             if c in df.columns:
                 df[c] = df[c].astype(int)
         df.drop_duplicates(inplace=True, ignore_index=True, keep='last')
-        df.fillna(inplace=True)
+        df.fillna(inplace=True, value=0)
     return df
 
 
