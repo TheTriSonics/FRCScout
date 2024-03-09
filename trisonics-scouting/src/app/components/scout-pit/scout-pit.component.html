@@ -35,8 +35,13 @@
     </p>
   </div>
   <div class="flex-row">
-    <mat-slider class="scout-input" thumbLabel
-      min="-10" max="10" step="1" tickInterval="1" value="0" formControlName="robotRating"></mat-slider>
+    <mat-select formControlName="robotRating" class="rating-select">
+      <mat-option *ngFor="let r of this.ratings" [value]="r">{{r}}</mat-option>
+    </mat-select>
+    <!--
+    <mat-slider class="scout-input" thumbLabel ngDefaultControl
+      min="-10" max="10" step="1" tickInterval="1" value="0"></mat-slider>
+    -->
   </div>
   <div class="flex-row section-header">
     <h2 class="mat-h2">Robot Notes</h2>

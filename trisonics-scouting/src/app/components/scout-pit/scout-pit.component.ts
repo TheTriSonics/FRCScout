@@ -32,6 +32,8 @@ export class ScoutPitComponent implements OnInit {
 
   public matchesLoaded = false;
 
+  public ratings: number[] = Array.from({ length: 21 }, (_, index) => index - 10);
+
   public fgScoutPit: FormGroup = new FormGroup({
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     teamKey: new FormControl(this.appData.teamKey, Validators.required),
@@ -63,6 +65,7 @@ export class ScoutPitComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    console.log('ratings', this.ratings);
     this.fgScoutPit.get('eventKey')?.valueChanges.subscribe((eventKey) => {
       this.appData.eventKey = eventKey;
       this.loadData();
