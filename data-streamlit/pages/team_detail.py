@@ -47,8 +47,8 @@ if team:
     comp_cols = [c for c in allcols if c.startswith("comp")]
     comp_df = tdf[comp_cols]
 
-    st.subheader("Computed")
-    st.bar_chart(comp_df)
+    # st.subheader("Computed")
+    # st.bar_chart(comp_df)
 
     st.subheader("Auton")
     st.bar_chart(auton_df)
