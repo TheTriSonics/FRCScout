@@ -69,6 +69,10 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     });
   }
 
+  get matchCount(): number {
+    return this.matchList.length;
+  }
+
   get loadingData(): boolean {
     return this.loadingTeams && this.loadingMatches;
   }

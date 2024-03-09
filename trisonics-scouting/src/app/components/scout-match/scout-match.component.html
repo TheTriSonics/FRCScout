@@ -24,6 +24,10 @@
       </mat-select>
     </mat-form-field>
   </div>
+  <div *ngIf="this.matchCount == 0">
+    No matches published yet. The event must first finalize the schedule
+    before this screen will be available.
+  </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-red" class="upload-data-button"
     *ngIf="this.scoutingTeamSelected"
