@@ -22,7 +22,7 @@ orig_score_vectors = score_vectors.copy()
 st.dataframe(score_vectors)
 
 simp = alt.Chart(orig_score_vectors).mark_circle().encode(
-    x='comp_teleop_piece_points', y='comp_auto_piece_points',  # color='pca3',
+    x='teleop_amp', y='teleop_speaker',  # color='pca3',
     tooltip='scouting_team',
 ).interactive()
 
