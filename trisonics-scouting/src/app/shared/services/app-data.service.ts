@@ -110,6 +110,8 @@ export class AppDataService {
 
   private _eventName = '';
 
+  private _showConfetti = true;
+
   // Shorthand to prevent using the full name to the environment setting
   private baseUrl = environment.baseUrl;
 
@@ -162,6 +164,15 @@ export class AppDataService {
     return this._eventName || 'undefined';
   }
 
+  public set showConfetti(v: boolean) {
+    this._showConfetti = v;
+    this.saveSettings();
+  }
+
+  public get showConfetti(): boolean {
+    return this._showConfetti;
+  }
+
   constructor(private httpClient: HttpClient) {
     /*
     Only one instance of this object will ever be created, at startup, so
@@ -182,6 +193,7 @@ export class AppDataService {
   */
   private saveSettings(): void {
     const d: AppSettings = {
+      showConfetti: this.showConfetti,
       scouterName: this.scouterName,
       secretKey: this.secretKey,
       eventKey: this.eventKey,

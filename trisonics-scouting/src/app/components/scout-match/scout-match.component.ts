@@ -89,8 +89,10 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public launchConfetti(): void {
-    this.confetti.canon(45, 0.1);
-    this.confetti.canon(135, 0.9);
+    if (this.appData.showConfetti) {
+      this.confetti.canon(45, 0.1);
+      this.confetti.canon(135, 0.9);
+    }
   }
 
 

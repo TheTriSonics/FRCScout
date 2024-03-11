@@ -25,6 +25,7 @@ export class SettingsComponent implements OnInit {
   public matchList: TBAMatch[] = [];
 
   public fgSettings: FormGroup = new FormGroup({
+    showConfetti: new FormControl(this.appData.showConfetti),
     teamKey: new FormControl(this.appData.teamKey),
     scouterName: new FormControl(this.appData.scouterName, Validators.required),
     eventKey: new FormControl(this.appData.eventKey, Validators.required),
