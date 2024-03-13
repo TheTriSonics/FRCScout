@@ -109,6 +109,18 @@ def get_teams_for_event(req: func.HttpRequest) -> func.HttpResponse:
         status_code=200
     )
 
+@app.function_name(name="GetStatboticsMatches")
+@app.route(route="GetStatboticsMatches", auth_level=func.AuthLevel.ANONYMOUS)
+def get_matches_for_event(req: func.HttpRequest) -> func.HttpResponse:
+    event_key = req.params.get('event_key')
+    df = get_statbotics_matches(event_key)
+    json_obj = df.to_json(orient='records')
+    return func.HttpResponse(
+        json_obj,
+        status_code=200
+    )
+
+
 @app.function_name(name="GetMatchesForEvent")
 @app.route(route="GetMatchesForEvent", auth_level=func.AuthLevel.ANONYMOUS)
 def get_matches_for_event(req: func.HttpRequest) -> func.HttpResponse:
@@ -261,6 +273,17 @@ def rebuild_data(req: func.TimerRequest) -> None:
 """
 
 
+def get_statbotics_url_as_df(url):
+    statbot = 'https://api.statbotics.io/v3'
+    full_url = f'{statbot}{url}'
+    logging.info('statboturl')
+    logging.info(full_url)
+    r = requests.get(full_url)
+    json_data = r.text
+    df = pd.read_json(io.StringIO(json_data))
+    return df
+
+
 def get_tba_url_as_df(url):
     """
     Retrieves a URL from The Blue Alliance and converts it to a dataframe
@@ -280,6 +303,11 @@ def get_tba_url_as_df(url):
     json_data = r.text
     logging.error(json_data)
     df = pd.read_json(io.StringIO(json_data))
+    return df
+
+
+def get_statbotics_matches(event_key):
+    df = get_statbotics_url_as_df(f'/matches?event={event_key}')
     return df
 
 
