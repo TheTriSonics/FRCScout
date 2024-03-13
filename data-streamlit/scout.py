@@ -25,18 +25,7 @@ def fix_session():
 
 def fix_page_names():
     stp_dir = os.environ.get('STP_DIR') or '.'
-    stp.show_pages(
-        [
-            stp.Page(f'{stp_dir}/scout.py', 'Config'),
-            stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
-            stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
-            stp.Page(f'{stp_dir}/pages/pca.py', 'PCA'),
-            stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
-            stp.Page(f'{stp_dir}/pages/picklist.py', 'Pick Lists'),
-            stp.Page(f'{stp_dir}/pages/what_if.py', 'What If'),
-            stp.Page(f'{stp_dir}/pages/app_status.py', 'Workspace'),
-        ]
-    )
+    stp.show_pages(_gen_pages(stp_dir))
 
 
 def get_team_list_url(event_key):
@@ -50,6 +39,10 @@ def get_scouted_data_url(secret_key, event_key):
         raise ValueError('secret_key needs to be defined')
 
 
+def get_matches_data_url(event_key):
+    return f"{base_url}/GetMatchesForEvent?event_key={event_key}"  # noqa
+
+
 def get_opr_data_url(secret_key, event_key):
     return f"{base_url}/GetOPRData?secret_team_key={secret_key}&event_key={event_key}"  # noqa
 
@@ -58,19 +51,46 @@ def get_pit_data_url(secret_key, event_key, team_key):
     return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
 
 
-stp_dir = os.environ.get('STP_DIR') or '.'
-stp.show_pages(
-    [
+def get_secret_key():
+    ret = None
+    if 'secret_key' in st.session_state:
+        ret = st.session_state.secret_key
+    if 'secret_key' in st.query_params:
+        ret = st.query_params.secret_key
+        st.session_state.secret_key = ret
+    print(f'secret_key: {ret}')
+    return ret
+
+
+def get_event_key():
+    ret = None
+    if 'event_key' in st.session_state:
+        ret = st.session_state.event_key
+    if 'event_key' in st.query_params:
+        ret = st.query_params.event_key
+        st.session_state.event_key = ret
+    print(f'event_key: {ret}')
+    return ret
+
+
+
+
+def _gen_pages(stp_dir, secret_key=None, event_key=None):
+    return [
         stp.Page(f'{stp_dir}/scout.py', 'Config'),
         stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
         stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
         stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
         stp.Page(f'{stp_dir}/pages/picklist.py', 'Pick Lists'),
+        stp.Page(f'{stp_dir}/pages/match_breakdowns.py',
+                 'Match Breakdowns'),
         stp.Page(f'{stp_dir}/pages/what_if.py', 'What If'),
         stp.Page(f'{stp_dir}/pages/app_status.py', 'Workspace'),
     ]
-)
 
+
+stp_dir = os.environ.get('STP_DIR') or '.'
+stp.show_pages(_gen_pages(stp_dir))
 
 p = False
 
@@ -92,6 +112,14 @@ def load_event_data(secret_key, event_key):
 
 
 @st.cache_data(persist=p)
+def load_matches_data(event_key):
+    url = get_matches_data_url(event_key)
+    print(url)
+    df = pd.read_json(url)
+    return df
+
+
+@st.cache_data(persist=p)
 def load_pit_data(secret_key, event_key, team_key):
     url = get_pit_data_url(secret_key, event_key, team_key)
     print(url)
@@ -105,6 +133,9 @@ def load_opr_data(secret_key, event_key):
     print(url)
     opr_data = pd.read_json(url)
     return opr_data
+
+def load_tba_opr_data(event_key):
+    pass
 
 
 def get_dnp():
@@ -121,18 +152,6 @@ def get_fsp():
         return [x[0] for x in data]
     else:
         return []
-
-
-def get_secret_key():
-    if 'secret_key' in st.session_state:
-        return st.session_state.secret_key
-    return None
-
-
-def get_event_key():
-    if 'event_key' in st.session_state:
-        return st.session_state.event_key
-    return None
 
 
 def load_data():
@@ -178,11 +197,21 @@ def main():
         # import os
         # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
         st.session_state['secret_key'] = ''
+    if 'event_key' not in st.session_state:
+        st.session_state['event_key'] = ''
 
     with st.expander('Instructions'):
         st.write(instructions)
-    st.text_input("Secret key", key='secret_key')
-    st.text_input("Event key", key='event_key')
+    if 'secret_key' in st.query_params:
+        secret_key = st.query_params['secret_key']
+        st.session_state.secret_key = secret_key
+    else:
+        st.text_input("Secret key", key='secret_key')
+    if 'event_key' in st.query_params:
+        event_key = st.query_params['event_key']
+        st.session_state.event_key = event_key
+    else:
+        st.text_input("Event key", key='event_key')
     st.button('Load Data', on_click=load_data)
 
 
