@@ -7,6 +7,7 @@ import st_pages as stp
 from os.path import exists
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
+statbot_url = "https://api.statbotics.io/v3"
 
 
 instructions = """
@@ -115,6 +116,14 @@ def load_event_data(secret_key, event_key):
 def load_matches_data(event_key):
     url = get_matches_data_url(event_key)
     print(url)
+    df = pd.read_json(url)
+    return df
+
+
+@st.cache_data(persist=p)
+def load_statbot_matches_data(event_key):
+    url = f'{base_url}/GetStatboticsMatches?event_key={event_key}'
+    print('statbot url', url)
     df = pd.read_json(url)
     return df
 
