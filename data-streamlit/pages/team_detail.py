@@ -35,29 +35,29 @@ if team:
     # Gets a list of every column name in the dataframe
     allcols = tdf.columns
     # Now we can create new dataframes where we only see the auto columns
-    auton_cols = [c for c in allcols if c.startswith("auto")]
+    auton_cols = [c for c in allcols if c.startswith("auto") or c == 'match_key']
     auton_df = tdf[auton_cols]
     # And then teleop...
-    teleop_cols = [c for c in allcols if c.startswith("tele")]
+    teleop_cols = [c for c in allcols if c.startswith("tele") or c == 'match_key']
     teleop_df = tdf[teleop_cols]
     # And endgame.
-    endgame_cols = [c for c in allcols if c.startswith("endgame")]
+    endgame_cols = [c for c in allcols if c.startswith("endgame") or c == 'match_key']
     endgame_df = tdf[endgame_cols]
     # And our computed ones
-    comp_cols = [c for c in allcols if c.startswith("comp")]
-    comp_df = tdf[comp_cols]
+    # comp_cols = [c for c in allcols if c.startswith("comp")]
+    # comp_df = tdf[comp_cols]
 
     # st.subheader("Computed")
     # st.bar_chart(comp_df)
 
     st.subheader("Auton")
-    st.bar_chart(auton_df)
+    st.bar_chart(auton_df, x='match_key')
 
     st.subheader("Teleop")
-    st.bar_chart(teleop_df)
+    st.bar_chart(teleop_df, x='match_key')
 
     st.subheader("Endgame")
-    st.bar_chart(endgame_df)
+    st.bar_chart(endgame_df, x='match_key')
 
     # Show the pit scouting data
     st.header("Pit Scouting")
