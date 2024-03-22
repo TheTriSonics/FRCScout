@@ -13,7 +13,9 @@ export interface ScoutResult {
   auto_speaker: number,
 
   teleop_amp: number,
+  teleop_amp_missed: number,
   teleop_speaker: number,
+  teleop_speaker_missed: number,
 
   endgame_park: boolean,
   endgame_onstage: boolean,

@@ -84,12 +84,29 @@
   </div>
 
   <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Amps MISSED</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopAmpMissDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_amp_missed }}</span>
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopAmpMissInc()">+</button>
+  </div>
+
+  <div class="flex-row score-label">
     <h4 class="mat-h4 game-element">Speakers</h4>
   </div>
   <div class="flex-row">
     <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopSpeakerDec()">-</button>
     <span class="score">{{ this.appData.scoutingData.teleop_speaker }}</span>
     <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopSpeakerInc()">+</button>
+  </div>
+  <div class="flex-row score-label">
+    <h4 class="mat-h4 game-element">Speakers MISSED</h4>
+  </div>
+  <div class="flex-row">
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopSpeakerMissDec()">-</button>
+    <span class="score">{{ this.appData.scoutingData.teleop_speaker_missed }}</span>
+    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopSpeakerMissInc()">+</button>
   </div>
   <div class="flex-row game-section">
     <h2 class="mat-h2">End Game</h2>

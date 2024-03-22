@@ -141,6 +141,21 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
+  public teleopAmpMissInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_amp_missed) {
+      this.appData.scoutingData.teleop_amp_missed = 0;
+    }
+    this.appData.scoutingData.teleop_amp_missed += 1;
+  }
+
+  public teleopAmpMissDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_amp_missed > 0) {
+      this.appData.scoutingData.teleop_amp_missed -= 1;
+    }
+  }
+
   public teleopSpeakerInc(): void {
     this.launchConfetti();
     if (!this.appData.scoutingData.teleop_speaker) {
@@ -153,6 +168,21 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     this.launchConfetti();
     if (this.appData.scoutingData.teleop_speaker > 0) {
       this.appData.scoutingData.teleop_speaker -= 1;
+    }
+  }
+
+  public teleopSpeakerMissInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_speaker_missed) {
+      this.appData.scoutingData.teleop_speaker_missed = 0;
+    }
+    this.appData.scoutingData.teleop_speaker_missed += 1;
+  }
+
+  public teleopSpeakerMissDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_speaker_missed > 0) {
+      this.appData.scoutingData.teleop_speaker_missed -= 1;
     }
   }
 
