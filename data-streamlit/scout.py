@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import urllib
 import streamlit as st
 import st_pages as stp
 
@@ -184,12 +185,17 @@ def load_data():
         st.error("Event team list failed.")
         all_loaded = False
 
-    _ = load_opr_data(secret_key, event_key)
-    if len(_.index) > 0:
-        st.success("OPR calculations loaded")
-    else:
-        st.success("OPR calculation load failed.")
-        all_loaded = False
+    try:
+        _ = load_opr_data(secret_key, event_key)
+        if len(_.index) > 0:
+            st.success("OPR calculations loaded")
+        else:
+            st.success("OPR calculation load failed.")
+            all_loaded = False
+    except urllib.error.HTTPError:  # noqa
+        # Swallow eception
+        st.success("OPR calculation not available yet.")
+        pass
     if all_loaded:
         st.success("All data loaded! Proceed!")
 

@@ -1,3 +1,4 @@
+import urllib
 import streamlit as st
 import pandas as pd
 
@@ -8,7 +9,6 @@ from scout import (
 
 pd.options.mode.copy_on_write = True
 
-
 fix_session()
 
 sk = get_secret_key()
@@ -16,24 +16,9 @@ ek = get_event_key()
 
 td = None
 matches = None
-if get_event_key():
+if ek:
     event = load_event_data(get_secret_key(), get_event_key())
     td = load_team_data(get_event_key())
-
-
-def avail_teams():
-    if td is None:
-        return []
-    selected_teams = []
-    for x in range(8):
-        try:
-            selected_teams += alliance[x]['team_select']
-        except KeyError:
-            pass  # Ignore
-    all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
-    rem_teams = [t for t in all_teams if t not in selected_teams]
-    return rem_teams
-
 
 st.header('Match Breakdowns')
 with st.expander('Instructions'):
@@ -45,9 +30,17 @@ event = load_event_data(sk, ek)
 # st.dataframe(event)
 
 matches = load_matches_data(ek)
+team_data = load_team_data(ek)
 
-oprdata = load_opr_data(sk, ek)
-opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+print(team_data.columns)
+st.selectbox('Team', team_data, placeholder='Select a team')
+
+try:
+    oprdata = load_opr_data(sk, ek)
+    opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+except urllib.error.HTTPError:
+    oprdata = None
+    opr_totalpoints = None
 matches = matches[matches['comp_level'] == 'qm']
 # Order the matches dataframe by the match_number column
 matches = matches.sort_values(by='match_number').reset_index(drop=True)
@@ -70,14 +63,20 @@ pblue.columns = ['blue1', 'blue2', 'blue3']
 pred.columns = ['red1', 'red2', 'red3']
 matches = matches.join(pblue).join(pred)
 
-for color in ['blue', 'red']:
-    for index in [1, 2, 3]:
-        matches = matches.join(opr_totalpoints.set_index('teamNumber'), on=f'{color}{index}')
-        matches.rename(columns={'totalPoints': f'{color}{index}_totalPoints'}, inplace=True)
+if opr_totalpoints is not None:
+    for color in ['blue', 'red']:
+        for index in [1, 2, 3]:
+            matches = matches.join(
+                opr_totalpoints.set_index('teamNumber'),
+                on=f'{color}{index}'
+            )
+            matches.rename(
+                columns={'totalPoints': f'{color}{index}_totalPoints'},
+                inplace=True
+            )
 # st.dataframe(matches)
 
 statbotics = load_statbot_matches_data('2024milac')
-print(statbotics.columns)
 preds = statbotics[['comp_level', 'match_number', 'pred']]
 preds = preds[preds['comp_level'] == 'qm']
 pred_detail = preds.join(pd.json_normalize(preds['pred']))
@@ -96,7 +95,6 @@ matches = matches.join(actual_detail.set_index('match_number')
                        on='match_number')
 
 
-print(matches.columns)
 for panda_idx, match in matches.iterrows():
     with st.container(border=8):
         # Display the match number
@@ -112,7 +110,10 @@ for panda_idx, match in matches.iterrows():
                     for bot in [1, 2, 3]:
                         team_num = match[f'{color}{bot}']
                         team_nums.append(team_num)
-                        opr_total = match[f'{color}{bot}_totalPoints']
+                        if opr_totalpoints is not None:
+                            opr_total = match[f'{color}{bot}_totalPoints']
+                        else:
+                            opr_total = 0
                         total_point_oprs.append(opr_total)
                         alliance_opr_total += opr_total
                     pred_winner = match[f'winner_pred'] == color
@@ -130,7 +131,12 @@ for panda_idx, match in matches.iterrows():
                     st.table(team_breakdown.style.format(precision=1))
                     score_pred = match[f'{color}_score_pred']
                     score_actual = match[f'{color}_score_actual']
-                    stats[color] = [alliance_opr_total, score_pred, score_actual]
+                    stats[color] = [
+                        alliance_opr_total,
+                        score_pred,
+                        score_actual
+                    ]
+        # JJB: I'm not thrilled with my indent level above
         misc_breakdown = pd.DataFrame({
             'Label': ['Total TP OPR',
                       'Score Predicted',
