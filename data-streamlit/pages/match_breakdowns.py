@@ -76,7 +76,7 @@ if opr_totalpoints is not None:
             )
 # st.dataframe(matches)
 
-statbotics = load_statbot_matches_data('2024milac')
+statbotics = load_statbot_matches_data(get_event_key())
 preds = statbotics[['comp_level', 'match_number', 'pred']]
 preds = preds[preds['comp_level'] == 'qm']
 pred_detail = preds.join(pd.json_normalize(preds['pred']))
