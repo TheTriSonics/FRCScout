@@ -133,6 +133,7 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
             align='left',
             baseline='top',
             color='blue',
+            fontSize=16,
             dx=5,
         ).encode(
             text='scouting_team'
