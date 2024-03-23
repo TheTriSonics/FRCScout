@@ -33,7 +33,7 @@ matches = load_matches_data(ek)
 team_data = load_team_data(ek)
 
 print(team_data.columns)
-st.selectbox('Team', team_data, placeholder='Select a team')
+team_filter = st.multiselect('Team', team_data, placeholder='Select a team')
 
 try:
     oprdata = load_opr_data(sk, ek)
@@ -62,6 +62,15 @@ pred = redteams.pivot(columns='robot_num', values='red.team_keys')
 pblue.columns = ['blue1', 'blue2', 'blue3']
 pred.columns = ['red1', 'red2', 'red3']
 matches = matches.join(pblue).join(pred)
+
+if team_filter:
+    print(team_filter)
+    matches = matches[(matches['red1'].isin(team_filter)) |
+                 (matches['red2'].isin(team_filter)) |
+                 (matches['red3'].isin(team_filter)) |
+                 (matches['blue1'].isin(team_filter)) |
+                 (matches['blue2'].isin(team_filter)) |
+                 (matches['blue3'].isin(team_filter))]
 
 if opr_totalpoints is not None:
     for color in ['blue', 'red']:
