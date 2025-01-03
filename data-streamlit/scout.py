@@ -3,7 +3,6 @@ import json
 import pandas as pd
 import urllib
 import streamlit as st
-import st_pages as stp
 
 from os.path import exists
 
@@ -23,11 +22,6 @@ instructions = """
 
 def fix_session():
     st.session_state.update(st.session_state)
-
-
-def fix_page_names():
-    stp_dir = os.environ.get('STP_DIR') or '.'
-    stp.show_pages(_gen_pages(stp_dir))
 
 
 def get_team_list_url(event_key):
@@ -79,20 +73,16 @@ def get_event_key():
 
 def _gen_pages(stp_dir, secret_key=None, event_key=None):
     return [
-        stp.Page(f'{stp_dir}/scout.py', 'Config'),
-        stp.Page(f'{stp_dir}/pages/explore.py', 'Explore Data'),
-        stp.Page(f'{stp_dir}/pages/team_detail.py', 'Team Details'),
-        stp.Page(f'{stp_dir}/pages/clusters.py', 'Clustering'),
-        stp.Page(f'{stp_dir}/pages/picklist.py', 'Pick Lists'),
-        stp.Page(f'{stp_dir}/pages/match_breakdowns.py',
-                 'Match Breakdowns'),
-        stp.Page(f'{stp_dir}/pages/what_if.py', 'What If'),
-        stp.Page(f'{stp_dir}/pages/app_status.py', 'Workspace'),
+        st.Page(f'{stp_dir}/scout.py', title='Config'),
+        st.Page(f'{stp_dir}/pages/explore.py', title='Explore Data'),
+        st.Page(f'{stp_dir}/pages/team_detail.py', title='Team Details'),
+        st.Page(f'{stp_dir}/pages/clusters.py', title='Clustering'),
+        st.Page(f'{stp_dir}/pages/picklist.py', title='Pick Lists'),
+        st.Page(f'{stp_dir}/pages/match_breakdowns.py',
+                 title='Match Breakdowns'),
+        st.Page(f'{stp_dir}/pages/what_if.py', title='What If'),
+        st.Page(f'{stp_dir}/pages/app_status.py', title='Workspace'),
     ]
-
-
-stp_dir = os.environ.get('STP_DIR') or '.'
-stp.show_pages(_gen_pages(stp_dir))
 
 p = False
 
@@ -208,6 +198,9 @@ def main():
 
     st.title("Trisonics FRC Scouting")
 
+    pg = st.navigation(_gen_pages('.'))
+    pg.run()
+
     if 'secret_key' not in st.session_state:
         # import os
         # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
@@ -241,5 +234,4 @@ def load_dev_config():
 if __name__ == '__main__':
     load_dev_config()
     fix_session()
-    fix_page_names()
     main()
