@@ -10,12 +10,6 @@ def apply_state():
     st.session_state.update(obj)
 
 
-def copy_state():
-    json_str = json.dumps(obj, indent=4, sort_keys=True)
-    clipboard.copy(json_str)
-    st.toast('Copy to clipboard complete!')
-
-
 fix_session()
 
 # Create text input that lets us paste in the JSON status of our app
@@ -28,7 +22,6 @@ apply = st.button('Apply', on_click=apply_state)
 # top right
 obj = dict(st.session_state)
 st.subheader('Current state')
-apply = st.button('Copy to clipboard', on_click=copy_state)
 st.code(
     json.dumps(obj, indent=4, sort_keys=True),
     language="json",
