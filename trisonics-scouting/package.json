@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.0.1",
-    "@angular/cli": "^17.0.1",
+    "@angular/cli": "^17.3.12",
     "@angular/compiler-cli": "^17.0.3",
     "@types/canvas-confetti": "^1.6.4",
     "@types/jasmine": "~5.1.0",

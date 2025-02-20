@@ -8,6 +8,7 @@ import { AppDataService } from 'src/app/shared/services/app-data.service';
 import * as _ from 'lodash';
 import ConfettiService from 'src/app/shared/services/confetti.service';
 
+
 @Component({
   selector: 'app-scout-match',
   templateUrl: './scout-match.component.html',
@@ -65,6 +66,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
       console.log('match list', ml);
       let qm = ml.filter((m) => m.comp_level === 'qm');
       this.matchList = _.sortBy(qm, (m) => +m.match_number);
+      console.log('sorted match list', this.matchList);
       this.loadingMatches = false;
     });
   }
@@ -95,126 +97,186 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
-
-  public autoAmpInc(): void {
+  public autoCoral4Inc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.auto_amp) {
-      this.appData.scoutingData.auto_amp = 0;
+    if (!this.appData.scoutingData.auto_coral4) {
+      this.appData.scoutingData.auto_coral4 = 0;
     }
-    this.appData.scoutingData.auto_amp += 1;
+    this.appData.scoutingData.auto_coral4 += 1;
   }
 
-  public autoAmpDec(): void {
+  public autoCoral4Dec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.auto_amp > 0) {
-      this.appData.scoutingData.auto_amp -= 1;
-    }
-  }
-
-  public autoSpeakerInc(): void {
-    this.launchConfetti();
-    if (!this.appData.scoutingData.auto_speaker) {
-      this.appData.scoutingData.auto_speaker = 0;
-    }
-    this.appData.scoutingData.auto_speaker += 1;
-  }
-
-  public autoSpeakerDec(): void {
-    this.launchConfetti();
-    if (this.appData.scoutingData.auto_speaker > 0) {
-      this.appData.scoutingData.auto_speaker -= 1;
+    if (this.appData.scoutingData.auto_coral4 > 0) {
+      this.appData.scoutingData.auto_coral4 -= 1;
     }
   }
 
-  public teleopAmpInc(): void {
+  public autoCoral3Inc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.teleop_amp) {
-      this.appData.scoutingData.teleop_amp = 0;
+    if (!this.appData.scoutingData.auto_coral3) {
+      this.appData.scoutingData.auto_coral3 = 0;
     }
-    this.appData.scoutingData.teleop_amp += 1;
+    this.appData.scoutingData.auto_coral3 += 1;
   }
 
-  public teleopAmpDec(): void {
+  public autoCoral3Dec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.teleop_amp > 0) {
-      this.appData.scoutingData.teleop_amp -= 1;
-    }
-  }
-
-  public teleopAmpMissInc(): void {
-    this.launchConfetti();
-    if (!this.appData.scoutingData.teleop_amp_missed) {
-      this.appData.scoutingData.teleop_amp_missed = 0;
-    }
-    this.appData.scoutingData.teleop_amp_missed += 1;
-  }
-
-  public teleopAmpMissDec(): void {
-    this.launchConfetti();
-    if (this.appData.scoutingData.teleop_amp_missed > 0) {
-      this.appData.scoutingData.teleop_amp_missed -= 1;
+    if (this.appData.scoutingData.auto_coral3 > 0) {
+      this.appData.scoutingData.auto_coral3 -= 1;
     }
   }
 
-  public teleopSpeakerInc(): void {
+  public autoCoral2Inc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.teleop_speaker) {
-      this.appData.scoutingData.teleop_speaker = 0;
+    if (!this.appData.scoutingData.auto_coral2) {
+      this.appData.scoutingData.auto_coral2 = 0;
     }
-    this.appData.scoutingData.teleop_speaker += 1;
+    this.appData.scoutingData.auto_coral2 += 1;
   }
 
-  public teleopSpeakerDec(): void {
+  public autoCoral2Dec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.teleop_speaker > 0) {
-      this.appData.scoutingData.teleop_speaker -= 1;
-    }
-  }
-
-  public teleopSpeakerMissInc(): void {
-    this.launchConfetti();
-    if (!this.appData.scoutingData.teleop_speaker_missed) {
-      this.appData.scoutingData.teleop_speaker_missed = 0;
-    }
-    this.appData.scoutingData.teleop_speaker_missed += 1;
-  }
-
-  public teleopSpeakerMissDec(): void {
-    this.launchConfetti();
-    if (this.appData.scoutingData.teleop_speaker_missed > 0) {
-      this.appData.scoutingData.teleop_speaker_missed -= 1;
+    if (this.appData.scoutingData.auto_coral2 > 0) {
+      this.appData.scoutingData.auto_coral2 -= 1;
     }
   }
 
-  public endgameTrapInc(): void {
+  public autoCoral1Inc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.endgame_trap) {
-      this.appData.scoutingData.endgame_trap = 0;
+    if (!this.appData.scoutingData.auto_coral1) {
+      this.appData.scoutingData.auto_coral1 = 0;
     }
-    this.appData.scoutingData.endgame_trap += 1;
+    this.appData.scoutingData.auto_coral1 += 1;
   }
 
-  public endgameTrapDec(): void {
+  public autoCoral1Dec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.endgame_trap > 0) {
-      this.appData.scoutingData.endgame_trap -= 1;
+    if (this.appData.scoutingData.auto_coral1 > 0) {
+      this.appData.scoutingData.auto_coral1 -= 1;
     }
   }
 
-  public endgameMicrophoneInc(): void {
+  public autoBargeInc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.endgame_microphone) {
-      this.appData.scoutingData.endgame_microphone = 0;
+    if (!this.appData.scoutingData.auto_barge) {
+      this.appData.scoutingData.auto_barge = 0;
     }
-    this.appData.scoutingData.endgame_microphone += 1;
+    this.appData.scoutingData.auto_barge += 1;
   }
 
-  public endgameMicrophoneDec(): void {
+  public autoBargeDec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.endgame_microphone > 0) {
-      this.appData.scoutingData.endgame_microphone -= 1;
+    if (this.appData.scoutingData.auto_barge > 0) {
+      this.appData.scoutingData.auto_barge -= 1;
     }
   }
+
+  public autoProcessorInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.auto_barge) {
+      this.appData.scoutingData.auto_barge = 0;
+    }
+    this.appData.scoutingData.auto_barge += 1;
+  }
+
+  public autoProcessorDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.auto_barge > 0) {
+      this.appData.scoutingData.auto_barge -= 1;
+    }
+  }
+
+  public teleopCoral4Inc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_coral4) {
+      this.appData.scoutingData.teleop_coral4 = 0;
+    }
+    this.appData.scoutingData.teleop_coral4 += 1;
+  }
+
+  public teleopCoral4Dec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_coral4 > 0) {
+      this.appData.scoutingData.teleop_coral4 -= 1;
+    }
+  }
+
+  public teleopCoral3Inc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_coral3) {
+      this.appData.scoutingData.teleop_coral3 = 0;
+    }
+    this.appData.scoutingData.teleop_coral3 += 1;
+  }
+
+  public teleopCoral3Dec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_coral3 > 0) {
+      this.appData.scoutingData.teleop_coral3 -= 1;
+    }
+  }
+
+  public teleopCoral2Inc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_coral2) {
+      this.appData.scoutingData.teleop_coral2 = 0;
+    }
+    this.appData.scoutingData.teleop_coral2 += 1;
+  }
+
+  public teleopCoral2Dec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_coral2 > 0) {
+      this.appData.scoutingData.teleop_coral2 -= 1;
+    }
+  }
+
+  public teleopCoral1Inc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_coral1) {
+      this.appData.scoutingData.teleop_coral1 = 0;
+    }
+    this.appData.scoutingData.teleop_coral1 += 1;
+  }
+
+  public teleopCoral1Dec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_coral1 > 0) {
+      this.appData.scoutingData.teleop_coral1 -= 1;
+    }
+  }
+
+  public teleopBargeInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_barge) {
+      this.appData.scoutingData.teleop_barge = 0;
+    }
+    this.appData.scoutingData.teleop_barge += 1;
+  }
+
+  public teleopBargeDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_barge > 0) {
+      this.appData.scoutingData.teleop_barge -= 1;
+    }
+  }
+
+  public teleopProcessorInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_processor) {
+      this.appData.scoutingData.teleop_processor = 0;
+    }
+    this.appData.scoutingData.teleop_processor += 1;
+  }
+
+  public teleopProcessorDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_processor > 0) {
+      this.appData.scoutingData.teleop_processor -= 1;
+    }
+  }
+
 
   get scoutingTeamSelected(): boolean {
     const val = this.fgMatch.get('scoutingTeam')?.value;
@@ -272,17 +334,23 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   }
 
   public resetForm(): void {
-    this.appData.scoutingData.auto_zone = false;
+    this.appData.scoutingData.auto_left_line = false;
     this.appData.scoutingData.auto_nothing = false;
-    this.appData.scoutingData.auto_amp = 0;
-    this.appData.scoutingData.auto_speaker = 0;
-    this.appData.scoutingData.teleop_amp = 0;
-    this.appData.scoutingData.teleop_speaker = 0;
-    this.appData.scoutingData.endgame_trap = 0;
-    this.appData.scoutingData.endgame_microphone = 0;
-    this.appData.scoutingData.endgame_harmony = false;
-    this.appData.scoutingData.endgame_onstage = false;
+    this.appData.scoutingData.auto_coral4 = 0;
+    this.appData.scoutingData.auto_coral3 = 0;
+    this.appData.scoutingData.auto_coral2 = 0;
+    this.appData.scoutingData.auto_coral1 = 0;
+    this.appData.scoutingData.auto_barge = 0;
+    this.appData.scoutingData.auto_processor = 0;
+    this.appData.scoutingData.teleop_coral4 = 0;
+    this.appData.scoutingData.teleop_coral3 = 0;
+    this.appData.scoutingData.teleop_coral2 = 0;
+    this.appData.scoutingData.teleop_coral1 = 0;
+    this.appData.scoutingData.teleop_barge = 0;
+    this.appData.scoutingData.teleop_processor = 0;
     this.appData.scoutingData.endgame_park = false;
+    this.appData.scoutingData.endgame_hang_shallow = false;
+    this.appData.scoutingData.endgame_hang_deep = false;
     this.appData.scoutingData.match_notes = '';
   }
 
@@ -299,7 +367,11 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
       const teamList: TBATeam[] = [];
       this.blueBots = [] as TBATeam[]
       this.redBots = [] as TBATeam[]
-      const match = this.matchList.find((m) => m.match_number == this.matchNumber) as TBAMatch;
+      let match = this.matchList.find((m) => m.match_number == this.matchNumber) as TBAMatch;
+      if (this.matchNumber === 0) {
+        match = this.matchList[0];
+
+      }
       match?.alliances.blue.team_keys.forEach((t) => {
         const team = this.fullTeamList.find((ft) => `frc${ft.number}` === t) as TBATeam;
         this.blueBots.push(team);
