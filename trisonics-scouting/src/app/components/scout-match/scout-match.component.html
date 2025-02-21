@@ -37,6 +37,7 @@
 </form>
 
 <div class="flex-col" *ngIf="this.scoutingActive">
+    <h2 class="mat-h2">Scouting {{this.fgMatch.get('scoutingTeam')?.value}}</h2>
     <!-- Preferences -->
     <div class="flex-row">
         <mat-checkbox [(ngModel)]="this.appData.showConfetti">Show Confetti Feedback?</mat-checkbox>
