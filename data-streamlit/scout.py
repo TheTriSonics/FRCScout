@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 import pandas as pd
 import urllib
 import streamlit as st
@@ -74,7 +75,7 @@ def get_event_key():
 def _gen_pages(stp_dir, secret_key=None, event_key=None):
     return [
         st.Page(f'{stp_dir}/scout.py', title='Config'),
-        st.Page(f'{stp_dir}/pages/explore.py', title='Explore Data'),
+        # st.Page(f'{stp_dir}/pages/explore.py', title='Explore Data'),
         st.Page(f'{stp_dir}/pages/team_detail.py', title='Team Details'),
         st.Page(f'{stp_dir}/pages/clusters.py', title='Clustering'),
         st.Page(f'{stp_dir}/pages/picklist.py', title='Pick Lists'),
@@ -94,12 +95,21 @@ def load_team_data(event_key):
     df = pd.read_json(url)
     return df
 
-
 @st.cache_data(persist=p)
 def load_event_data(secret_key, event_key):
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
     df = pd.read_json(url)
+    # Add a auton_coral_total column that adds up level, level2, etc.
+    df['auto_coral_total'] = (
+        df['auto_coral1'] + df['auto_coral2'] +
+        df['auto_coral3'] + df['auto_coral4']
+    )
+
+    df['teleop_coral_total'] = (
+        df['teleop_coral1'] + df['auto_coral2'] +
+        df['teleop_coral3'] + df['auto_coral4']
+    )
     return df
 
 
@@ -193,7 +203,6 @@ def load_data():
 def main():
     st.set_page_config(
         layout="wide",
-        page_title="Config",
     )
 
     st.title("Trisonics FRC Scouting")
