@@ -141,7 +141,7 @@ def load_tba_opr_data(event_key):
 def get_dnp():
     if 'pick_list_dnp' in st.session_state:
         data = st.session_state.pick_list_dnp
-        return [x[0] for x in data]
+        return data
     else:
         return []
 
@@ -149,7 +149,7 @@ def get_dnp():
 def get_fsp():
     if 'pick_list_fsp' in st.session_state:
         data = st.session_state.pick_list_fsp
-        return [x[0] for x in data]
+        return data
     else:
         return []
 
