@@ -18,7 +18,7 @@ logging.getLogger(
   ).setLevel(logging.WARNING)
 
 app = func.FunctionApp()
-_match_results_container = 'MatchResults2024'
+_match_results_container = 'MatchResults2025'
 
 
 @app.function_name(name="HelloWorld")
