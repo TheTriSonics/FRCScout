@@ -12,6 +12,38 @@ from scout import (
 
 norm = np.linalg.norm
 
+def add_pca_components(df, feature_columns):
+    from sklearn.preprocessing import StandardScaler
+    # Extract features
+    X = df[feature_columns].values
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Calculate covariance matrix
+    cov_matrix = np.cov(X_scaled.T)
+
+    # Calculate eigenvalues and eigenvectors
+    eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
+
+    # Sort eigenvectors by eigenvalues in descending order
+    idx = eigenvalues.argsort()[::-1]
+    eigenvectors = eigenvectors[:, idx]
+
+    # Get first two principal components
+    pca_transform = eigenvectors[:, :2]
+
+    # Project data onto first two principal components
+    pca_result = np.dot(X_scaled, pca_transform)
+
+    # Add PCA components to DataFrame
+    df_result = df.copy()
+    df_result['pca1'] = pca_result[:, 0]
+    df_result['pca2'] = pca_result[:, 1]
+
+    return df_result
+
 
 # TODO: Clean this up so we're not duplicating code
 def get_cluster_name(clusters, team_number):
@@ -52,7 +84,10 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
         .reset_index()
     )
     score_cols = [x for x in score_vectors.columns
-                  if x.startswith(('auto', 'tele', 'endgame', 'comp'))]
+                  if x.startswith(('auto', 'tele', 'endgame', 'comp', 'pca'))]
+    score_vectors = add_pca_components(score_vectors, score_cols)
+    score_cols = [x for x in score_vectors.columns
+                  if x.startswith(('auto', 'tele', 'endgame', 'comp', 'pca'))]
     variances = {}
     # Okay, we could do this with linear algebra. Might change it out
     # Have code in kmeans.ipynb notebook in project, but this gives the same
@@ -69,9 +104,11 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
         col2 = variances.values()
         var_df = pd.DataFrame({'measure': col1, 'var': col2})
         st.dataframe(var_df, hide_index=True)
-    data_cols = st.multiselect('Considered data', avail_cols,
-                               format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-                               default=avail_cols[:2])
+    data_cols = st.multiselect(
+        'Considered data', avail_cols,
+        format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
+        default=[col for col in avail_cols if not col[0].startswith('pca')]
+    )
 
     if len(data_cols) == 0:
         return  # Can't go on. Just abort
@@ -121,26 +158,33 @@ def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
     score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in score_vectors.scouting_team
     ]
+    pca_axes = st.checkbox(f'Use PCA for chart axis')
+    if pca_axes:
+        x_axis = 'pca1'
+        y_axis = 'pca2'
+    else:
+        x_axis = data_cols[0][0]
+        y_axis = data_cols[1][0]
 
-    if len(data_cols) >= 2:
-        simp = alt.Chart(score_vectors).mark_circle().encode(
-            x=data_cols[0][0], y=data_cols[1][0],
-            color='group_label',
-            tooltip='scouting_team',
-        ).interactive()
+    simp = alt.Chart(score_vectors).mark_circle().encode(
+        x=x_axis, y=y_axis,
+        color='group_label',
+        tooltip='scouting_team',
+    ).interactive()
 
-        simp_text = simp.mark_text(
-            align='left',
-            baseline='top',
-            color='blue',
-            fontSize=16,
-            dx=5,
-        ).encode(
-            text='scouting_team'
-        )
-        st.altair_chart(simp_text + simp,
-                        theme="streamlit",
-                        use_container_width=True)
+    simp_text = simp.mark_text(
+        align='left',
+        baseline='top',
+        color='blue',
+        fontSize=20,
+        dx=5,
+    ).encode(
+        text='scouting_team'
+    )
+
+    st.altair_chart(simp_text + simp,
+                    theme="streamlit",
+                    use_container_width=True)
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],
                                  reverse=True):
