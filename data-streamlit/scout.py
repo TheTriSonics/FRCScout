@@ -55,6 +55,8 @@ def get_secret_key():
     if 'secret_key' in st.query_params:
         ret = st.query_params.secret_key
         st.session_state.secret_key = ret
+    # Remove any leading or trailing whitespace from ret
+    ret = ret.strip()
     print(f'secret_key: {ret}')
     return ret
 
@@ -66,6 +68,7 @@ def get_event_key():
     if 'event_key' in st.query_params:
         ret = st.query_params.event_key
         st.session_state.event_key = ret
+    ret = ret.strip()
     print(f'event_key: {ret}')
     return ret
 
