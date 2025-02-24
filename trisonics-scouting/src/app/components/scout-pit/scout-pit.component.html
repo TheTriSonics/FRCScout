@@ -20,29 +20,6 @@
       </mat-select>
     </mat-form-field>
   </div>
-  <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" formControlName="hasWheelOmni">Omni Wheels</mat-checkbox>
-      <mat-checkbox class="dt-checkbox" formControlName="hasWheelMec">Mecanum Wheels</mat-checkbox>
-      <mat-checkbox class="dt-checkbox" formControlName="hasWheelInflated">Inflated Wheels</mat-checkbox>
-      <mat-checkbox class="dt-checkbox" formControlName="hasWheelSolid">Solid Wheels</mat-checkbox>
-  </div>
-  <div class="flex-row section-header">
-    <h2 class="mat-h2">Robot Pick Rating</h2>
-  </div>
-  <div class="flex-row">
-    <p class="mat-body">
-      A 10 means a must pick robot, a -10 is a do-not-pick robot.
-    </p>
-  </div>
-  <div class="flex-row">
-    <mat-select formControlName="robotRating" class="rating-select">
-      <mat-option *ngFor="let r of this.ratings" [value]="r">{{r}}</mat-option>
-    </mat-select>
-    <!--
-    <mat-slider class="scout-input" thumbLabel ngDefaultControl
-      min="-10" max="10" step="1" tickInterval="1" value="0"></mat-slider>
-    -->
-  </div>
   <div class="flex-row section-header">
     <h2 class="mat-h2">Robot Notes</h2>
   </div>

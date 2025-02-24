@@ -44,17 +44,6 @@ export class ScoutPitComponent implements OnInit {
     eventKey: new FormControl(this.appData.eventKey, Validators.required),
 
     driveTrain: new FormControl(''),
-    hasWheelOmni: new FormControl(false),
-    hasWheelMec: new FormControl(false),
-    hasWheelSolid: new FormControl(false),
-    hasWheelInflated: new FormControl(false),
-    lowGoal: new FormControl(false),
-    highGoal: new FormControl(false),
-    lowHang: new FormControl(false),
-    highHang: new FormControl(false),
-    midHang: new FormControl(false),
-    traversalHang: new FormControl(false),
-    robotRating: new FormControl(0),
     robotNotes: new FormControl(''),
   });
 
@@ -117,17 +106,9 @@ export class ScoutPitComponent implements OnInit {
       event_key: this.fgScoutPit.get('eventKey')?.value,
       scouting_team: this.fgScoutPit.get('scoutingTeam')?.value,
       drive_train: this.fgScoutPit.get('driveTrain')?.value,
-      wheel_omni: this.fgScoutPit.get('hasWheelOmni')?.value,
-      wheel_inflated: this.fgScoutPit.get('hasWheelInflated')?.value,
-      wheel_mec: this.fgScoutPit.get('hasWheelMec')?.value,
-      wheel_solid: this.fgScoutPit.get('hasWheelSolid')?.value,
-      robot_rating: this.fgScoutPit.get('robotRating')?.value,
       robot_notes: this.fgScoutPit.get('robotNotes')?.value,
       images: this.imageList,
     } as PitResult;
-    if (this.fgScoutPit.get('robotRating')?.dirty === false) {
-      ret.robot_rating = null;
-    }
     return ret;
   }
 
