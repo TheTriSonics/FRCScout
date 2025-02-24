@@ -23,6 +23,10 @@ export interface ScoutResult {
   teleop_processor: number,
   teleop_barge: number,
 
+  coral_ground_pickup: boolean,
+  algae_ground_pickup: boolean,
+  coral_human_pickup: boolean,
+
   endgame_park: boolean,
   endgame_hang_shallow: boolean,
   endgame_hang_deep: boolean,

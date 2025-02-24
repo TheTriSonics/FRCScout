@@ -206,6 +206,9 @@
       </div>
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral1Inc()">+</button>
     </div>
+    <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.coral_ground_pickup">Coral Ground Pickup</mat-checkbox>
+    </div>
 
     <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Algae - Barge</h4>
@@ -224,19 +227,24 @@
       <span class="score">{{ this.appData.scoutingData.teleop_processor }}</span>
       <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopProcessorInc()">+</button>
     </div>
+    <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.algae_ground_pickup">Algae Ground Pickup</mat-checkbox>
+    </div>
   </div>
-  <div class="flex-row game-section">
-    <h2 class="mat-h2">End Game</h2>
+  <div class="endgame-controls flex-col">
+    <div class="flex-row game-section">
+      <h2 class="mat-h2">End Game</h2>
+    </div>
+    <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_park">Parked</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_hang_shallow">Shallow Cage (higher) </mat-checkbox>
+    </div>
+    <div class="flex-row">
+      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_hang_deep">Deep Cage (close to ground)</mat-checkbox>
+    </div>
   </div>
-  <div class="flex-row">
-    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_park">Parked</mat-checkbox>
-</div>
-<div class="flex-row">
-    <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_hang_shallow">Shallow Cage (higher) </mat-checkbox>
-</div>
-<div class="flex-row">
-  <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.endgame_hang_deep">Deep Cage (close to ground)</mat-checkbox>
-</div>
 
   <div class="flex-row game-section">
     <h2 class="mat-h2">Match Notes</h2>
