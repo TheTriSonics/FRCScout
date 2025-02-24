@@ -49,13 +49,8 @@ export class AppDataService {
   from later.
   */
   public driveTrainList: string[] = [
-    'Tank (4 wheel)',
-    'Tank (6 wheel)',
-    'Tank (treads)',
-    'Drop Center (6 wheel)',
-    'Drop Center (8 wheel)',
     'Swerve',
-    'H drive',
+    'Tank',
   ];
 
   /*

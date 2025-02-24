@@ -43,127 +43,187 @@
         <mat-checkbox [(ngModel)]="this.appData.showConfetti">Show Confetti Feedback?</mat-checkbox>
     </div>
     <!-- Auton Controls -->
-  <div class="flex-row game-section">
-    <h1 class="mat-h1 game-section">Autonomous</h1>
+  <div class="auton-controls flex-col">
+    <div class="flex-row game-section">
+      <h1 class="mat-h1 game-section">Autonomous</h1>
+    </div>
+
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Did Nothing</mat-checkbox>
+    </div>
+    <div class="flex-row">
+        <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_left_line">Left Line</mat-checkbox>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 4</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral4Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level4.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.auto_coral4 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral4Inc()">+</button>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 3</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral3Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level3.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.auto_coral3 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral3Inc()">+</button>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 2</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral2Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level2.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.auto_coral2 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral2Inc()">+</button>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 1</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral1Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level1.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.auto_coral1 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral1Inc()">+</button>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Algae - Barge</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoBargeDec()">-</button>
+      <span class="score">{{ this.appData.scoutingData.auto_barge }}</span>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoBargeInc()">+</button>
+    </div>
+
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Algae - Processor</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoProcessorDec()">-</button>
+      <span class="score">{{ this.appData.scoutingData.auto_processor }}</span>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoProcessorInc()">+</button>
+    </div>
   </div>
 
-  <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_nothing">Did Nothing</mat-checkbox>
-  </div>
-  <div class="flex-row">
-      <mat-checkbox class="dt-checkbox" [(ngModel)]="this.appData.scoutingData.auto_left_line">Left Line</mat-checkbox>
-  </div>
+  <div class="teleop-controls flex-col">
+    <div class="flex-row game-section">
+      <h2 class="mat-h2">Teleop</h2>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 4</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral4Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_coral4 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral4Inc()">+</button>
-  </div>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 4</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral4Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level4.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.teleop_coral4 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral4Inc()">+</button>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 3</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral3Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_coral3 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral3Inc()">+</button>
-  </div>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 3</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral3Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level3.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.teleop_coral3 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral3Inc()">+</button>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 2</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral2Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_coral2 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral2Inc()">+</button>
-  </div>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 2</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral2Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level2.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.teleop_coral2 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral2Inc()">+</button>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 1</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral1Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_coral1 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoCoral1Inc()">+</button>
-  </div>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Coral 1</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral1Dec()">-</button>
+      <div class="flex-col">
+        <div class="flex-row">
+          <img class="scoring-hint" src="assets/coral_level1.png" height="50px" />
+        </div>
+        <div class="flex-row scored-number">
+          <span class="score">{{ this.appData.scoutingData.teleop_coral1 }}</span>
+        </div>
+      </div>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral1Inc()">+</button>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Algae - Barge</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoBargeDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_barge }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoBargeInc()">+</button>
-  </div>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Algae - Barge</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopBargeDec()">-</button>
+      <span class="score">{{ this.appData.scoutingData.teleop_barge }}</span>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopBargeInc()">+</button>
+    </div>
 
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Algae - Processor</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoProcessorDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.auto_processor }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.autoProcessorInc()">+</button>
-  </div>
-
-  <div class="flex-row game-section">
-    <h2 class="mat-h2">Teleop</h2>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 4</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral4Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_coral4 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral4Inc()">+</button>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 3</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral3Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_coral3 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral3Inc()">+</button>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 2</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral2Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_coral2 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral2Inc()">+</button>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Coral 1</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral1Dec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_coral1 }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopCoral1Inc()">+</button>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Algae - Barge</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopBargeDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_barge }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopBargeInc()">+</button>
-  </div>
-
-  <div class="flex-row score-label">
-    <h4 class="mat-h4 game-element">Algae - Processor</h4>
-  </div>
-  <div class="flex-row">
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopProcessorDec()">-</button>
-    <span class="score">{{ this.appData.scoutingData.teleop_processor }}</span>
-    <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopProcessorInc()">+</button>
+    <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Algae - Processor</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopProcessorDec()">-</button>
+      <span class="score">{{ this.appData.scoutingData.teleop_processor }}</span>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopProcessorInc()">+</button>
+    </div>
   </div>
   <div class="flex-row game-section">
     <h2 class="mat-h2">End Game</h2>

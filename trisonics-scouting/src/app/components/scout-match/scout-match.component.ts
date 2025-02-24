@@ -174,16 +174,16 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
 
   public autoProcessorInc(): void {
     this.launchConfetti();
-    if (!this.appData.scoutingData.auto_barge) {
-      this.appData.scoutingData.auto_barge = 0;
+    if (!this.appData.scoutingData.auto_processor) {
+      this.appData.scoutingData.auto_processor = 0;
     }
-    this.appData.scoutingData.auto_barge += 1;
+    this.appData.scoutingData.auto_processor += 1;
   }
 
   public autoProcessorDec(): void {
     this.launchConfetti();
-    if (this.appData.scoutingData.auto_barge > 0) {
-      this.appData.scoutingData.auto_barge -= 1;
+    if (this.appData.scoutingData.auto_processor > 0) {
+      this.appData.scoutingData.auto_processor -= 1;
     }
   }
 
