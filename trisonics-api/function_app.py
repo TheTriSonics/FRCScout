@@ -217,7 +217,7 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     del payload['images']
     if 'id' not in payload:
         payload['id'] = str(uuid4())
-    container = get_container('PitResults2024')
+    container = get_container('PitResults2025')
     # Now that we have a connection to the container we can insert/update data
     container.upsert_item(payload)
     return func.HttpResponse(
@@ -513,7 +513,7 @@ def cosmos_get_time_entries(secret_team_key=None, account_name=None):
 
 
 def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
-    container = get_container('PitResults2024')
+    container = get_container('PitResults2025')
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
     ]
@@ -556,7 +556,7 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
 
 
 def get_robot_data(secret_team_key=None, team_key=None):
-    container = get_container('MatchResults2024')
+    container = get_container('MatchResults2025')
     query = """
         SELECT *
         FROM c
