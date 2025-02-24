@@ -219,7 +219,7 @@ capabilities of a computer at our disposal.
     merged_score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
     ]
-    pca_axes = st.checkbox(f'Use PCA for chart axis')
+    pca_axes = st.checkbox('Use PCA for chart axis')
     if pca_axes:
         x_axis = 'pca1'
         y_axis = 'pca2'
