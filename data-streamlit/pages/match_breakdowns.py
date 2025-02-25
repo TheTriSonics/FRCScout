@@ -99,22 +99,29 @@ else:
     # st.dataframe(matches)
 
     statbotics = load_statbot_matches_data(get_event_key())
-    preds = statbotics[['comp_level', 'match_number', 'pred']]
-    preds = preds[preds['comp_level'] == 'qm']
-    pred_detail = preds.join(pd.json_normalize(preds['pred']))
+    if statbotics.index.size == 0:
+        st.subheader('No statbotics data available yet.')
+        pred_detail = None
+        actual_detail = None
+    else:
+        preds = statbotics[['comp_level', 'match_number', 'pred']]
+        preds = preds[preds['comp_level'] == 'qm']
+        pred_detail = preds.join(pd.json_normalize(preds['pred']))
 
-    actual = statbotics[['comp_level', 'match_number', 'result']]
-    actual = actual[actual['comp_level'] == 'qm']
-    actual_detail = actual.join(pd.json_normalize(actual['result']))
+        actual = statbotics[['comp_level', 'match_number', 'result']]
+        actual = actual[actual['comp_level'] == 'qm']
+        actual_detail = actual.join(pd.json_normalize(actual['result']))
     # st.dataframe(pred_detail)
 
-    matches = matches.join(pred_detail.set_index('match_number')
-                                    .add_suffix('_pred'),
-                        on='match_number')
+    if pred_detail is not None:
+        matches = matches.join(pred_detail.set_index('match_number')
+                                        .add_suffix('_pred'),
+                            on='match_number')
 
-    matches = matches.join(actual_detail.set_index('match_number')
-                                        .add_suffix('_actual'),
-                        on='match_number')
+    if actual_detail is not None:
+        matches = matches.join(actual_detail.set_index('match_number')
+                                            .add_suffix('_actual'),
+                            on='match_number')
 
 
     for panda_idx, match in matches.iterrows():
@@ -138,9 +145,11 @@ else:
                                 opr_total = 0
                             total_point_oprs.append(opr_total)
                             alliance_opr_total += opr_total
-                        pred_winner = match[f'winner_pred'] == color
-                        actual_winner = match[f'winner_actual'] == color
-                        redpct = match[f'red_win_prob_pred'] * 100
+                        pred_winner, actual_winner, redpct = 'none', 'none', 0
+                        if 'winner_pred' in match.keys():
+                            pred_winner = match['winner_pred'] == color
+                            actual_winner = match['winner_actual'] == color
+                            redpct = match['red_win_prob_pred'] * 100
                         pct = redpct if color == 'red' else 100 - redpct
                         show_star = '*' if actual_winner else ''
                         st.markdown(f"""
@@ -151,8 +160,10 @@ else:
                             'TP OPR': total_point_oprs
                         }).set_index('Team')
                         st.table(team_breakdown.style.format(precision=1))
-                        score_pred = match[f'{color}_score_pred']
-                        score_actual = match[f'{color}_score_actual']
+                        score_pred, score_actual = 0, 0
+                        if f'{color}_score_pred' in match.keys():
+                            score_pred = match[f'{color}_score_pred']
+                            score_actual = match[f'{color}_score_actual']
                         stats[color] = [
                             alliance_opr_total,
                             score_pred,
@@ -166,5 +177,4 @@ else:
                 'Red': stats['red'],
                 'Blue': stats['blue'],
             }).set_index('Label')
-            st.table(misc_breakdown.style.format(precision=1)
-                                        .highlight_max(axis='columns'))
+            st.table(misc_breakdown.style.format(precision=1))

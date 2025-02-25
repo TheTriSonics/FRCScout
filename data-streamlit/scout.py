@@ -101,16 +101,17 @@ def load_event_data(secret_key, event_key):
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
     df = pd.read_json(url)
-    # Add a auton_coral_total column that adds up level, level2, etc.
-    df['auto_coral_total'] = (
-        df['auto_coral1'] + df['auto_coral2'] +
-        df['auto_coral3'] + df['auto_coral4']
-    )
+    if event_key.startswith('2025'):
+        # Add a auton_coral_total column that adds up level, level2, etc.
+        df['auto_coral_total'] = (
+            df['auto_coral1'] + df['auto_coral2'] +
+            df['auto_coral3'] + df['auto_coral4']
+        )
 
-    df['teleop_coral_total'] = (
-        df['teleop_coral1'] + df['auto_coral2'] +
-        df['teleop_coral3'] + df['auto_coral4']
-    )
+        df['teleop_coral_total'] = (
+            df['teleop_coral1'] + df['auto_coral2'] +
+            df['teleop_coral3'] + df['auto_coral4']
+        )
     return df
 
 

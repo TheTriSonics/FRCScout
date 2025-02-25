@@ -111,7 +111,7 @@ capabilities of a computer at our disposal.
     fsp_show = 'none' if len(fsp_nums) == 0 else ', '.join(map(str, fsp_nums))
     exclude_dnp = st.checkbox(f'Exclude do not pick teams ({dnp_show})')
     exclude_fsp = st.checkbox(f'Exclude first pick teams ({fsp_show})')
-    cluster_count = st.text_input("Cluster Count", 4)
+    cluster_count = st.text_input("Cluster Count", 4, key='cluster_count')
     # Filter out any team we are NOT picking from custering
     if dnp_nums is not None and exclude_dnp:
         df = df[~df.scouting_team.isin(dnp_nums)]
@@ -171,12 +171,14 @@ capabilities of a computer at our disposal.
     scouted_data_cols = st.pills(
         'Dimensions (scouted data)', scouted_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
+        key='scouted_data_cols',
         selection_mode='multi',
         default=[col for col in scouted_avail_cols if not col[0].startswith('pca')]
     )
     opr_data_cols = st.pills(
         'Dimensions (opr data)', opr_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
+        key='opr_data_cols',
         selection_mode='multi',
         default=[col for col in opr_avail_cols if not col[0].startswith('pca')]
     )
@@ -241,8 +243,8 @@ capabilities of a computer at our disposal.
     merged_score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
     ]
-    x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]))
-    y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]))
+    x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]), key='x_axis')
+    y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]), key='y_axis')
 
     simp = alt.Chart(merged_score_vectors).mark_circle().encode(
         x=x_axis, y=y_axis,
