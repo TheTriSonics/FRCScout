@@ -60,7 +60,6 @@ def get_cluster_name(clusters, team_number):
 
 def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
     st.header("KMeans clusters")
-    st.write(opr)
     with st.expander('Instructions'):
         st.write(
 """
@@ -138,33 +137,54 @@ capabilities of a computer at our disposal.
         if x.startswith(("auto", "tele", "endgame", "comp"))
     ]
     opr_score_cols = [x for x in opr_score_vectors.columns if x != 'teamNumber']
-    variances = {}
+    scouted_variances = {}
+    opr_variances = {}
 
-    # Okay, we could do this with linear algebra. Might change it out
-    # Have code in kmeans.ipynb notebook in project, but this gives the same
-    # values
     for sc in scouted_score_cols:
         v = np.var(scouted_score_vectors[sc])
-        variances[sc] = v
+        scouted_variances[sc] = v
+    scouted_variances_by_val = sorted(scouted_variances.items(), key=lambda x: x[1],
+                              reverse=True)
+    scouted_variances = dict(scouted_variances_by_val)
+    scouted_avail_cols = list(zip(scouted_variances.keys(), scouted_variances.values()))
+
     for sc in opr_score_cols:
         v = np.var(opr_score_vectors[sc])
-        variances[sc] = v
-    variances_by_val = sorted(variances.items(), key=lambda x: x[1],
+        opr_variances[sc] = v
+    opr_variances_by_val = sorted(opr_variances.items(), key=lambda x: x[1],
                               reverse=True)
-    variances = dict(variances_by_val)
-    avail_cols = list(zip(variances.keys(), variances.values()))
+    opr_variances = dict(opr_variances_by_val)
+    opr_avail_cols = list(zip(opr_variances.keys(), opr_variances.values()))
     with st.expander("Variance of each column (informational)"):
-        col1 = variances.keys()
-        col2 = variances.values()
-        var_df = pd.DataFrame({'measure': col1, 'var': col2})
-        st.dataframe(var_df, hide_index=True)
-    scouted_data_cols = st.multiselect(
-        'Dimensions (scouted data)', avail_cols,
+        scouted_col1 = scouted_variances.keys()
+        scouted_col2 = scouted_variances.values()
+        scouted_var_df = pd.DataFrame({'measure': scouted_col1, 'var': scouted_col2})
+        opr_col1 = opr_variances.keys()
+        opr_col2 = opr_variances.values()
+        opr_var_df = pd.DataFrame({'measure': opr_col1, 'var': opr_col2})
+        col_left, col_right = st.columns(2)
+        with col_left:
+            st.dataframe(scouted_var_df, hide_index=True)
+        with col_right:
+            st.dataframe(opr_var_df, hide_index=True)
+    # Make these all a fixed width
+    scouted_data_cols = st.pills(
+        'Dimensions (scouted data)', scouted_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-        default=[col for col in avail_cols if not col[0].startswith('pca')]
+        selection_mode='multi',
+        default=[col for col in scouted_avail_cols if not col[0].startswith('pca')]
+    )
+    opr_data_cols = st.pills(
+        'Dimensions (opr data)', opr_avail_cols,
+        format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
+        selection_mode='multi',
+        default=[col for col in opr_avail_cols if not col[0].startswith('pca')]
     )
 
-    if len(scouted_data_cols) == 0:
+    for sc in opr_score_cols:
+        v = np.var(opr_score_vectors[sc])
+        opr_variances[sc] = v
+    if len(scouted_data_cols) == 0 and len(opr_data_cols) == 0:
         return  # Can't go on. Just abort
 
     model = KMeans(int(cluster_count),
@@ -179,8 +199,10 @@ capabilities of a computer at our disposal.
     merged_score_vectors = scouted_score_vectors.merge(
         opr_score_vectors, left_on='scouting_team', right_on='teamNumber'
     )
-    merged_score_vectors = add_pca_components(merged_score_vectors, [x[0] for x in scouted_data_cols])
-    v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols]]
+    merged_score_vectors = add_pca_components(
+        merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
+    )
+    v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols + opr_data_cols]]
     if False:
         print(
             v.to_numpy()
@@ -219,13 +241,8 @@ capabilities of a computer at our disposal.
     merged_score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
     ]
-    pca_axes = st.checkbox('Use PCA for chart axis')
-    if pca_axes:
-        x_axis = 'pca1'
-        y_axis = 'pca2'
-    else:
-        x_axis = scouted_data_cols[0][0]
-        y_axis = scouted_data_cols[1][0]
+    x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]))
+    y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]))
 
     simp = alt.Chart(merged_score_vectors).mark_circle().encode(
         x=x_axis, y=y_axis,
