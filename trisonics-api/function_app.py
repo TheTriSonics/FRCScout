@@ -18,7 +18,6 @@ logging.getLogger(
   ).setLevel(logging.WARNING)
 
 app = func.FunctionApp()
-_match_results_container = 'MatchResults2025'
 
 
 @app.function_name(name="HelloWorld")
@@ -234,6 +233,7 @@ def post_results(req: func.HttpRequest) -> func.HttpResponse:
     if 'id' not in payload:
         payload['id'] = str(uuid4())
     logging.warning(payload)
+    _match_results_container = 'MatchResults2025'
     container = get_container(_match_results_container)
     # Now that we have a connection to the container we can insert/update data
     container.upsert_item(payload)
@@ -449,7 +449,7 @@ def get_event_teams_df(event_key):
     return df
 
 
-def get_container(container_name=_match_results_container):
+def get_container(container_name: str):
     endpoint = os.environ.get('COSMOS_ENDPOINT')
     key = os.environ.get('COSMOS_KEY')
     # Some hard-coded values for our datbase name and container for match
@@ -462,7 +462,10 @@ def get_container(container_name=_match_results_container):
 
 
 def get_scouting_data(secret_team_key=None, event_key=None):
-    container = get_container(_match_results_container)
+    # Get the year from event_key, the first four characters are the year
+    year = event_key[:4]
+    container_name = f'MatchResults{year}'
+    container = get_container(container_name)
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
     ]
@@ -513,7 +516,10 @@ def cosmos_get_time_entries(secret_team_key=None, account_name=None):
 
 
 def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
-    container = get_container('PitResults2025')
+    # Get the year from event_key, the first four characters are the year
+    year = event_key[:4]
+    container_name = f'PitResults{year}'
+    container = get_container(container_name)
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
     ]
