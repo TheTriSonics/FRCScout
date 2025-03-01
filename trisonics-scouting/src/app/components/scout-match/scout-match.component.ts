@@ -281,7 +281,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
   get scoutingTeamSelected(): boolean {
     const val = this.fgMatch.get('scoutingTeam')?.value;
     console.log('scouting team value', val);
-    return val > 1;
+    return val > 0;
   }
 
   public uploadData(): void {
