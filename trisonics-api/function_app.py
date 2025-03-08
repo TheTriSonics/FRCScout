@@ -596,6 +596,16 @@ def http_get_opr_data(event_code):
     matches = get_event_matches_df(event_code)
     quals = matches[matches['comp_level'] == 'qm']
     quals = quals.dropna(axis='index', subset=['score_breakdown'])
+    for _, row in quals.iterrows():
+        for color in ['blue', 'red']:
+            row['score_breakdown'][color]['auto_coral_level1'] = row['score_breakdown'][color]['autoReef']['trough']
+            row['score_breakdown'][color]['auto_coral_level2'] = row['score_breakdown'][color]['autoReef']['tba_botRowCount']
+            row['score_breakdown'][color]['auto_coral_level3'] = row['score_breakdown'][color]['autoReef']['tba_midRowCount']
+            row['score_breakdown'][color]['auto_coral_level4'] = row['score_breakdown'][color]['autoReef']['tba_topRowCount']
+            row['score_breakdown'][color]['teleop_coral_level1'] = row['score_breakdown'][color]['teleopReef']['trough']
+            row['score_breakdown'][color]['teleop_coral_level2'] = row['score_breakdown'][color]['teleopReef']['tba_botRowCount']
+            row['score_breakdown'][color]['teleop_coral_level3'] = row['score_breakdown'][color]['teleopReef']['tba_midRowCount']
+            row['score_breakdown'][color]['teleop_coral_level4'] = row['score_breakdown'][color]['teleopReef']['tba_topRowCount']
 
     # dictionary to keep track of who played in a match
     # had to be modified so we could work with events where not
@@ -640,7 +650,11 @@ def http_get_opr_data(event_code):
             teams = alliance['surrogate_team_keys'] + alliance['team_keys']
             team_matrix_row = teams_in_match.copy()
             for team in teams:
-                mot = tmn_df.loc[(tmn_df['team_key'] == team) & (tmn_df['match_num'] == row['match_number']), 'match_of_tournament'].values[0]  # noqa
+                mot = tmn_df.loc[
+                    (tmn_df["team_key"] == team)
+                    & (tmn_df["match_num"] == row["match_number"]),
+                    "match_of_tournament",
+                ].values[0]  # noqa
                 # Use tanh to make the 12th match more important than the 1st,
                 # emphasis on later matches
                 team_matrix_row[team] = math.tanh(mot)
