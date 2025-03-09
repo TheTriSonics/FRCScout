@@ -35,10 +35,10 @@ if team:
     # Gets a list of every column name in the dataframe
     allcols = tdf.columns
     # Now we can create new dataframes where we only see the auto columns
-    auton_cols = [c for c in allcols if c.startswith("auto") or c == 'match_key']
+    auton_cols = [c for c in allcols if (c.startswith("auto") and not c.endswith('total')) or c == 'match_key']
     auton_df = tdf[auton_cols]
     # And then teleop...
-    teleop_cols = [c for c in allcols if c.startswith("tele") or c == 'match_key']
+    teleop_cols = [c for c in allcols if (c.startswith("tele") and not c.endswith('total')) or c == 'match_key']
     teleop_df = tdf[teleop_cols]
     # And endgame.
     endgame_cols = [c for c in allcols if c.startswith("endgame") or c == 'match_key']
@@ -69,20 +69,6 @@ if team:
     for idx, row in pdf.iterrows():
         st.subheader(row.scouter_name)
         st.info(row.robot_notes or "no notes")
-        wheel_types = []
-        if row.wheel_omni:
-            wheel_types.append('Omni')
-        if row.wheel_inflated:
-            wheel_types.append('Inflated')
-        if row.wheel_mec:
-            wheel_types.append('Mecanum')
-        if row.wheel_solid:
-            wheel_types.append('Solid')
-        if len(wheel_types) == 0:
-            wheel_types = ['N/A']
-        rating = f'{row.robot_rating}/10' if row.robot_rating else 'N/A'
-        st.write(f"#### Wheel type(s): {', '.join(wheel_types)}  ")
         st.write(f"#### Drive Train: {row.drive_train}  ")
-        st.write(f"#### Rating: {rating}  ")
         for i in row.image_names:
             st.image(i)
