@@ -7,7 +7,7 @@ from sklearn.cluster import KMeans
 
 from scout import (
     load_event_data, load_opr_data, get_event_key, get_secret_key,
-    get_dnp, get_fsp, fix_session,
+    get_dnp, get_fsp, fix_session, load_team_data
 )
 
 norm = np.linalg.norm
@@ -58,7 +58,7 @@ def get_cluster_name(clusters, team_number):
     return 'bob'
 
 
-def show_cluster_panel(df, opr, dnp_nums, fsp_nums):
+def show_cluster_panel(df, opr, dnp_nums, fsp_nums, all_teams):
     st.header("KMeans clusters")
     with st.expander('Instructions'):
         st.write(
@@ -111,7 +111,9 @@ capabilities of a computer at our disposal.
     fsp_show = 'none' if len(fsp_nums) == 0 else ', '.join(map(str, fsp_nums))
     exclude_dnp = st.checkbox(f'Exclude do not pick teams ({dnp_show})')
     exclude_fsp = st.checkbox(f'Exclude first pick teams ({fsp_show})')
-    cluster_count = st.text_input("Cluster Count", 4, key='cluster_count')
+    if 'cluster_count' not in st.session_state:
+        st.session_state['cluster_count'] = '4'
+    cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from custering
     if dnp_nums is not None and exclude_dnp:
         df = df[~df.scouting_team.isin(dnp_nums)]
@@ -131,6 +133,16 @@ capabilities of a computer at our disposal.
         .mean(numeric_only=True)
         .reset_index()
     )
+    # Now normalize the vectors in opr_score_vectors
+    for col in opr_score_vectors.columns:
+        if col == 'teamNumber':
+            continue
+        opr_score_vectors[col] = (
+            opr_score_vectors[col] / opr_score_vectors[col].max()
+        )
+    # Now fill in any NaN values with 0
+    opr_score_vectors.fillna(0, inplace=True)
+
     scouted_score_cols = [
         x
         for x in scouted_score_vectors.columns
@@ -171,14 +183,12 @@ capabilities of a computer at our disposal.
     scouted_data_cols = st.pills(
         'Dimensions (scouted data)', scouted_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-        key='scouted_data_cols',
         selection_mode='multi',
         default=[col for col in scouted_avail_cols if not col[0].startswith('pca')]
     )
     opr_data_cols = st.pills(
         'Dimensions (opr data)', opr_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-        key='opr_data_cols',
         selection_mode='multi',
         default=[col for col in opr_avail_cols if not col[0].startswith('pca')]
     )
@@ -201,15 +211,15 @@ capabilities of a computer at our disposal.
     merged_score_vectors = scouted_score_vectors.merge(
         opr_score_vectors, left_on='scouting_team', right_on='teamNumber'
     )
-    merged_score_vectors = add_pca_components(
-        merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
-    )
     v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols + opr_data_cols]]
     if False:
         print(
             v.to_numpy()
         )
     model.fit(v.to_numpy())
+    merged_score_vectors = add_pca_components(
+        merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
+    )
 
     clusters = {}
 
@@ -243,28 +253,35 @@ capabilities of a computer at our disposal.
     merged_score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
     ]
-    x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]), key='x_axis')
-    y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols]), key='y_axis')
+    show_chart = st.checkbox('Display 2D chart (not always useful)')
+    if show_chart:
+        if 'x_axis' not in st.session_state:
+            st.session_state.x_axis = 'totalPoints'
+        if 'y_axis' not in st.session_state:
+            st.session_state.y_axis = 'autoPoints'
 
-    simp = alt.Chart(merged_score_vectors).mark_circle().encode(
-        x=x_axis, y=y_axis,
-        color='group_label',
-        tooltip='scouting_team',
-    ).interactive()
+        x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols + [('pca1', 1)]]), key='x_axis')
+        y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols + [('pca2', 2)]]), key='y_axis')
 
-    simp_text = simp.mark_text(
-        align='left',
-        baseline='top',
-        color='blue',
-        fontSize=20,
-        dx=5,
-    ).encode(
-        text='scouting_team'
-    )
+        simp = alt.Chart(merged_score_vectors).mark_circle().encode(
+            x=x_axis, y=y_axis,
+            color='group_label',
+            tooltip='scouting_team',
+        ).interactive()
 
-    st.altair_chart(simp_text + simp,
-                    theme="streamlit",
-                    use_container_width=True)
+        simp_text = simp.mark_text(
+            align='left',
+            baseline='top',
+            color='blue',
+            fontSize=20,
+            dx=5,
+        ).encode(
+            text='scouting_team'
+        )
+
+        st.altair_chart(simp_text + simp,
+                        theme="streamlit",
+                        use_container_width=True)
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],
                                  reverse=True):
@@ -277,7 +294,10 @@ capabilities of a computer at our disposal.
             main_teams = [t for t in main_teams if t not in dnp_nums]
         if not exclude_fsp:
             main_teams = [t for t in main_teams if t not in fsp_nums]
-        info_md = ', '.join(main_teams) + '  \n'
+        info_md = ''
+        for tnum in main_teams:
+            tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
+            info_md += f"{tnum} ({tname})  \n"
         if len(dnp_in_cluster) > 0:
             info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
         if len(fsp_in_cluster) > 0:
@@ -289,6 +309,8 @@ capabilities of a computer at our disposal.
 fix_session()
 scouted_data = load_event_data(get_secret_key(), get_event_key())
 opr_data = load_opr_data(get_secret_key(), get_event_key())
+td = load_team_data(get_event_key())
+all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
 dnp = get_dnp()
 fsp = get_fsp()
-show_cluster_panel(scouted_data, opr_data, dnp, fsp)
+show_cluster_panel(scouted_data, opr_data, dnp, fsp, all_teams)
