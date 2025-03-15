@@ -299,7 +299,7 @@ capabilities of a computer at our disposal.
         info_md = ''
         for tnum in main_teams:
             tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
-            info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek})  \n"
+            info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum})  \n"
         if len(dnp_in_cluster) > 0:
             info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
         if len(fsp_in_cluster) > 0:

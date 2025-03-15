@@ -15,7 +15,12 @@ with st.expander('Instructions'):
     st.write("""
     Select a team to see their detailed data.
     """)
+# Check if we have team_detail_number in the query params
+if 'team_detail_number' in st.query_params:
+    team = int(st.query_params.team_detail_number)
+    st.session_state.team_detail_number = (team, td.loc[td.number == team].iloc[0]['name'])
 team = st.selectbox("Team", all_teams,
+                    key='team_detail_number',
                     format_func=lambda x: f'{x[0]} ({x[1]})')
 show_raw = st.checkbox('Show raw data')
 if team:
