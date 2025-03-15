@@ -55,7 +55,6 @@ def get_secret_key():
         st.session_state.secret_key = ret
     # Remove any leading or trailing whitespace from ret
     ret = ret.strip()
-    print(f'secret_key: {ret}')
     return ret
 
 
@@ -67,7 +66,6 @@ def get_event_key():
         ret = st.query_params.event_key
         st.session_state.event_key = ret
     ret = ret.strip()
-    print(f'event_key: {ret}')
     return ret
 
 
@@ -101,7 +99,7 @@ def load_event_data(secret_key, event_key):
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
     df = pd.read_json(url)
-    if event_key.startswith('2025'):
+    if event_key.startswith('2025') and len(df.index) > 0:
         # Add a auton_coral_total column that adds up level, level2, etc.
         df['auto_coral_total'] = (
             df['auto_coral1'] + df['auto_coral2'] +

@@ -133,15 +133,6 @@ capabilities of a computer at our disposal.
         .mean(numeric_only=True)
         .reset_index()
     )
-    # Now normalize the vectors in opr_score_vectors
-    for col in opr_score_vectors.columns:
-        if col == 'teamNumber':
-            continue
-        opr_score_vectors[col] = (
-            opr_score_vectors[col] / opr_score_vectors[col].max()
-        )
-    # Now fill in any NaN values with 0
-    opr_score_vectors.fillna(0, inplace=True)
 
     scouted_score_cols = [
         x
@@ -179,7 +170,15 @@ capabilities of a computer at our disposal.
             st.dataframe(scouted_var_df, hide_index=True)
         with col_right:
             st.dataframe(opr_var_df, hide_index=True)
-    # Make these all a fixed width
+
+    # Justin's own preference here; no reason to look at point level
+    # cOPR data.
+    default_off = [
+        'totalPoints', 'teleopPoints', 'teleopCoralPoints',
+        'algaePoints', 'autoPoints', 'autoCoralPoints',
+        'endGameBargePoints', 'foulPoints', 'adjustPoints'
+
+    ]
     scouted_data_cols = st.pills(
         'Dimensions (scouted data)', scouted_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
@@ -190,8 +189,10 @@ capabilities of a computer at our disposal.
         'Dimensions (opr data)', opr_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
         selection_mode='multi',
-        default=[col for col in opr_avail_cols if not col[0].startswith('pca')]
+        default=[col for col in opr_avail_cols if not col[0].startswith('pca') and col[0] not in default_off]
     )
+
+    show_features_chart = st.checkbox('Show features chart')
 
     for sc in opr_score_cols:
         v = np.var(opr_score_vectors[sc])
@@ -253,6 +254,25 @@ capabilities of a computer at our disposal.
     merged_score_vectors['group_label'] = [
         get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
     ]
+    for label, centroid in zip(labels, centers):
+        # Now createa a dataframe where centroid is the 'value' column and the
+        # column names are the feature names
+        cluster_df = pd.DataFrame(
+            [centroid],
+            columns=v.columns
+        )
+        # Now let's find the columns that have an absolute value larger than the
+        # others. IN order. We'll sort them.
+        cluster_df = cluster_df.T
+        cluster_df.columns = ['value']
+        cluster_df['abs'] = cluster_df.value.abs()
+        cluster_df = cluster_df.sort_values('abs', ascending=False)
+        cluster_df = cluster_df.drop('abs', axis=1)
+        cluster_df['feature'] = cluster_df.index
+        cluster_df = cluster_df.reset_index(drop=True)
+        clusters[label]['features'] = cluster_df.to_dict(orient='records')
+
+
     show_chart = st.checkbox('Display 2D chart (not always useful)')
     if show_chart:
         if 'x_axis' not in st.session_state:
@@ -305,8 +325,49 @@ capabilities of a computer at our disposal.
         if len(fsp_in_cluster) > 0:
             info_md += f"1st pick members: {', '.join(fsp_in_cluster)}  \n"
         st.info(info_md)
+        if show_features_chart:
+            # Now create a barchart from the features of this cluster sorted by
+            # the value
+            feature_df = pd.DataFrame(cluster['features'])
+            feature_df.sort_values('value', ascending=False, inplace=True)
+            chart = alt.Chart(feature_df).mark_bar().encode(
+                x=alt.X('value:Q'),
+                y=alt.Y('feature:N', sort='-x'),
+                tooltip=['feature', 'value']
+            ).properties(
+                title='Features by Value (Descending)',
+            )
+
+            # Display the chart in Streamlit
+            st.altair_chart(chart, use_container_width=True)
         idx += 1
 
+# Custom CSS to change pill highlight color from red to blue in dark mode
+st.markdown("""
+<style>
+/* Change pills highlight color from red to blue in dark mode */
+@media (prefers-color-scheme: dark) {
+    /* Target the pill button with attribute kind="pillsActive" */
+    button[kind="pillsActive"] {
+        background-color: rgba(28, 131, 225, 0.2) !important;
+        color: rgb(28, 131, 225) !important;
+        border-color: rgb(28, 131, 225) !important;
+    }
+
+    /* For hover state on inactive pills */
+    button[data-testid="stBaseButton-pills"]:hover {
+        background-color: rgba(28, 131, 225, 0.1) !important;
+        color: rgba(28, 131, 225, 0.8) !important;
+    }
+
+    /* Target the specific class if needed */
+    .st-emotion-cache-191l437 {
+        background-color: rgba(28, 131, 225, 0.2) !important;
+        color: rgb(28, 131, 225) !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 
 fix_session()
 scouted_data = load_event_data(get_secret_key(), get_event_key())
