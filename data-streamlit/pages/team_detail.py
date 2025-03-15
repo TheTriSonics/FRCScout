@@ -59,6 +59,11 @@ if team:
     st.subheader("Endgame")
     st.bar_chart(endgame_df, x='match_key')
 
+    st.header("Scouter Notes")
+    for idx, row in tdf.iterrows():
+        st.subheader(f'{row.scouter_name} - Match {row.match_key}')
+        st.info(row.match_notes or "No notes")
+
     # Show the pit scouting data
     st.header("Pit Scouting")
     if len(pdf.index) == 0:
