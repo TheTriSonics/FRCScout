@@ -282,6 +282,8 @@ capabilities of a computer at our disposal.
         st.altair_chart(simp_text + simp,
                         theme="streamlit",
                         use_container_width=True)
+    sk = get_secret_key()
+    ek = get_event_key()
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],
                                  reverse=True):
@@ -297,7 +299,7 @@ capabilities of a computer at our disposal.
         info_md = ''
         for tnum in main_teams:
             tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
-            info_md += f"{tnum} ({tname})  \n"
+            info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek})  \n"
         if len(dnp_in_cluster) > 0:
             info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
         if len(fsp_in_cluster) > 0:
