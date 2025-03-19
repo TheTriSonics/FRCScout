@@ -114,6 +114,7 @@ export class ScoutPitComponent implements OnInit {
 
   public resetForm(): void {
     this.fgScoutPit.get('scoutingTeam')?.setValue(0);
+    this.fgScoutPit.get('robotNotes')?.setValue('');
     this.imageList = [];
   }
 
