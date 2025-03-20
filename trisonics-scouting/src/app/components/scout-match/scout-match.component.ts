@@ -247,6 +247,21 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     }
   }
 
+  public teleopAlgaeCleanedInc(): void {
+    this.launchConfetti();
+    if (!this.appData.scoutingData.teleop_algae_cleaned) {
+      this.appData.scoutingData.teleop_algae_cleaned = 0;
+    }
+    this.appData.scoutingData.teleop_algae_cleaned += 1;
+  }
+
+  public teleopAlgaeCleanedDec(): void {
+    this.launchConfetti();
+    if (this.appData.scoutingData.teleop_algae_cleaned > 0) {
+      this.appData.scoutingData.teleop_algae_cleaned -= 1;
+    }
+  }
+
   public teleopBargeInc(): void {
     this.launchConfetti();
     if (!this.appData.scoutingData.teleop_barge) {
@@ -346,6 +361,7 @@ export class ScoutMatchComponent implements OnInit, AfterViewInit {
     this.appData.scoutingData.teleop_coral3 = 0;
     this.appData.scoutingData.teleop_coral2 = 0;
     this.appData.scoutingData.teleop_coral1 = 0;
+    this.appData.scoutingData.teleop_algae_cleaned = 0;
     this.appData.scoutingData.teleop_barge = 0;
     this.appData.scoutingData.teleop_processor = 0;
     this.appData.scoutingData.endgame_park = false;

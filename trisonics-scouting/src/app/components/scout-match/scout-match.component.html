@@ -211,6 +211,16 @@
     </div>
 
     <div class="flex-row score-label">
+      <h4 class="mat-h4 game-element">Algae - Cleaned</h4>
+    </div>
+    <div class="flex-row">
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopAlgaeCleanedDec()">-</button>
+      <span class="score">{{ this.appData.scoutingData.teleop_algae_cleaned }}</span>
+      <button mat-raised-button color="ts-red" class="pm-button" (click)="this.teleopAlgaeCleanedInc()">+</button>
+    </div>
+
+
+    <div class="flex-row score-label">
       <h4 class="mat-h4 game-element">Algae - Barge</h4>
     </div>
     <div class="flex-row">

@@ -20,6 +20,7 @@ export interface ScoutResult {
   teleop_coral3: number,
   teleop_coral2: number,
   teleop_coral1: number,
+  teleop_algae_cleaned: number,
   teleop_processor: number,
   teleop_barge: number,
 
