@@ -192,7 +192,7 @@ capabilities of a computer at our disposal.
         default=[col for col in opr_avail_cols if not col[0].startswith('pca') and col[0] not in default_off]
     )
 
-    show_features_chart = st.checkbox('Show features chart')
+    show_features_chart = st.checkbox('Show features chart', value=True)
 
     for sc in opr_score_cols:
         v = np.var(opr_score_vectors[sc])
@@ -330,15 +330,27 @@ capabilities of a computer at our disposal.
             # Now create a barchart from the features of this cluster sorted by
             # the value
             feature_df = pd.DataFrame(cluster['features'])
+            # split feature_df into two dataframes, one for features in scouted_data_cols and another for
+            # features in opr_data_cols
             feature_df.sort_values('value', ascending=False, inplace=True)
-            chart = alt.Chart(feature_df).mark_bar().encode(
+            opr_features = feature_df[ feature_df['feature'].isin([x[0] for x in opr_data_cols])]
+            scouted_features = feature_df[feature_df['feature'].isin([x[0] for x in scouted_data_cols])]
+            chart = alt.Chart(scouted_features).mark_bar().encode(
                 x=alt.X('value:Q'),
                 y=alt.Y('feature:N', sort='-x'),
                 tooltip=['feature', 'value']
             ).properties(
-                title='Features by Value (Descending)',
+                title='Scouted Dimensions (Descending)',
             )
-
+            # Display the chart in Streamlit
+            st.altair_chart(chart, use_container_width=True)
+            chart = alt.Chart(opr_features).mark_bar().encode(
+                x=alt.X('value:Q'),
+                y=alt.Y('feature:N', sort='-x'),
+                tooltip=['feature', 'value']
+            ).properties(
+                title='OPR Dimensions (Descending)',
+            )
             # Display the chart in Streamlit
             st.altair_chart(chart, use_container_width=True)
         idx += 1
