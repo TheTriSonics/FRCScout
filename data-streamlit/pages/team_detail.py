@@ -34,7 +34,8 @@ if team:
         st.subheader("No match data")
     else:
         tdf = scouted_data.loc[scouted_data.scouting_team == team_number]
-        odf = opr_data.loc[opr_data.teamNumber == team_number]
+        if opr_data is not None:
+            odf = opr_data.loc[opr_data.teamNumber == team_number]
 
         if show_raw:
             st.subheader("Team Raw Scouting Data")
@@ -76,14 +77,16 @@ if team:
             'teamNumber',
         ]
         scouted_drop = [col for col in tdf.columns if col in default_off]
-        opr_drop = [col for col in odf.columns if col in default_off]
+        if opr_data is not None:
+            opr_drop = [col for col in odf.columns if col in default_off]
         scouted_features = tdf.select_dtypes(include='number').drop(columns=['scouting_team', 'match_key'])
         # now average everything in the dataframe by number of rows
         scouted_features = scouted_features.mean().to_frame().reset_index()
         scouted_features.columns = ['feature', 'value']
 
-        opr_features = odf.select_dtypes(include='number').drop(columns=opr_drop)
-        opr_features = opr_features.melt(var_name='feature', value_name='value')
+        if opr_data is not None:
+            opr_features = odf.select_dtypes(include='number').drop(columns=opr_drop)
+            opr_features = opr_features.melt(var_name='feature', value_name='value')
         # Display the chart in Streamlit
         chart = alt.Chart(scouted_features).mark_bar().encode(
             x=alt.X('value:Q'),
@@ -94,15 +97,16 @@ if team:
         )
         st.altair_chart(chart, use_container_width=True)
 
-        chart = alt.Chart(opr_features).mark_bar().encode(
-            x=alt.X('value:Q'),
-            y=alt.Y('feature:N', sort='-x'),
-            tooltip=['feature', 'value']
-        ).properties(
-            title='OPR Dimensions (Descending)',
-        )
-        # Display the chart in Streamlit
-        st.altair_chart(chart, use_container_width=True)
+        if opr_data is not None:
+            chart = alt.Chart(opr_features).mark_bar().encode(
+                x=alt.X('value:Q'),
+                y=alt.Y('feature:N', sort='-x'),
+                tooltip=['feature', 'value']
+            ).properties(
+                title='OPR Dimensions (Descending)',
+            )
+            # Display the chart in Streamlit
+            st.altair_chart(chart, use_container_width=True)
 
         st.header("Scouter Notes")
         for idx, row in tdf.iterrows():

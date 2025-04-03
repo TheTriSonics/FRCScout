@@ -141,8 +141,11 @@ def load_pit_data(secret_key, event_key, team_key):
 def load_opr_data(secret_key, event_key):
     url = get_opr_data_url(secret_key, event_key)
     print(url)
-    opr_data = pd.read_json(url)
-    return opr_data
+    try:
+        opr_data = pd.read_json(url)
+        return opr_data
+    except:
+        return None
 
 def load_tba_opr_data(event_key):
     pass
@@ -187,7 +190,7 @@ def load_data():
 
     try:
         _ = load_opr_data(secret_key, event_key)
-        if len(_.index) > 0:
+        if _ is not None and len(_.index) > 0:
             st.success("OPR calculations loaded")
         else:
             st.success("OPR calculation load failed.")
