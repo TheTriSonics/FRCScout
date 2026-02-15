@@ -189,19 +189,38 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     # Get the request body, interpreted as JSON into an python object
     payload = req.get_json()
     blob_conn = os.environ.get('BLOB_CONN')
-    # Get image data from payload
     payload['image_names'] = []
-    for i in payload['images']:
-        header, b64data = i.split(',', 2)
-        _, encoding = header.split(':', 2)
-        mimetype, algo = encoding.split(';')
-        filetype, fileext = mimetype.split('/', 2)
+
+    if 'images' in payload:
+        # Legacy format: array of data URIs like "data:image/png;base64,..."
+        for i in payload['images']:
+            header, b64data = i.split(',', 2)
+            _, encoding = header.split(':', 2)
+            mimetype, algo = encoding.split(';')
+            filetype, fileext = mimetype.split('/', 2)
+            filedata = base64.b64decode(b64data)
+            logging.info(fileext)
+            logging.info(f'Blob connection string to use: {blob_conn}')
+            filename = f'{uuid4()}.{fileext}'
+            logging.info(f'Trying {filename}')
+            blob_client = BlobClient.from_connection_string(
+                conn_str=blob_conn,
+                container_name='images',
+                blob_name=filename,
+            )
+            blob_client.upload_blob(
+                data=filedata,
+                content_settings=ContentSettings(content_type=mimetype)
+            )
+            logging.info(f'Added {filename}')
+            payload['image_names'].append(filename)
+        del payload['images']
+    elif 'photo_base64' in payload and payload['photo_base64']:
+        # New format: raw base64 string (no data URI prefix), assumed JPEG
+        b64data = payload['photo_base64']
         filedata = base64.b64decode(b64data)
-        logging.info(fileext)
-        # upload to blob storage
-        logging.info(f'Blob connections tring to use: {blob_conn}')
-        filename = f'{uuid4()}.{fileext}'
-        logging.error(f'Trying {filename}')
+        filename = f'{uuid4()}.jpeg'
+        logging.info(f'Uploading photo as {filename}')
         blob_client = BlobClient.from_connection_string(
             conn_str=blob_conn,
             container_name='images',
@@ -209,14 +228,18 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
         )
         blob_client.upload_blob(
             data=filedata,
-            content_settings=ContentSettings(content_type=mimetype)
+            content_settings=ContentSettings(content_type='image/jpeg')
         )
-        logging.error(f'Added {filename}')
+        logging.info(f'Added {filename}')
         payload['image_names'].append(filename)
-    del payload['images']
+        del payload['photo_base64']
+
     if 'id' not in payload:
         payload['id'] = str(uuid4())
-    container = get_container('PitResults2025')
+    # Derive container year from event_key (first 4 chars)
+    event_key = payload.get('event_key', '')
+    year = event_key[:4] if len(event_key) >= 4 else '2026'
+    container = get_container(f'PitResults{year}')
     # Now that we have a connection to the container we can insert/update data
     container.upsert_item(payload)
     return func.HttpResponse(
@@ -233,8 +256,10 @@ def post_results(req: func.HttpRequest) -> func.HttpResponse:
     if 'id' not in payload:
         payload['id'] = str(uuid4())
     logging.warning(payload)
-    _match_results_container = 'MatchResults2025'
-    container = get_container(_match_results_container)
+    # Derive container year from event_key (first 4 chars)
+    event_key = payload.get('event_key', '')
+    year = event_key[:4] if len(event_key) >= 4 else '2026'
+    container = get_container(f'MatchResults{year}')
     # Now that we have a connection to the container we can insert/update data
     container.upsert_item(payload)
     return func.HttpResponse(
@@ -348,7 +373,7 @@ def get_teams_df(year):
         # dataframe already started, so we need to append() the partial one
         # to the largert one
         else:
-            teams_df = teams_df.append(partial_df)
+            teams_df = pd.concat([teams_df, partial_df])
 
         # Now we take a count of how many teams we've found so far.
         # It's a little odd, because we're useing teams_df.index which

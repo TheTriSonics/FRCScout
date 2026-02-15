@@ -243,7 +243,7 @@ def get_teams_df(year):
         # dataframe already started, so we need to append() the partial one
         # to the largert one
         else:
-            teams_df = teams_df.append(partial_df)
+            teams_df = pd.concat([teams_df, partial_df])
 
         # Now we take a count of how many teams we've found so far.
         # It's a little odd, because we're useing teams_df.index which
