@@ -68,17 +68,16 @@ def clusters_page():
     """
     This allows us to break teams into groups that share similar attributes with one
     another.
-    
+
     If you were to pick two numbers upon which to group robots and graph them out on
     an X/Y plane you can generally see which ones are similar based on their
     distance from one another. But, that only lets you consider two metrics. For
-    Reefscape you could do something like add up all of the coral points a team gets
-    and all of the algae points a team gets and use them as your X and Y values. And
-    that kind of tells you something. But, what if you want to consider everything
-    we collect?  The number of corals scored on level 4, level 3, level 1, the
-    trough, etc.  Every number. Well, you end up with more than the two dimensions
-    you can graph in the X/Y plane. For most FRC games we collect 12-20 metrics and
-    that means we're working in 12-20 dimensions.
+    example you could add up all of one type of scoring a team does and all of
+    another type and use them as your X and Y values. And that kind of tells you
+    something. But, what if you want to consider everything we collect? Every
+    number. Well, you end up with more than the two dimensions you can graph in
+    the X/Y plane. For most FRC games we collect 12-20 metrics and that means
+    we're working in 12-20 dimensions.
     
     And while it's not intuitive to work in those higher dimensions, we have math to
     guide the way. What we're doing in KMeans clustering is finding thigns that are
@@ -175,12 +174,10 @@ def clusters_page():
                 st.dataframe(opr_var_df, hide_index=True)
     
         # Justin's own preference here; no reason to look at point level
-        # cOPR data.
+        # cOPR data. Dynamically detect *Points columns.
         default_off = [
-            'totalPoints', 'teleopPoints', 'teleopCoralPoints',
-            'algaePoints', 'autoPoints', 'autoCoralPoints',
-            'endGameBargePoints', 'foulPoints', 'adjustPoints'
-    
+            col for col in opr_score_vectors.columns
+            if col.endswith('Points')
         ]
         scouted_data_cols = st.pills(
             'Dimensions (scouted data)', scouted_avail_cols,
@@ -237,7 +234,7 @@ def clusters_page():
         for (idx, row), label in zip(merged_score_vectors.iterrows(), model.labels_):
             clusters[label]['teams'].append(str(int(row.scouting_team)))
             teamopr = opr_data[opr_data.teamNumber == row.scouting_team]
-            if len(teamopr) == 1:
+            if len(teamopr) == 1 and 'totalPoints' in opr_data.columns:
                 clusters[label]['opr_total'] += (
                     teamopr.totalPoints.values[0]
                 )
@@ -274,10 +271,11 @@ def clusters_page():
     
         show_chart = st.checkbox('Display 2D chart (not always useful)')
         if show_chart:
+            all_axis_cols = sorted([x[0] for x in scouted_data_cols + opr_data_cols])
             if 'x_axis' not in st.session_state:
-                st.session_state.x_axis = 'totalPoints'
+                st.session_state.x_axis = 'totalPoints' if 'totalPoints' in all_axis_cols else all_axis_cols[0]
             if 'y_axis' not in st.session_state:
-                st.session_state.y_axis = 'autoPoints'
+                st.session_state.y_axis = 'autoPoints' if 'autoPoints' in all_axis_cols else all_axis_cols[-1]
     
             x_axis = st.selectbox('X Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols + [('pca1', 1)]]), key='x_axis')
             y_axis = st.selectbox('Y Axis', sorted([x[0] for x in scouted_data_cols + opr_data_cols + [('pca2', 2)]]), key='y_axis')
@@ -318,8 +316,12 @@ def clusters_page():
             info_md = ''
             for tnum in main_teams:
                 tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
-                opr = round(opr_data[opr_data.teamNumber == tnum].totalPoints.values[0], 1)
-                info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum}):  {opr} OPR  \n"
+                team_opr_row = opr_data[opr_data.teamNumber == tnum]
+                if 'totalPoints' in opr_data.columns and len(team_opr_row) > 0:
+                    opr_val = round(team_opr_row.totalPoints.values[0], 1)
+                    info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum}):  {opr_val} OPR  \n"
+                else:
+                    info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum})  \n"
             if len(dnp_in_cluster) > 0:
                 info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
             if len(fsp_in_cluster) > 0:

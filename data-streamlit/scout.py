@@ -131,6 +131,11 @@ def load_event_data(secret_key, event_key):
             df['teleop_coral1'] + df['teleop_coral2'] +
             df['teleop_coral3'] + df['teleop_coral4']
         )
+    elif event_key.startswith('2026') and len(df.index) > 0:
+        df['auto_fuel_total'] = df['auto_fuel_scored'] + df['auto_fuel_missed']
+        df['teleop_fuel_total'] = df['teleop_fuel_scored'] + df['teleop_fuel_missed']
+        df['auto_fuel_accuracy'] = df['auto_fuel_scored'] / df['auto_fuel_total'].replace(0, float('nan'))
+        df['teleop_fuel_accuracy'] = df['teleop_fuel_scored'] / df['teleop_fuel_total'].replace(0, float('nan'))
     return df
 
 

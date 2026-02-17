@@ -44,7 +44,10 @@ def match_breakdowns_page():
     
     try:
         oprdata = load_opr_data(sk, ek)
-        opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+        if oprdata is not None and 'totalPoints' in oprdata.columns:
+            opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+        else:
+            opr_totalpoints = None
     except urllib.error.HTTPError:
         oprdata = None
         opr_totalpoints = None

@@ -79,11 +79,9 @@ def team_detail_page():
             st.subheader("Endgame")
             st.bar_chart(endgame_df, x='match_key')
 
-            default_off = [
-                'totalPoints', 'teleopPoints', 'teleopCoralPoints',
-                'algaePoints', 'autoPoints', 'autoCoralPoints',
-                'endGameBargePoints', 'foulPoints', 'adjustPoints',
-                'teamNumber',
+            default_off = ['teamNumber'] + [
+                col for col in (odf.columns if opr_data is not None else [])
+                if col.endswith('Points')
             ]
             scouted_drop = [col for col in tdf.columns if col in default_off]
             if opr_data is not None:
