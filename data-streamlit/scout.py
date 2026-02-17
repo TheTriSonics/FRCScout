@@ -11,11 +11,19 @@ statbot_url = "https://api.statbotics.io/v3"
 
 def init_cookies():
     """Initialize cookie manager and read cookies. Call once at the top of main()."""
-    if 'cookie_manager' not in st.session_state:
-        st.session_state.cookie_manager = stx.CookieManager(key='cookie_manager_main')
+    # Must create CookieManager every render so its hidden JS component stays
+    # in the page. Caching it in session_state and skipping creation on later
+    # renders meant the iframe never re-rendered and get_all() returned stale
+    # data.
+    st.session_state.cookie_manager = stx.CookieManager(key='cookie_manager_main')
     cookies = st.session_state.cookie_manager.get_all()
     if cookies:
         st.session_state.cookies = cookies
+    elif 'cookies_checked' not in st.session_state:
+        # First render: the browser JS component hasn't reported cookies yet.
+        # Mark as checked and rerun so the component gets a full round-trip.
+        st.session_state.cookies_checked = True
+        st.rerun()
 
 
 def get_cookies():
