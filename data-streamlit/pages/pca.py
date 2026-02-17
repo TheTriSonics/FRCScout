@@ -13,7 +13,7 @@ def pca_page():
     secret_key = get_secret_key()
     event_key = get_event_key()
     
-    if not secret_key or not event_key:
+    if secret_key is None or event_key is None:
         st.warning("Please set secret key and event key in the Config page first.")
         st.stop()
     

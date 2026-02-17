@@ -17,8 +17,9 @@ def team_detail_page():
         Select a team to see their detailed data.
         """)
 
-    if not secret_key or not event_key:
+    if secret_key is None or event_key is None:
         st.warning("Please set secret key and event key in the Config page first.")
+        st.info(f"Current URL keys: secret_key={'set' if 'secret_key' in st.query_params else 'not set'}, event_key={'set' if 'event_key' in st.query_params else 'not set'}")
         st.stop()
 
     td = load_team_data(event_key)

@@ -43,34 +43,50 @@ def get_pit_data_url(secret_key, event_key, team_key):
 
 
 def get_secret_key():
+    """Get secret key, prioritizing query params over session state"""
     ret = None
-    if 'secret_key' in st.session_state:
-        ret = st.session_state.secret_key
+
+    # Priority 1: Query params (from URL)
     if 'secret_key' in st.query_params:
         ret = str(st.query_params['secret_key'])
-        st.session_state.secret_key = ret
-    # Remove any leading or trailing whitespace from ret
+    # Priority 2: Session state
+    elif 'secret_key' in st.session_state:
+        ret = st.session_state.secret_key
+
+    # Clean and sync
     if ret:
         ret = ret.strip()
-    return ret or ''
+        # Keep session_state in sync with query params
+        if ret:
+            st.session_state.secret_key = ret
+
+    return ret if ret else None
 
 
 def get_event_key():
+    """Get event key, prioritizing query params over session state"""
     ret = None
-    if 'event_key' in st.session_state:
-        ret = st.session_state.event_key
+
+    # Priority 1: Query params (from URL)
     if 'event_key' in st.query_params:
         ret = str(st.query_params['event_key'])
-        st.session_state.event_key = ret
-    # Remove any leading or trailing whitespace from ret
+    # Priority 2: Session state
+    elif 'event_key' in st.session_state:
+        ret = st.session_state.event_key
+
+    # Clean and sync
     if ret:
         ret = ret.strip()
-    return ret or ''
+        # Keep session_state in sync with query params
+        if ret:
+            st.session_state.event_key = ret
+
+    return ret if ret else None
 
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_team_data(event_key):
-    if not event_key:
+    if event_key is None or event_key == '':
         return pd.DataFrame()
     url = get_team_list_url(event_key)
     print(url)
@@ -79,7 +95,7 @@ def load_team_data(event_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_event_data(secret_key, event_key):
-    if not secret_key or not event_key:
+    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
         return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
@@ -100,7 +116,7 @@ def load_event_data(secret_key, event_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_matches_data(event_key):
-    if not event_key:
+    if event_key is None or event_key == '':
         return pd.DataFrame()
     url = get_matches_data_url(event_key)
     print(url)
@@ -110,7 +126,7 @@ def load_matches_data(event_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_statbot_matches_data(event_key):
-    if not event_key:
+    if event_key is None or event_key == '':
         return pd.DataFrame()
     url = f'{base_url}/GetStatboticsMatches?event_key={event_key}'
     print('statbot url', url)
@@ -120,7 +136,7 @@ def load_statbot_matches_data(event_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_pit_data(secret_key, event_key, team_key):
-    if not secret_key or not event_key:
+    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
         return pd.DataFrame()
     url = get_pit_data_url(secret_key, event_key, team_key)
     print(url)
@@ -130,7 +146,7 @@ def load_pit_data(secret_key, event_key, team_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_opr_data(secret_key, event_key):
-    if not secret_key or not event_key:
+    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
         return None
     url = get_opr_data_url(secret_key, event_key)
     print(url)
@@ -198,6 +214,7 @@ def load_data():
 
 def config_page():
     """Config page - inline here to avoid circular imports"""
+    # Initialize session state
     if 'secret_key' not in st.session_state:
         st.session_state['secret_key'] = ''
     if 'event_key' not in st.session_state:
@@ -205,16 +222,24 @@ def config_page():
 
     with st.expander('Instructions'):
         st.write(instructions)
-    if 'secret_key' in st.query_params:
-        secret_key = str(st.query_params['secret_key'])
-        st.session_state.secret_key = secret_key
-    else:
-        st.text_input("Secret key", key='secret_key')
-    if 'event_key' in st.query_params:
-        event_key = str(st.query_params['event_key'])
-        st.session_state.event_key = event_key
-    else:
-        st.text_input("Event key", key='event_key')
+
+    # Show text inputs for keys
+    secret_key_input = st.text_input("Secret key", value=get_secret_key() or '', key='secret_key_input')
+    event_key_input = st.text_input("Event key", value=get_event_key() or '', key='event_key_input')
+
+    # Update button that sets query params
+    def update_keys():
+        # Update query params (this makes them persist in URL)
+        if secret_key_input:
+            st.query_params['secret_key'] = secret_key_input.strip()
+            st.session_state.secret_key = secret_key_input.strip()
+        if event_key_input:
+            st.query_params['event_key'] = event_key_input.strip()
+            st.session_state.event_key = event_key_input.strip()
+
+    if st.button('Update Keys', on_click=update_keys):
+        st.rerun()
+
     st.button('Load Data', on_click=load_data)
 
 
