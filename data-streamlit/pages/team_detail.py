@@ -1,3 +1,5 @@
+import base64
+import pandas as pd
 import streamlit as st
 import altair as alt
 from scout import (
@@ -39,6 +41,57 @@ def team_detail_page():
             opr_data = load_opr_data(secret_key, event_key)
             (team_number, team_name) = team
             pdf = load_pit_data(secret_key, event_key, team_number)
+
+        # --- Pit Scouting Summary ---
+        if pdf is not None and len(pdf.index) > 0:
+            st.subheader("Pit Scouting")
+            pit_row = pdf.iloc[0]
+            pit_cols = pdf.columns.tolist()
+
+            # Photo
+            if 'photo_base64' in pit_cols and pd.notna(pit_row.get('photo_base64')):
+                try:
+                    img_bytes = base64.b64decode(pit_row['photo_base64'])
+                    st.image(img_bytes, caption=f"Team {team_number}", width=300)
+                except Exception:
+                    pass
+
+            # Key fields displayed as metrics / text
+            col1, col2, col3 = st.columns(3)
+            # Drive train
+            for field in ['drive_train', 'driveTrain', 'drivetrain']:
+                if field in pit_cols and pd.notna(pit_row.get(field)):
+                    col1.metric("Drive Train", str(pit_row[field]))
+                    break
+
+            # Fuel / game-piece capacity
+            for field in ['fuel_capacity', 'fuelCapacity', 'game_piece_capacity']:
+                if field in pit_cols and pd.notna(pit_row.get(field)):
+                    col2.metric("Capacity", pit_row[field])
+                    break
+
+            # Weight
+            for field in ['weight', 'robot_weight', 'robotWeight']:
+                if field in pit_cols and pd.notna(pit_row.get(field)):
+                    col3.metric("Weight", pit_row[field])
+                    break
+
+            # Boolean capabilities shown as yes/no chips
+            bool_fields = [c for c in pit_cols if pit_row.get(c) in [True, False, 0, 1]
+                           and c not in ['photo_base64', 'scouting_team', 'team_key']]
+            if bool_fields:
+                cap_cols = st.columns(min(len(bool_fields), 4))
+                for i, field in enumerate(bool_fields):
+                    val = pit_row[field]
+                    label = field.replace('_', ' ').title()
+                    cap_cols[i % len(cap_cols)].metric(label, "Yes" if val else "No")
+
+            # Notes
+            for field in ['notes', 'pit_notes', 'pitNotes', 'comment', 'comments']:
+                if field in pit_cols and pd.notna(pit_row.get(field)) and str(pit_row[field]).strip():
+                    st.write(f"**Notes:** {pit_row[field]}")
+                    break
+
         # Trim team data down from the full event data to just theirs w/ Pandas
         if len(scouted_data.index) == 0:
             st.subheader("No match data")
@@ -78,6 +131,10 @@ def team_detail_page():
             st.bar_chart(teleop_df, x='match_key')
 
             st.subheader("Endgame")
+            endgame_numeric = endgame_df.select_dtypes(include='number')
+            if not endgame_numeric.empty:
+                avg_endgame = endgame_numeric.mean().mean()
+                st.metric("Avg Endgame Score", f"{avg_endgame:.1f}")
             st.bar_chart(endgame_df, x='match_key')
 
             default_off = ['teamNumber'] + [

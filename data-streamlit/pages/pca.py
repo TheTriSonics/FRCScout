@@ -54,18 +54,9 @@ def pca_page():
     dropcols = [x for x in score_vectors.columns if x.startswith('comp')]
     score_vectors.drop(dropcols, axis=1, inplace=True)
     A = np.array(score_vectors.drop('scouting_team', axis=1).to_numpy())
-    st.write("A shape")
-    st.write(A.shape)
     A -= A.mean(axis=0)
-    U, Σ, V = np.linalg.svd(A)
-    U2 = U[:, :dims]
-    Σ2 = np.zeros((dims, dims), float)
-    np.fill_diagonal(Σ2, Σ[:dims])
-    V2 = V[:, :dims]
-
-    proj = (Σ2*V2.T).T
-
-    st.write(proj.shape)
+    U, Σ, V = np.linalg.svd(A, full_matrices=False)
+    proj = U[:, :dims] * Σ[:dims]
 
     cols = [f'pca{x+1}' for x in range(dims)]
     proj = DataFrame(data=proj, columns=cols)

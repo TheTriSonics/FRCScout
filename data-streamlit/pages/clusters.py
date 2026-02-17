@@ -397,8 +397,14 @@ def clusters_page():
     </style>
     """, unsafe_allow_html=True)
     
-    scouted_data = load_event_data(get_secret_key(), get_event_key())
-    opr_data = load_opr_data(get_secret_key(), get_event_key())
+    sk = get_secret_key()
+    ek = get_event_key()
+    if sk is None or ek is None:
+        st.warning("Please set secret key and event key in the Config page first.")
+        st.stop()
+
+    scouted_data = load_event_data(sk, ek)
+    opr_data = load_opr_data(sk, ek)
     td = load_team_data(get_event_key())
     all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
     dnp = [t[0] for t in get_dnp()]

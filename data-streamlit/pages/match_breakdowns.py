@@ -15,13 +15,19 @@ def match_breakdowns_page():
     
     sk = get_secret_key()
     ek = get_event_key()
-    
+
+    if sk is None or ek is None:
+        st.warning("Please set secret key and event key in the Config page first.")
+        st.stop()
+
     st.header('Match Breakdowns')
     with st.expander('Instructions'):
         st.write("""
-        TODO
+        Match-by-match breakdown showing alliance compositions, OPR-based
+        predictions, and actual scores. Filter by match type or team to
+        focus on specific matchups.
         """)
-    
+
     event = load_event_data(sk, ek)
     # st.dataframe(event)
     
