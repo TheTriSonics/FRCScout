@@ -19,10 +19,6 @@ instructions = """
 """
 
 
-def fix_session():
-    st.session_state.update(st.session_state)
-
-
 def get_team_list_url(event_key):
     return f"{base_url}/GetTeamsForEvent?event_key={event_key}"
 
@@ -51,11 +47,12 @@ def get_secret_key():
     if 'secret_key' in st.session_state:
         ret = st.session_state.secret_key
     if 'secret_key' in st.query_params:
-        ret = st.query_params.secret_key
+        ret = str(st.query_params['secret_key'])
         st.session_state.secret_key = ret
     # Remove any leading or trailing whitespace from ret
-    ret = ret.strip()
-    return ret
+    if ret:
+        ret = ret.strip()
+    return ret or ''
 
 
 def get_event_key():
@@ -63,39 +60,27 @@ def get_event_key():
     if 'event_key' in st.session_state:
         ret = st.session_state.event_key
     if 'event_key' in st.query_params:
-        ret = st.query_params.event_key
+        ret = str(st.query_params['event_key'])
         st.session_state.event_key = ret
-    ret = ret.strip()
-    return ret
+    # Remove any leading or trailing whitespace from ret
+    if ret:
+        ret = ret.strip()
+    return ret or ''
 
 
-
-
-def _gen_pages(stp_dir, secret_key=None, event_key=None):
-    return [
-        st.Page(f'{stp_dir}/scout.py', title='Config'),
-        # st.Page(f'{stp_dir}/pages/explore.py', title='Explore Data'),
-        st.Page(f'{stp_dir}/pages/team_detail.py', title='Team Details'),
-        st.Page(f'{stp_dir}/pages/clusters.py', title='Clustering'),
-        st.Page(f'{stp_dir}/pages/picklist.py', title='Pick Lists'),
-        st.Page(f'{stp_dir}/pages/match_breakdowns.py',
-                 title='Match Breakdowns'),
-        st.Page(f'{stp_dir}/pages/what_if.py', title='What If'),
-        st.Page(f'{stp_dir}/pages/app_status.py', title='Workspace'),
-    ]
-
-p = False
-
-
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_team_data(event_key):
+    if not event_key:
+        return pd.DataFrame()
     url = get_team_list_url(event_key)
     print(url)
     df = pd.read_json(url)
     return df
 
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_event_data(secret_key, event_key):
+    if not secret_key or not event_key:
+        return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
     print(url)
     df = pd.read_json(url)
@@ -113,32 +98,40 @@ def load_event_data(secret_key, event_key):
     return df
 
 
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_matches_data(event_key):
+    if not event_key:
+        return pd.DataFrame()
     url = get_matches_data_url(event_key)
     print(url)
     df = pd.read_json(url)
     return df
 
 
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_statbot_matches_data(event_key):
+    if not event_key:
+        return pd.DataFrame()
     url = f'{base_url}/GetStatboticsMatches?event_key={event_key}'
     print('statbot url', url)
     df = pd.read_json(url)
     return df
 
 
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_pit_data(secret_key, event_key, team_key):
+    if not secret_key or not event_key:
+        return pd.DataFrame()
     url = get_pit_data_url(secret_key, event_key, team_key)
     print(url)
     pit_data = pd.read_json(url)
     return pit_data
 
 
-@st.cache_data(persist=p)
+@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_opr_data(secret_key, event_key):
+    if not secret_key or not event_key:
+        return None
     url = get_opr_data_url(secret_key, event_key)
     print(url)
     try:
@@ -203,19 +196,9 @@ def load_data():
         st.success("All data loaded! Proceed!")
 
 
-def main():
-    st.set_page_config(
-        layout="wide",
-    )
-
-    st.title("Trisonics FRC Scouting")
-
-    pg = st.navigation(_gen_pages('.'))
-    pg.run()
-
+def config_page():
+    """Config page - inline here to avoid circular imports"""
     if 'secret_key' not in st.session_state:
-        # import os
-        # st.session_state['secret_key'] = os.environ.get('FRC_SECRET_KEY')
         st.session_state['secret_key'] = ''
     if 'event_key' not in st.session_state:
         st.session_state['event_key'] = ''
@@ -223,16 +206,45 @@ def main():
     with st.expander('Instructions'):
         st.write(instructions)
     if 'secret_key' in st.query_params:
-        secret_key = st.query_params['secret_key']
+        secret_key = str(st.query_params['secret_key'])
         st.session_state.secret_key = secret_key
     else:
         st.text_input("Secret key", key='secret_key')
     if 'event_key' in st.query_params:
-        event_key = st.query_params['event_key']
+        event_key = str(st.query_params['event_key'])
         st.session_state.event_key = event_key
     else:
         st.text_input("Event key", key='event_key')
     st.button('Load Data', on_click=load_data)
+
+
+def main():
+    st.set_page_config(
+        layout="wide",
+    )
+
+    st.title("Trisonics FRC Scouting")
+
+    # Import page functions lazily to avoid module-level execution
+    from pages.team_detail import team_detail_page
+    from pages.clusters import clusters_page
+    from pages.picklist import picklist_page
+    from pages.match_breakdowns import match_breakdowns_page
+    from pages.what_if import what_if_page
+    from pages.app_status import app_status_page
+    from pages.pca import pca_page
+
+    pg = st.navigation([
+        st.Page(config_page, title='Config'),
+        st.Page(team_detail_page, title='Team Details'),
+        st.Page(clusters_page, title='Clustering'),
+        st.Page(picklist_page, title='Pick Lists'),
+        st.Page(match_breakdowns_page, title='Match Breakdowns'),
+        st.Page(what_if_page, title='What If'),
+        st.Page(pca_page, title='PCA'),
+        st.Page(app_status_page, title='Workspace'),
+    ])
+    pg.run()
 
 
 def load_dev_config():
@@ -245,5 +257,4 @@ def load_dev_config():
 
 if __name__ == '__main__':
     load_dev_config()
-    fix_session()
     main()
