@@ -30,7 +30,9 @@ def team_detail_page():
     # Check if we have team_detail_number in the query params
     if 'team_detail_number' in st.query_params:
         team = int(st.query_params['team_detail_number'])
-        st.session_state.team_detail_number = (team, td.loc[td.number == team].iloc[0]['name'])
+        matching = td.loc[td.number == team]
+        if not matching.empty:
+            st.session_state.team_detail_number = (team, matching.iloc[0]['name'])
     team = st.selectbox("Team", all_teams,
                         key='team_detail_number',
                         format_func=lambda x: f'{x[0]} ({x[1]})')
@@ -117,13 +119,6 @@ def team_detail_page():
             # And endgame.
             endgame_cols = [c for c in allcols if c.startswith("endgame") or c == 'match_key']
             endgame_df = tdf[endgame_cols]
-            # And our computed ones
-            # comp_cols = [c for c in allcols if c.startswith("comp")]
-            # comp_df = tdf[comp_cols]
-
-            # st.subheader("Computed")
-            # st.bar_chart(comp_df)
-
             st.subheader("Auton")
             st.bar_chart(auton_df, x='match_key')
 

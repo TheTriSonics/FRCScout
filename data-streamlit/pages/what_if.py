@@ -11,16 +11,18 @@ def what_if_page():
     if event_key:
         td = load_team_data(event_key)
 
+    alliance = {}
+
     def avail_teams():
         if td is None:
             return []
         selected_teams = []
-        for x in range(8):
+        for i in range(8):
             try:
-                selected_teams += alliance[x]['team_select']
+                selected_teams += alliance[i]['team_select']
             except KeyError:
-                pass  # Ignore
-        all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
+                pass
+        all_teams = [(row.number, row['name']) for _, row in td.iterrows()]
         rem_teams = [t for t in all_teams if t not in selected_teams]
         return rem_teams
 
@@ -31,7 +33,6 @@ def what_if_page():
         to see how they will stack up against each other.
         """)
 
-    alliance = {}
     for x in range(8):
         alliance[x] = {}
         with st.container():
@@ -40,7 +41,7 @@ def what_if_page():
                 'Members', avail_teams(),
                 placeholder='Choose 3 teams',
                 max_selections=3,
-                format_func=lambda x: f'{x[0]} ({x[1]})',
+                format_func=lambda t: f'{t[0]} ({t[1]})',
                 key=f'alliance_{x}_multiselect'
             )
             st.info('Graphs go here')

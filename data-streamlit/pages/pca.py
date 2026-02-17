@@ -1,5 +1,5 @@
 import numpy as np
-from pandas import DataFrame
+import pandas as pd
 import streamlit as st
 import altair as alt
 
@@ -59,7 +59,7 @@ def pca_page():
     proj = U[:, :dims] * Σ[:dims]
 
     cols = [f'pca{x+1}' for x in range(dims)]
-    proj = DataFrame(data=proj, columns=cols)
+    proj = pd.DataFrame(data=proj, columns=cols)
     proj['team_number'] = orig_score_vectors.scouting_team
     st.dataframe(proj)
 

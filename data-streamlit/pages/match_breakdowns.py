@@ -1,18 +1,14 @@
-import urllib
 import streamlit as st
 import pandas as pd
 
 from scout import (
     load_matches_data, load_opr_data, load_team_data, get_event_key,
-    load_event_data, load_statbot_matches_data, get_secret_key
+    load_statbot_matches_data, get_secret_key
 )
 
 def match_breakdowns_page():
     """Match Breakdowns Page"""
-    
-    pd.options.mode.copy_on_write = True
-    
-    
+
     sk = get_secret_key()
     ek = get_event_key()
 
@@ -28,47 +24,35 @@ def match_breakdowns_page():
         focus on specific matchups.
         """)
 
-    event = load_event_data(sk, ek)
-    # st.dataframe(event)
-    
     matches = load_matches_data(ek)
-    types = matches.comp_level.unique()
     team_data = load_team_data(ek)
-    
+
     qm_filter = st.checkbox('Qualifying Matches', True)
     po_filter = st.checkbox('Playoff Matches', True)
-    
+
     match_types = []
     if qm_filter:
         match_types.append('qm')
     if po_filter:
         for level in ['sf', 'f']:
             match_types.append(level)
-    print(types)
-    print(match_types)
     team_filter = st.multiselect('Team', team_data, placeholder='Select a team')
-    
-    try:
-        oprdata = load_opr_data(sk, ek)
-        if oprdata is not None and 'totalPoints' in oprdata.columns:
-            opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
-        else:
-            opr_totalpoints = None
-    except urllib.error.HTTPError:
-        oprdata = None
+
+    oprdata = load_opr_data(sk, ek)
+    if oprdata is not None and 'totalPoints' in oprdata.columns:
+        opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+    else:
         opr_totalpoints = None
+
     matches = matches[matches['comp_level'].isin(match_types)]
     # Order the matches dataframe by the match_number column
     matches = matches.sort_values(by='match_number').reset_index(drop=True)
-    # st.dataframe(matches)
-    
+
     if len(matches.index) == 0:
         st.subheader('No match data available yet.')
     else:
         n1 = pd.json_normalize(matches['alliances'])
-        bluen2 = pd.json_normalize(n1['blue.team_keys'])
-        redn2 = pd.json_normalize(n1['red.team_keys'])
-    
+
         blueteams = pd.DataFrame(n1['blue.team_keys'].explode())
         redteams = pd.DataFrame(n1['red.team_keys'].explode())
         blueteams['blue.team_keys'] = blueteams['blue.team_keys'].str.replace('frc', '').astype(int)
@@ -80,16 +64,15 @@ def match_breakdowns_page():
         pblue.columns = ['blue1', 'blue2', 'blue3']
         pred.columns = ['red1', 'red2', 'red3']
         matches = matches.join(pblue).join(pred)
-    
+
         if team_filter:
-            print(team_filter)
             matches = matches[(matches['red1'].isin(team_filter)) |
                         (matches['red2'].isin(team_filter)) |
                         (matches['red3'].isin(team_filter)) |
                         (matches['blue1'].isin(team_filter)) |
                         (matches['blue2'].isin(team_filter)) |
                         (matches['blue3'].isin(team_filter))]
-    
+
         if opr_totalpoints is not None:
             for color in ['blue', 'red']:
                 for index in [1, 2, 3]:
@@ -101,8 +84,7 @@ def match_breakdowns_page():
                         columns={'totalPoints': f'{color}{index}_totalPoints'},
                         inplace=True
                     )
-        # st.dataframe(matches)
-    
+
         statbotics = load_statbot_matches_data(get_event_key())
         if statbotics.index.size == 0:
             st.subheader('No statbotics data available yet.')
@@ -112,23 +94,22 @@ def match_breakdowns_page():
             preds = statbotics[['comp_level', 'match_number', 'pred']]
             preds = preds[preds['comp_level'] == 'qm']
             pred_detail = preds.join(pd.json_normalize(preds['pred']))
-    
+
             actual = statbotics[['comp_level', 'match_number', 'result']]
             actual = actual[actual['comp_level'] == 'qm']
             actual_detail = actual.join(pd.json_normalize(actual['result']))
-        # st.dataframe(pred_detail)
-    
+
         if pred_detail is not None:
             matches = matches.join(pred_detail.set_index('match_number')
                                             .add_suffix('_pred'),
                                 on='match_number')
-    
+
         if actual_detail is not None:
             matches = matches.join(actual_detail.set_index('match_number')
                                                 .add_suffix('_actual'),
                                 on='match_number')
-    
-    
+
+
         for panda_idx, match in matches.iterrows():
             with st.container(border=8):
                 # Display the match number
@@ -174,7 +155,6 @@ def match_breakdowns_page():
                                 score_pred,
                                 score_actual
                             ]
-                # JJB: I'm not thrilled with my indent level above
                 misc_breakdown = pd.DataFrame({
                     'Label': ['Total TP OPR',
                             'Score Predicted',

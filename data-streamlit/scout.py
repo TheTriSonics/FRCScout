@@ -1,10 +1,11 @@
 import json
 import pandas as pd
-import urllib
 import streamlit as st
 import extra_streamlit_components as stx
 
 from os.path import exists
+
+pd.options.mode.copy_on_write = True
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 statbot_url = "https://api.statbotics.io/v3"
@@ -33,12 +34,46 @@ def get_cookies():
 
 instructions = """
         Use this screen to enter your team's secret key. This is used to keep
-        different team's data seperate. If you want to pool efforts with
+        different team's data separate. If you want to pool efforts with
         another team just use the same key.
 
         Once you've entered that and selected an event data will be loaded for
         the event.
 """
+
+
+def _get_key(name):
+    """Get a key value, checking query params -> cookies -> session state."""
+    ret = None
+    cookies = get_cookies()
+
+    # Priority 1: Query params (from URL - for sharing)
+    if name in st.query_params:
+        ret = str(st.query_params[name])
+    # Priority 2: Cookies (for persistence across sessions)
+    elif cookies and name in cookies:
+        ret = cookies[name]
+    # Priority 3: Session state
+    elif name in st.session_state:
+        ret = st.session_state[name]
+
+    # Clean and sync
+    if ret:
+        ret = ret.strip()
+        if ret:
+            st.session_state[name] = ret
+
+    return ret if ret else None
+
+
+def get_secret_key():
+    """Get secret key, checking query params -> cookies -> session state."""
+    return _get_key('secret_key')
+
+
+def get_event_key():
+    """Get event key, checking query params -> cookies -> session state."""
+    return _get_key('event_key')
 
 
 def get_team_list_url(event_key):
@@ -47,89 +82,43 @@ def get_team_list_url(event_key):
 
 def get_scouted_data_url(secret_key, event_key):
     if secret_key:
-        return f"{base_url}/GetResults?secret_team_key={secret_key}&event_key={event_key}"  # noqa
+        return f"{base_url}/GetResults?secret_team_key={secret_key}&event_key={event_key}"
     else:
         raise ValueError('secret_key needs to be defined')
 
 
 def get_matches_data_url(event_key):
-    return f"{base_url}/GetMatchesForEvent?event_key={event_key}"  # noqa
+    return f"{base_url}/GetMatchesForEvent?event_key={event_key}"
 
 
 def get_opr_data_url(secret_key, event_key):
-    return f"{base_url}/GetOPRData?secret_team_key={secret_key}&event_key={event_key}"  # noqa
+    return f"{base_url}/GetOPRData?secret_team_key={secret_key}&event_key={event_key}"
 
 
 def get_pit_data_url(secret_key, event_key, team_key):
-    return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"  # noqa
+    return f"{base_url}/GetPitResults?secret_team_key={secret_key}&event_key={event_key}&team_key={team_key}"
 
 
-def get_secret_key():
-    """Get secret key, checking cookies → query params → session state"""
-    ret = None
-    cookies = get_cookies()
-
-    # Priority 1: Query params (from URL - for sharing)
-    if 'secret_key' in st.query_params:
-        ret = str(st.query_params['secret_key'])
-    # Priority 2: Cookies (for persistence across sessions)
-    elif cookies and 'secret_key' in cookies:
-        ret = cookies['secret_key']
-    # Priority 3: Session state
-    elif 'secret_key' in st.session_state:
-        ret = st.session_state.secret_key
-
-    # Clean and sync
-    if ret:
-        ret = ret.strip()
-        if ret:
-            st.session_state.secret_key = ret
-
-    return ret if ret else None
-
-
-def get_event_key():
-    """Get event key, checking cookies → query params → session state"""
-    ret = None
-    cookies = get_cookies()
-
-    # Priority 1: Query params (from URL - for sharing)
-    if 'event_key' in st.query_params:
-        ret = str(st.query_params['event_key'])
-    # Priority 2: Cookies (for persistence across sessions)
-    elif cookies and 'event_key' in cookies:
-        ret = cookies['event_key']
-    # Priority 3: Session state
-    elif 'event_key' in st.session_state:
-        ret = st.session_state.event_key
-
-    # Clean and sync
-    if ret:
-        ret = ret.strip()
-        if ret:
-            st.session_state.event_key = ret
-
-    return ret if ret else None
+def _keys_missing(*args):
+    """Return True if any of the given keys are None or empty."""
+    return any(a is None or a == '' for a in args)
 
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_team_data(event_key):
-    if event_key is None or event_key == '':
+    if _keys_missing(event_key):
         return pd.DataFrame()
     url = get_team_list_url(event_key)
-    print(url)
     df = pd.read_json(url)
     return df
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_event_data(secret_key, event_key):
-    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
+    if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
-    print(url)
     df = pd.read_json(url)
     if event_key.startswith('2025') and len(df.index) > 0:
-        # Add a auton_coral_total column that adds up level, level2, etc.
         df['auto_coral_total'] = (
             df['auto_coral1'] + df['auto_coral2'] +
             df['auto_coral3'] + df['auto_coral4']
@@ -149,61 +138,54 @@ def load_event_data(secret_key, event_key):
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_matches_data(event_key):
-    if event_key is None or event_key == '':
+    if _keys_missing(event_key):
         return pd.DataFrame()
     url = get_matches_data_url(event_key)
-    print(url)
     df = pd.read_json(url)
     return df
 
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_statbot_matches_data(event_key):
-    if event_key is None or event_key == '':
+    if _keys_missing(event_key):
         return pd.DataFrame()
     url = f'{base_url}/GetStatboticsMatches?event_key={event_key}'
-    print('statbot url', url)
     df = pd.read_json(url)
     return df
 
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_pit_data(secret_key, event_key, team_key):
-    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
+    if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
     url = get_pit_data_url(secret_key, event_key, team_key)
-    print(url)
     pit_data = pd.read_json(url)
     return pit_data
 
 
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_opr_data(secret_key, event_key):
-    if secret_key is None or event_key is None or secret_key == '' or event_key == '':
+    if _keys_missing(secret_key, event_key):
         return None
     url = get_opr_data_url(secret_key, event_key)
-    print(url)
     try:
         opr_data = pd.read_json(url)
         return opr_data
-    except:
+    except Exception:
         return None
 
 
+def _get_pick_list(key):
+    """Return the pick list stored in session state, or an empty list."""
+    return st.session_state.get(key, [])
+
+
 def get_dnp():
-    if 'pick_list_dnp' in st.session_state:
-        data = st.session_state.pick_list_dnp
-        return data
-    else:
-        return []
+    return _get_pick_list('pick_list_dnp')
 
 
 def get_fsp():
-    if 'pick_list_fsp' in st.session_state:
-        data = st.session_state.pick_list_fsp
-        return data
-    else:
-        return []
+    return _get_pick_list('pick_list_fsp')
 
 
 def load_data():
@@ -217,32 +199,28 @@ def load_data():
     load_matches_data.clear()
     load_statbot_matches_data.clear()
     load_pit_data.clear()
-    _ = load_event_data(secret_key, event_key)
 
-    if len(_.index) > 0:
+    event_data = load_event_data(secret_key, event_key)
+    if len(event_data.index) > 0:
         st.success("Scouted data loaded!")
     else:
         st.error("Scouting data not found.")
         all_loaded = False
-    _ = load_team_data(event_key)
 
-    if len(_.index) > 0:
+    team_data = load_team_data(event_key)
+    if len(team_data.index) > 0:
         st.success("Event team list loaded!")
     else:
         st.error("Event team list failed.")
         all_loaded = False
 
-    try:
-        _ = load_opr_data(secret_key, event_key)
-        if _ is not None and len(_.index) > 0:
-            st.success("OPR calculations loaded")
-        else:
-            st.success("OPR calculation load failed.")
-            all_loaded = False
-    except urllib.error.HTTPError:  # noqa
-        # Swallow eception
-        st.success("OPR calculation not available yet.")
-        pass
+    opr_data = load_opr_data(secret_key, event_key)
+    if opr_data is not None and len(opr_data.index) > 0:
+        st.success("OPR calculations loaded")
+    else:
+        st.warning("OPR calculation not available yet.")
+        all_loaded = False
+
     if all_loaded:
         st.success("All data loaded! Proceed!")
 
@@ -270,11 +248,11 @@ def config_page():
 
     with col1:
         # Save button that sets cookies, query params, and session state
-        if st.button('💾 Save Keys', type='primary'):
+        if st.button('Save Keys', type='primary'):
             if cookie_manager:
                 if secret_key_input:
                     sk = secret_key_input.strip()
-                    cookie_manager.set('secret_key', sk, expires_at=None, key='set_secret_key')  # Never expires
+                    cookie_manager.set('secret_key', sk, expires_at=None, key='set_secret_key')
                     st.query_params['secret_key'] = sk
                     st.session_state.secret_key = sk
                     st.session_state.cookies['secret_key'] = sk
@@ -288,7 +266,7 @@ def config_page():
 
     with col2:
         # Clear button to remove saved keys
-        if st.button('🗑️ Clear Saved Keys'):
+        if st.button('Clear Saved Keys'):
             if cookie_manager:
                 cookie_manager.delete('secret_key')
                 cookie_manager.delete('event_key')
