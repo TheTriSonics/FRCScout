@@ -104,7 +104,7 @@ def team_detail_page():
             ).properties(
                 title='Scouted Dimensions (Descending)',
             )
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
             if opr_data is not None:
                 chart = alt.Chart(opr_features).mark_bar().encode(
@@ -114,4 +114,4 @@ def team_detail_page():
                 ).properties(
                     title='OPR Dimensions (Descending)',
                 )
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')

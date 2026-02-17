@@ -16,7 +16,13 @@ def app_status_page():
 
     # Display the current session JSON to the user w/ a "copy" box in the
     # top right
-    obj = dict(st.session_state)
+    obj = {}
+    for k, v in st.session_state.items():
+        try:
+            json.dumps(v)
+            obj[k] = v
+        except (TypeError, ValueError):
+            obj[k] = str(v)
     st.subheader('Current state')
     st.code(
         json.dumps(obj, indent=4, sort_keys=True),

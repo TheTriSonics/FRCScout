@@ -2,11 +2,21 @@ import json
 import pandas as pd
 import urllib
 import streamlit as st
+import extra_streamlit_components as stx
 
 from os.path import exists
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 statbot_url = "https://api.statbotics.io/v3"
+
+def get_cookies_once():
+    """Load cookies once per session and cache in session_state"""
+    if 'cookies_loaded' not in st.session_state:
+        cookie_manager = stx.CookieManager(key='cookie_manager_main')
+        st.session_state.cookies = cookie_manager.get_all()
+        st.session_state.cookies_loaded = True
+        st.session_state.cookie_manager = cookie_manager
+    return st.session_state.get('cookies', {})
 
 
 instructions = """
@@ -43,20 +53,23 @@ def get_pit_data_url(secret_key, event_key, team_key):
 
 
 def get_secret_key():
-    """Get secret key, prioritizing query params over session state"""
+    """Get secret key, checking cookies → query params → session state"""
     ret = None
+    cookies = get_cookies_once()
 
-    # Priority 1: Query params (from URL)
+    # Priority 1: Query params (from URL - for sharing)
     if 'secret_key' in st.query_params:
         ret = str(st.query_params['secret_key'])
-    # Priority 2: Session state
+    # Priority 2: Cookies (for persistence across sessions)
+    elif cookies and 'secret_key' in cookies:
+        ret = cookies['secret_key']
+    # Priority 3: Session state
     elif 'secret_key' in st.session_state:
         ret = st.session_state.secret_key
 
     # Clean and sync
     if ret:
         ret = ret.strip()
-        # Keep session_state in sync with query params
         if ret:
             st.session_state.secret_key = ret
 
@@ -64,20 +77,23 @@ def get_secret_key():
 
 
 def get_event_key():
-    """Get event key, prioritizing query params over session state"""
+    """Get event key, checking cookies → query params → session state"""
     ret = None
+    cookies = get_cookies_once()
 
-    # Priority 1: Query params (from URL)
+    # Priority 1: Query params (from URL - for sharing)
     if 'event_key' in st.query_params:
         ret = str(st.query_params['event_key'])
-    # Priority 2: Session state
+    # Priority 2: Cookies (for persistence across sessions)
+    elif cookies and 'event_key' in cookies:
+        ret = cookies['event_key']
+    # Priority 3: Session state
     elif 'event_key' in st.session_state:
         ret = st.session_state.event_key
 
     # Clean and sync
     if ret:
         ret = ret.strip()
-        # Keep session_state in sync with query params
         if ret:
             st.session_state.event_key = ret
 
@@ -108,8 +124,8 @@ def load_event_data(secret_key, event_key):
         )
 
         df['teleop_coral_total'] = (
-            df['teleop_coral1'] + df['auto_coral2'] +
-            df['teleop_coral3'] + df['auto_coral4']
+            df['teleop_coral1'] + df['teleop_coral2'] +
+            df['teleop_coral3'] + df['teleop_coral4']
         )
     return df
 
@@ -156,9 +172,6 @@ def load_opr_data(secret_key, event_key):
     except:
         return None
 
-def load_tba_opr_data(event_key):
-    pass
-
 
 def get_dnp():
     if 'pick_list_dnp' in st.session_state:
@@ -181,7 +194,12 @@ def load_data():
     event_key = get_event_key()
 
     all_loaded = True
-    st.cache_data.clear()
+    load_event_data.clear()
+    load_team_data.clear()
+    load_opr_data.clear()
+    load_matches_data.clear()
+    load_statbot_matches_data.clear()
+    load_pit_data.clear()
     _ = load_event_data(secret_key, event_key)
 
     if len(_.index) > 0:
@@ -214,6 +232,10 @@ def load_data():
 
 def config_page():
     """Config page - inline here to avoid circular imports"""
+    # Load cookies once
+    cookies = get_cookies_once()
+    cookie_manager = st.session_state.get('cookie_manager')
+
     # Initialize session state
     if 'secret_key' not in st.session_state:
         st.session_state['secret_key'] = ''
@@ -223,22 +245,44 @@ def config_page():
     with st.expander('Instructions'):
         st.write(instructions)
 
-    # Show text inputs for keys
+    # Show text inputs for keys (pre-filled from cookies/query params)
     secret_key_input = st.text_input("Secret key", value=get_secret_key() or '', key='secret_key_input')
     event_key_input = st.text_input("Event key", value=get_event_key() or '', key='event_key_input')
 
-    # Update button that sets query params
-    def update_keys():
-        # Update query params (this makes them persist in URL)
-        if secret_key_input:
-            st.query_params['secret_key'] = secret_key_input.strip()
-            st.session_state.secret_key = secret_key_input.strip()
-        if event_key_input:
-            st.query_params['event_key'] = event_key_input.strip()
-            st.session_state.event_key = event_key_input.strip()
+    col1, col2 = st.columns(2)
 
-    if st.button('Update Keys', on_click=update_keys):
-        st.rerun()
+    with col1:
+        # Save button that sets cookies, query params, and session state
+        if st.button('💾 Save Keys', type='primary'):
+            if cookie_manager:
+                if secret_key_input:
+                    sk = secret_key_input.strip()
+                    cookie_manager.set('secret_key', sk, expires_at=None, key='set_secret_key')  # Never expires
+                    st.query_params['secret_key'] = sk
+                    st.session_state.secret_key = sk
+                    st.session_state.cookies['secret_key'] = sk
+                if event_key_input:
+                    ek = event_key_input.strip()
+                    cookie_manager.set('event_key', ek, expires_at=None, key='set_event_key')
+                    st.query_params['event_key'] = ek
+                    st.session_state.event_key = ek
+                    st.session_state.cookies['event_key'] = ek
+                st.success('Keys saved! They will persist across sessions.')
+                st.rerun()
+
+    with col2:
+        # Clear button to remove saved keys
+        if st.button('🗑️ Clear Saved Keys'):
+            if cookie_manager:
+                cookie_manager.delete('secret_key')
+                cookie_manager.delete('event_key')
+            st.query_params.clear()
+            st.session_state.secret_key = ''
+            st.session_state.event_key = ''
+            if 'cookies' in st.session_state:
+                st.session_state.cookies = {}
+            st.success('Keys cleared!')
+            st.rerun()
 
     st.button('Load Data', on_click=load_data)
 

@@ -29,20 +29,26 @@ def pca_page():
     orig_score_vectors = score_vectors.copy()
     st.dataframe(score_vectors)
 
-    simp = alt.Chart(orig_score_vectors).mark_circle().encode(
-        x='teleop_amp', y='teleop_speaker',
-        tooltip='scouting_team',
-    ).interactive()
+    numeric_cols = [c for c in orig_score_vectors.select_dtypes(include='number').columns
+                    if c != 'scouting_team' and not c.startswith('comp')]
+    if len(numeric_cols) >= 2:
+        x_col = st.selectbox('X Axis', numeric_cols, index=0, key='pca_x')
+        y_col = st.selectbox('Y Axis', numeric_cols, index=min(1, len(numeric_cols)-1), key='pca_y')
 
-    simp_text = simp.mark_text(
-        align='left',
-        baseline='top',
-        color='blue',
-        dx=5,
-    ).encode(
-        text='scouting_team'
-    )
-    st.altair_chart(simp_text + simp, use_container_width=True)
+        simp = alt.Chart(orig_score_vectors).mark_circle().encode(
+            x=x_col, y=y_col,
+            tooltip='scouting_team',
+        ).interactive()
+
+        simp_text = simp.mark_text(
+            align='left',
+            baseline='top',
+            color='blue',
+            dx=5,
+        ).encode(
+            text='scouting_team'
+        )
+        st.altair_chart(simp_text + simp, width='stretch')
 
     dims = 2
     dropcols = [x for x in score_vectors.columns if x.startswith('comp')]
@@ -80,4 +86,4 @@ def pca_page():
         text='team_number'
     )
 
-    st.altair_chart(proj_chart+proj_text, use_container_width=True)
+    st.altair_chart(proj_chart+proj_text, width='stretch')

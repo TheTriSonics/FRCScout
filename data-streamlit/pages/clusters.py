@@ -216,10 +216,6 @@ def clusters_page():
             opr_score_vectors, left_on='scouting_team', right_on='teamNumber'
         )
         v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols + opr_data_cols]]
-        if False:
-            print(
-                v.to_numpy()
-            )
         model.fit(v.to_numpy())
         merged_score_vectors = add_pca_components(
             merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
@@ -241,7 +237,7 @@ def clusters_page():
         for (idx, row), label in zip(merged_score_vectors.iterrows(), model.labels_):
             clusters[label]['teams'].append(str(int(row.scouting_team)))
             teamopr = opr_data[opr_data.teamNumber == row.scouting_team]
-            if len(teamopr == 1):
+            if len(teamopr) == 1:
                 clusters[label]['opr_total'] += (
                     teamopr.totalPoints.values[0]
                 )
@@ -304,7 +300,7 @@ def clusters_page():
     
             st.altair_chart(simp_text + simp,
                             theme="streamlit",
-                            use_container_width=True)
+                            width='stretch')
         sk = get_secret_key()
         ek = get_event_key()
         for cname, cluster in sorted(clusters.items(),
@@ -315,10 +311,10 @@ def clusters_page():
             main_teams = cluster['teams']
             dnp_in_cluster = [t for t in main_teams if int(t) in dnp_nums]
             fsp_in_cluster = [t for t in main_teams if int(t) in fsp_nums]
-            if not exclude_dnp:
-                main_teams = [t for t in main_teams if t not in dnp_nums]
-            if not exclude_fsp:
-                main_teams = [t for t in main_teams if t not in fsp_nums]
+            if exclude_dnp:
+                main_teams = [t for t in main_teams if int(t) not in dnp_nums]
+            if exclude_fsp:
+                main_teams = [t for t in main_teams if int(t) not in fsp_nums]
             info_md = ''
             for tnum in main_teams:
                 tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
@@ -346,7 +342,7 @@ def clusters_page():
                     title='Scouted Dimensions (Descending)',
                 )
                 # Display the chart in Streamlit
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
                 chart = alt.Chart(opr_features).mark_bar().encode(
                     x=alt.X('value:Q'),
                     y=alt.Y('feature:N', sort='-x'),
@@ -355,7 +351,7 @@ def clusters_page():
                     title='OPR Dimensions (Descending)',
                 )
                 # Display the chart in Streamlit
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
             idx += 1
     
     # Custom CSS to change pill highlight color from red to blue in dark mode
@@ -389,6 +385,6 @@ def clusters_page():
     opr_data = load_opr_data(get_secret_key(), get_event_key())
     td = load_team_data(get_event_key())
     all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
-    dnp = get_dnp()
-    fsp = get_fsp()
+    dnp = [t[0] for t in get_dnp()]
+    fsp = [t[0] for t in get_fsp()]
     show_cluster_panel(scouted_data, opr_data, dnp, fsp, all_teams)

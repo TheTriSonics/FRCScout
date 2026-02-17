@@ -16,12 +16,6 @@ def match_breakdowns_page():
     sk = get_secret_key()
     ek = get_event_key()
     
-    td = None
-    matches = None
-    if ek:
-        event = load_event_data(get_secret_key(), get_event_key())
-        td = load_team_data(get_event_key())
-    
     st.header('Match Breakdowns')
     with st.expander('Instructions'):
         st.write("""
