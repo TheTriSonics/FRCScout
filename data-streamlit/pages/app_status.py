@@ -15,9 +15,12 @@ def app_status_page():
     apply = st.button('Apply', on_click=apply_state)
 
     # Display the current session JSON to the user w/ a "copy" box in the
-    # top right
+    # top right. Filter out internal keys from streamlit components.
+    hidden_keys = {'cookie_manager', 'cookies_loaded', 'get_all', 'cookie_manager_main'}
     obj = {}
     for k, v in st.session_state.items():
+        if k in hidden_keys:
+            continue
         try:
             json.dumps(v)
             obj[k] = v
