@@ -9,13 +9,17 @@ from os.path import exists
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 statbot_url = "https://api.statbotics.io/v3"
 
-def get_cookies_once():
-    """Load cookies once per session and cache in session_state"""
-    if 'cookies_loaded' not in st.session_state:
-        cookie_manager = stx.CookieManager(key='cookie_manager_main')
-        st.session_state.cookies = cookie_manager.get_all()
-        st.session_state.cookies_loaded = True
-        st.session_state.cookie_manager = cookie_manager
+def init_cookies():
+    """Initialize cookie manager and read cookies. Call once at the top of main()."""
+    if 'cookie_manager' not in st.session_state:
+        st.session_state.cookie_manager = stx.CookieManager(key='cookie_manager_main')
+    cookies = st.session_state.cookie_manager.get_all()
+    if cookies:
+        st.session_state.cookies = cookies
+
+
+def get_cookies():
+    """Return cached cookies dict (populated by init_cookies)."""
     return st.session_state.get('cookies', {})
 
 
@@ -55,7 +59,7 @@ def get_pit_data_url(secret_key, event_key, team_key):
 def get_secret_key():
     """Get secret key, checking cookies → query params → session state"""
     ret = None
-    cookies = get_cookies_once()
+    cookies = get_cookies()
 
     # Priority 1: Query params (from URL - for sharing)
     if 'secret_key' in st.query_params:
@@ -79,7 +83,7 @@ def get_secret_key():
 def get_event_key():
     """Get event key, checking cookies → query params → session state"""
     ret = None
-    cookies = get_cookies_once()
+    cookies = get_cookies()
 
     # Priority 1: Query params (from URL - for sharing)
     if 'event_key' in st.query_params:
@@ -233,7 +237,7 @@ def load_data():
 def config_page():
     """Config page - inline here to avoid circular imports"""
     # Load cookies once
-    cookies = get_cookies_once()
+    cookies = get_cookies()
     cookie_manager = st.session_state.get('cookie_manager')
 
     # Initialize session state
@@ -293,6 +297,9 @@ def main():
     )
 
     st.title("Trisonics FRC Scouting")
+
+    # Read cookies once per render (before any page code runs)
+    init_cookies()
 
     # Import page functions lazily to avoid module-level execution
     from pages.team_detail import team_detail_page
