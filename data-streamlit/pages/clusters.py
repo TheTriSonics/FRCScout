@@ -3,7 +3,6 @@ import numpy as np
 import streamlit as st
 import altair as alt
 
-from sklearn.cluster import KMeans
 
 from scout import (
     load_event_data, load_opr_data, get_event_key, get_secret_key,
@@ -16,13 +15,11 @@ def clusters_page():
     norm = np.linalg.norm
     
     def add_pca_components(df, feature_columns):
-        from sklearn.preprocessing import StandardScaler
         # Extract features
         X = df[feature_columns].values
-    
-        # Standardize features
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
+
+        # Standardize features (zero mean, unit variance)
+        X_scaled = (X - X.mean(axis=0)) / (X.std(axis=0) + 1e-10)
     
         # Calculate covariance matrix
         cov_matrix = np.cov(X_scaled.T)
@@ -200,12 +197,29 @@ def clusters_page():
         if len(scouted_data_cols) == 0 and len(opr_data_cols) == 0:
             return  # Can't go on. Just abort
     
-        model = KMeans(int(cluster_count),
-                       random_state=1,
-                       init='random',
-                       n_init=10,
-                       max_iter=100)
-    
+        def _kmeans(data, k, n_init=10, max_iter=100, seed=1):
+            """Pure numpy KMeans. Returns (labels, centers)."""
+            rng = np.random.RandomState(seed)
+            best_labels, best_centers, best_inertia = None, None, np.inf
+            for _ in range(n_init):
+                idx = rng.choice(len(data), k, replace=False)
+                centers = data[idx].copy()
+                for _ in range(max_iter):
+                    dists = np.linalg.norm(data[:, None] - centers[None, :], axis=2)
+                    labels = dists.argmin(axis=1)
+                    new_centers = np.array([
+                        data[labels == i].mean(axis=0) if np.any(labels == i)
+                        else centers[i]
+                        for i in range(k)
+                    ])
+                    if np.allclose(centers, new_centers):
+                        break
+                    centers = new_centers
+                inertia = sum(np.sum((data[labels == i] - centers[i]) ** 2) for i in range(k))
+                if inertia < best_inertia:
+                    best_labels, best_centers, best_inertia = labels, centers, inertia
+            return best_labels, best_centers
+
         # make sure scouting_team and teamNumber are both strings
         scouted_score_vectors['scouting_team'] = scouted_score_vectors['scouting_team'].astype(str)
         # merge scouted score vectors with opr data
@@ -213,15 +227,15 @@ def clusters_page():
             opr_score_vectors, left_on='scouting_team', right_on='teamNumber'
         )
         v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols + opr_data_cols]]
-        model.fit(v.to_numpy())
+        km_labels, km_centers = _kmeans(v.to_numpy(), int(cluster_count))
         merged_score_vectors = add_pca_components(
             merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
         )
-    
+
         clusters = {}
-    
+
         labels, centers = zip(
-            *sorted(zip(set(model.labels_), model.cluster_centers_),
+            *sorted(zip(set(km_labels), km_centers),
                     reverse=True))
         for label, centroid in zip(labels, centers):
             clusters[label] = {
@@ -231,7 +245,7 @@ def clusters_page():
                 'opr_avg': 0,
             }
     
-        for (idx, row), label in zip(merged_score_vectors.iterrows(), model.labels_):
+        for (idx, row), label in zip(merged_score_vectors.iterrows(), km_labels):
             clusters[label]['teams'].append(str(int(row.scouting_team)))
             teamopr = opr_data[opr_data.teamNumber == row.scouting_team]
             if len(teamopr) == 1 and 'totalPoints' in opr_data.columns:

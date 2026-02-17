@@ -34,10 +34,11 @@ def team_detail_page():
                         format_func=lambda x: f'{x[0]} ({x[1]})')
     show_raw = st.checkbox('Show raw data')
     if team:
-        scouted_data = load_event_data(secret_key, event_key)
-        opr_data = load_opr_data(secret_key, event_key)
-        (team_number, team_name) = team
-        pdf = load_pit_data(secret_key, event_key, team_number)
+        with st.spinner('Loading team data...'):
+            scouted_data = load_event_data(secret_key, event_key)
+            opr_data = load_opr_data(secret_key, event_key)
+            (team_number, team_name) = team
+            pdf = load_pit_data(secret_key, event_key, team_number)
         # Trim team data down from the full event data to just theirs w/ Pandas
         if len(scouted_data.index) == 0:
             st.subheader("No match data")

@@ -276,8 +276,7 @@ def config_page():
                     st.query_params['event_key'] = ek
                     st.session_state.event_key = ek
                     st.session_state.cookies['event_key'] = ek
-                st.success('Keys saved! They will persist across sessions.')
-                st.rerun()
+                st.success('Keys saved! They will persist across sessions. Reload the page to confirm.')
 
     with col2:
         # Clear button to remove saved keys
@@ -306,24 +305,25 @@ def main():
     # Read cookies once per render (before any page code runs)
     init_cookies()
 
-    # Import page functions lazily to avoid module-level execution
-    from pages.team_detail import team_detail_page
-    from pages.clusters import clusters_page
-    from pages.picklist import picklist_page
-    from pages.match_breakdowns import match_breakdowns_page
-    from pages.what_if import what_if_page
-    from pages.app_status import app_status_page
-    from pages.pca import pca_page
+    def _lazy(module, func):
+        """Return a wrapper that imports a page function on first use."""
+        def wrapper():
+            import importlib
+            mod = importlib.import_module(module)
+            getattr(mod, func)()
+        wrapper.__name__ = func
+        wrapper.__qualname__ = func
+        return wrapper
 
     pg = st.navigation([
         st.Page(config_page, title='Config'),
-        st.Page(team_detail_page, title='Team Details'),
-        st.Page(clusters_page, title='Clustering'),
-        st.Page(picklist_page, title='Pick Lists'),
-        st.Page(match_breakdowns_page, title='Match Breakdowns'),
-        st.Page(what_if_page, title='What If'),
-        st.Page(pca_page, title='PCA'),
-        st.Page(app_status_page, title='Workspace'),
+        st.Page(_lazy('pages.team_detail', 'team_detail_page'), title='Team Details'),
+        st.Page(_lazy('pages.clusters', 'clusters_page'), title='Clustering'),
+        st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists'),
+        st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns'),
+        st.Page(_lazy('pages.what_if', 'what_if_page'), title='What If'),
+        st.Page(_lazy('pages.pca', 'pca_page'), title='PCA'),
+        st.Page(_lazy('pages.app_status', 'app_status_page'), title='Workspace'),
     ])
     pg.run()
 
