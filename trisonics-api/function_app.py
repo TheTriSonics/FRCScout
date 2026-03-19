@@ -63,7 +63,7 @@ def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     print(f'Team key: {team_key}')
     print(f'Event key: {event_key}')
     logging.error('getting pit data now')
-    df = get_pit_data(secret_team_key='', event_key=event_key,
+    df = get_pit_data(secret_team_key=secret_team_key, event_key=event_key,
                       team_key=team_key)
     if df is not None:
         json_obj = df.to_json(orient='records')
