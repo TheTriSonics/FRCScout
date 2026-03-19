@@ -191,7 +191,7 @@ def post_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     blob_conn = os.environ.get('BLOB_CONN')
     payload['image_names'] = []
 
-    if 'images' in payload:
+    if 'images' in payload and payload['images'] is not None:
         # Legacy format: array of data URIs like "data:image/png;base64,..."
         for i in payload['images']:
             header, b64data = i.split(',', 2)
