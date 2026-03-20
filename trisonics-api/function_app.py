@@ -1,23 +1,54 @@
 import os
 import io
+import sys
 import json
 import base64
 import math
 import logging
-import requests
-import numpy as np
-import pandas as pd
 import azure.functions as func
 
-from azure.storage.blob import BlobClient, ContentSettings
-from azure.cosmos import CosmosClient
+app = func.FunctionApp()
+
+# Diagnostic endpoint - reports Python version and import status
+_import_errors = []
+try:
+    import requests
+except Exception as e:
+    _import_errors.append(f"requests: {e}")
+try:
+    import numpy as np
+except Exception as e:
+    _import_errors.append(f"numpy: {e}")
+try:
+    import pandas as pd
+except Exception as e:
+    _import_errors.append(f"pandas: {e}")
+try:
+    from azure.storage.blob import BlobClient, ContentSettings
+except Exception as e:
+    _import_errors.append(f"azure.storage.blob: {e}")
+try:
+    from azure.cosmos import CosmosClient
+except Exception as e:
+    _import_errors.append(f"azure.cosmos: {e}")
 from uuid import uuid4
+
+@app.function_name(name="Diagnostics")
+@app.route(route="diag", auth_level=func.AuthLevel.ANONYMOUS)
+def diagnostics(req: func.HttpRequest) -> func.HttpResponse:
+    info = {
+        "python_version": sys.version,
+        "sys_path": sys.path,
+        "import_errors": _import_errors,
+        "cwd": os.getcwd(),
+        "wwwroot_contents": os.listdir("/home/site/wwwroot") if os.path.exists("/home/site/wwwroot") else "NOT FOUND",
+        "python_packages_exists": os.path.exists("/home/site/wwwroot/.python_packages/lib/site-packages"),
+    }
+    return func.HttpResponse(json.dumps(info, indent=2), mimetype="application/json")
 
 logging.getLogger(
     'azure.core.pipeline.policies.http_logging_policy'
   ).setLevel(logging.WARNING)
-
-app = func.FunctionApp()
 
 
 @app.function_name(name="HelloWorld")
