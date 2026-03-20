@@ -10,13 +10,13 @@ on:
       - release
   workflow_dispatch:
 
-env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: './trisonics-api' # set this to the path to your web app project, defaults to the repository root
-  PYTHON_VERSION: '3.11'
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,35 +24,12 @@ jobs:
       - name: Setup Python version
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
       - name: Install dependencies into package
         run: |
           cd trisonics-api
           pip install --target=".python_packages/lib/site-packages" -r requirements.txt
-
-      # Optional: Add step to run tests here
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: trisonics-api/
-          include-hidden-files: true
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-          path: python-app
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
@@ -60,7 +37,7 @@ jobs:
         with:
           app-name: 'trisonics-scouting-api'
           slot-name: 'Production'
-          package: python-app
+          package: trisonics-api
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_324BBF7DB8764296A9F0839283B8E03D }}
           scm-do-build-during-deployment: false
           enable-oryx-build: false
