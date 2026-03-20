@@ -10,6 +10,11 @@ on:
       - release
   workflow_dispatch:
 
+env:
+  AZURE_FUNCTIONAPP_NAME: 'trisonics-scouting-api'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'trisonics-api'
+  PYTHON_VERSION: '3.11'
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -21,40 +26,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python version
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies into package
+      - name: Install dependencies
+        shell: bash
         run: |
-          cd trisonics-api
-          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
-
-      - name: Create deployment package
-        run: |
-          cd trisonics-api
-          zip -r ../deploy.zip . \
-            -x ".venv/*" \
-            -x ".vscode/*" \
-            -x ".claude/*" \
-            -x "__pycache__/*" \
-            -x "local.settings.json" \
-            -x "*.pyc"
-          echo "--- Zip contents (top-level) ---"
-          zipinfo -1 ../deploy.zip | head -30
-          echo "--- Zip contains .python_packages? ---"
-          zipinfo -1 ../deploy.zip | grep -c "^\.python_packages/" || echo "NO .python_packages found!"
-          echo "--- Zip size ---"
-          ls -lh ../deploy.zip
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+          popd
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
-          app-name: 'trisonics-scouting-api'
-          slot-name: 'Production'
-          package: deploy.zip
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_324BBF7DB8764296A9F0839283B8E03D }}
-          scm-do-build-during-deployment: false
-          enable-oryx-build: false
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
