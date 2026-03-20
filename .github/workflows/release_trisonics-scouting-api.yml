@@ -38,6 +38,7 @@ jobs:
         with:
           name: python-app
           path: trisonics-api/
+          include-hidden-files: true
 
   deploy:
     runs-on: ubuntu-latest
