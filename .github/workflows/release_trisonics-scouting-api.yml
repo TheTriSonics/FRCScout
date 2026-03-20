@@ -26,13 +26,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Create and start virtual environment
+      - name: Install dependencies into package
         run: |
-          python -m venv venv
-          source venv/bin/activate
-
-      - name: Install dependencies
-        run: pip install -r trisonics-api/requirements.txt
+          cd trisonics-api
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
 
       # Optional: Add step to run tests here
 
@@ -40,8 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            .
+          path: trisonics-api/
 
   deploy:
     runs-on: ubuntu-latest
@@ -55,7 +51,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
-          path: .
+          path: python-app
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
@@ -63,7 +59,7 @@ jobs:
         with:
           app-name: 'trisonics-scouting-api'
           slot-name: 'Production'
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          package: python-app
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_324BBF7DB8764296A9F0839283B8E03D }}
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
