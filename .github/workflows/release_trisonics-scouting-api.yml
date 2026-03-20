@@ -31,13 +31,30 @@ jobs:
           cd trisonics-api
           pip install --target=".python_packages/lib/site-packages" -r requirements.txt
 
+      - name: Create deployment package
+        run: |
+          cd trisonics-api
+          zip -r ../deploy.zip . \
+            -x ".venv/*" \
+            -x ".vscode/*" \
+            -x ".claude/*" \
+            -x "__pycache__/*" \
+            -x "local.settings.json" \
+            -x "*.pyc"
+          echo "--- Zip contents (top-level) ---"
+          zipinfo -1 ../deploy.zip | head -30
+          echo "--- Zip contains .python_packages? ---"
+          zipinfo -1 ../deploy.zip | grep -c "^\.python_packages/" || echo "NO .python_packages found!"
+          echo "--- Zip size ---"
+          ls -lh ../deploy.zip
+
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
           app-name: 'trisonics-scouting-api'
           slot-name: 'Production'
-          package: trisonics-api
+          package: deploy.zip
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_324BBF7DB8764296A9F0839283B8E03D }}
           scm-do-build-during-deployment: false
           enable-oryx-build: false
