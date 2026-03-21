@@ -171,6 +171,19 @@ def _keys_missing(*args):
     return any(a is None or a == '' for a in args)
 
 
+@st.cache_data(ttl=3600, max_entries=5, show_spinner=False)
+def load_events(year):
+    """Load event list from TBA via our API."""
+    try:
+        url = f"{base_url}/GetEvents?year={year}"
+        df = pd.read_json(url)
+        if len(df.index) > 0 and 'key' in df.columns and 'name' in df.columns:
+            return df[['key', 'name', 'state_prov']].sort_values('name').reset_index(drop=True)
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+
 @st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_team_data(event_key):
     if _keys_missing(event_key):
@@ -345,6 +358,23 @@ def config_page():
     # Show text inputs for keys (pre-filled from cookies/query params)
     secret_key_input = st.text_input("Secret key", value=get_secret_key() or '', key='secret_key_input')
     event_key_input = st.text_input("Event key", value=get_event_key() or '', key='event_key_input')
+
+    # Optional: event picker from TBA
+    with st.expander("Browse events"):
+        year = st.selectbox("Year", [2026, 2025], key='event_year')
+        events = load_events(year)
+        if len(events.index) > 0:
+            event_options = [(row.key, f"{row['name']} ({row.state_prov})") for _, row in events.iterrows()]
+            selected_event = st.selectbox(
+                "Select an event",
+                event_options,
+                format_func=lambda x: x[1],
+                key='event_picker',
+            )
+            if selected_event and st.button("Use this event"):
+                st.session_state.event_key_input = selected_event[0]
+                st.session_state.event_key = selected_event[0]
+                st.rerun()
 
     col1, col2 = st.columns(2)
 
