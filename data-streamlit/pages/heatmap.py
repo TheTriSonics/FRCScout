@@ -3,7 +3,7 @@ import streamlit as st
 
 from scout import (
     load_event_data, load_team_data, get_event_key, get_secret_key,
-    BINARY_COLS, SKIP_COLS, SECTIONS, pretty_name,
+    BINARY_COLS, SKIP_COLS, SECTIONS, pretty_name, team_status_label,
 )
 
 
@@ -56,7 +56,7 @@ def heatmap_page():
     # Build display dataframe
     display = team_avgs[['team_number'] + visible_cols].copy()
     display['team_number'] = display['team_number'].apply(
-        lambda t: f"{int(t)} ({team_names.get(int(t), '')})"
+        lambda t: f"{int(t)} ({team_names.get(int(t), '')}){team_status_label(int(t))}"
     )
     display = display.set_index('team_number')
     display.columns = [pretty_name(c) for c in display.columns]

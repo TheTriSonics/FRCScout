@@ -271,6 +271,25 @@ def get_fsp():
     return _get_pick_list('pick_list_fsp')
 
 
+def get_dnp_nums():
+    """Return set of DNP team numbers."""
+    return {t[0] for t in get_dnp()}
+
+
+def get_fsp_nums():
+    """Return set of first-pick team numbers."""
+    return {t[0] for t in get_fsp()}
+
+
+def team_status_label(team_num):
+    """Return a status suffix for display: ' [DNP]', ' [1st]', or ''."""
+    if team_num in get_dnp_nums():
+        return ' [DNP]'
+    elif team_num in get_fsp_nums():
+        return ' [1st]'
+    return ''
+
+
 def load_data():
     secret_key = get_secret_key()
     event_key = get_event_key()
