@@ -99,14 +99,12 @@ def team_search_page():
     active_binary_filters = []
     active_numeric_filters = {}
 
-    with st.expander("Filters", expanded=True):
-        for section_name, section_test in SECTIONS:
-            sec_binary = [c for c in filter_binary if section_test(c)]
-            sec_numeric = [c for c in filter_numeric if section_test(c)]
-            if not sec_binary and not sec_numeric:
-                continue
-            st.markdown(f"**{section_name}**")
-
+    for section_name, section_test in SECTIONS:
+        sec_binary = [c for c in filter_binary if section_test(c)]
+        sec_numeric = [c for c in filter_numeric if section_test(c)]
+        if not sec_binary and not sec_numeric:
+            continue
+        with st.expander(section_name):
             # Binary filters as checkboxes in columns
             if sec_binary:
                 cols = st.columns(min(len(sec_binary), 4))

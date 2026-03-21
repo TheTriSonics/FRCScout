@@ -62,6 +62,18 @@ def chart_theme():
 alt.themes.register('trisonics', chart_theme)
 alt.themes.enable('trisonics')
 
+# --- Scouted-to-OPR column mapping for 2026 ---
+# Each entry: (scouted_col, opr_col, label)
+# Used for side-by-side comparison and scouting accuracy validation
+SCOUTED_OPR_MAP = [
+    ('auto_fuel_made', 'hubScore_autoCount', 'Auto Fuel Made'),
+    ('teleop_fuel_made', 'hubScore_teleopCount', 'Teleop Fuel Made'),
+    ('endgame_fuel_made', 'hubScore_endgameCount', 'Endgame Fuel Made'),
+    ('total_fuel_made', 'hubScore_totalCount', 'Total Fuel Made'),
+    ('auto_tower_level', 'autoTowerPoints', 'Auto Tower'),
+    ('endgame_tower_level', 'endGameTowerPoints', 'Endgame Tower'),
+]
+
 
 def pretty_name(col):
     """Convert column_name to Display Label."""
@@ -380,8 +392,9 @@ def main():
         st.Page(_lazy('pages.team_search', 'team_search_page'), title='Team Search'),
         st.Page(_lazy('pages.clusters', 'clusters_page'), title='Clustering'),
         st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists'),
+        st.Page(_lazy('pages.head_to_head', 'head_to_head_page'), title='Head to Head'),
         st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns'),
-        st.Page(_lazy('pages.what_if', 'what_if_page'), title='What If'),
+        st.Page(_lazy('pages.what_if', 'what_if_page'), title='Alliance Builder'),
         st.Page(_lazy('pages.pca', 'pca_page'), title='PCA'),
         st.Page(_lazy('pages.app_status', 'app_status_page'), title='Workspace'),
     ])
