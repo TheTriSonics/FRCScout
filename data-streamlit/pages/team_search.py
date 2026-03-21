@@ -227,15 +227,19 @@ def team_search_page():
             st.dataframe(pd.DataFrame(spark_data), column_config=spark_config,
                          hide_index=True, use_container_width=True)
 
-    for section_name, section_filter in SECTIONS:
-        section_cols = [c for c in chart_cols if section_filter(c)]
-        if not section_cols:
-            continue
-        st.subheader(section_name)
-        for col in sorted(section_cols):
-            st.markdown(f"**{pretty_name(col)}**")
-            if col in BINARY_COLS:
-                chart = _binary_stacked_chart(df, col)
-            else:
-                chart = _numeric_bar_chart(df, col)
-            st.altair_chart(chart, use_container_width=True)
+    @st.fragment
+    def _render_charts():
+        for section_name, section_filter in SECTIONS:
+            section_cols = [c for c in chart_cols if section_filter(c)]
+            if not section_cols:
+                continue
+            st.subheader(section_name)
+            for col in sorted(section_cols):
+                st.markdown(f"**{pretty_name(col)}**")
+                if col in BINARY_COLS:
+                    chart = _binary_stacked_chart(df, col)
+                else:
+                    chart = _numeric_bar_chart(df, col)
+                st.altair_chart(chart, use_container_width=True)
+
+    _render_charts()
