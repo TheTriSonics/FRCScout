@@ -166,3 +166,41 @@ def what_if_page():
                     return ''
 
                 st.dataframe(cap_df.style.map(_highlight_missing), use_container_width=True)
+
+    # --- Alliance vs Alliance Comparison ---
+    filled = {k: v for k, v in alliances.items() if v}
+    if len(filled) >= 2:
+        st.header("Alliance vs Alliance")
+        alliance_labels = [f"Alliance {k+1}" for k in filled]
+        compare_left, compare_right = st.columns(2)
+        with compare_left:
+            a1_key = st.selectbox("Alliance A", list(filled.keys()),
+                                  format_func=lambda k: f"Alliance {k+1}",
+                                  key='compare_a1')
+        with compare_right:
+            other_keys = [k for k in filled if k != a1_key]
+            a2_key = st.selectbox("Alliance B", other_keys,
+                                  format_func=lambda k: f"Alliance {k+1}",
+                                  key='compare_a2') if other_keys else None
+
+        if a2_key is not None:
+            a1_nums = [t[0] for t in filled[a1_key]]
+            a2_nums = [t[0] for t in filled[a2_key]]
+            a1_totals = team_avgs.loc[team_avgs.index.isin(a1_nums), chart_cols].sum()
+            a2_totals = team_avgs.loc[team_avgs.index.isin(a2_nums), chart_cols].sum()
+
+            num_cols = [c for c in chart_cols if c not in BINARY_COLS]
+            comp_data = pd.DataFrame({
+                'Attribute': [pretty_name(c) for c in num_cols],
+                f'Alliance {a1_key+1}': [a1_totals[c] for c in num_cols],
+                f'Alliance {a2_key+1}': [a2_totals[c] for c in num_cols],
+            })
+            melted = comp_data.melt(id_vars='Attribute', var_name='Alliance', value_name='Value')
+            chart = alt.Chart(melted).mark_bar().encode(
+                x=alt.X('Attribute:N', title='', axis=alt.Axis(labelAngle=-45)),
+                y=alt.Y('Value:Q', title='Combined Avg'),
+                color=alt.Color('Alliance:N', title=''),
+                xOffset='Alliance:N',
+                tooltip=['Alliance', 'Attribute', alt.Tooltip('Value:Q', format='.1f')],
+            ).properties(height=400)
+            st.altair_chart(chart, use_container_width=True)
