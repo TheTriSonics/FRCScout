@@ -3,7 +3,6 @@ import os
 import altair as alt
 import pandas as pd
 import streamlit as st
-import extra_streamlit_components as stx
 
 from os.path import exists
 
@@ -79,69 +78,38 @@ def pretty_name(col):
     """Convert column_name to Display Label."""
     return col.replace('_', ' ').title()
 
-def init_cookies():
-    """Initialize cookie manager and read cookies. Call once at the top of main()."""
-    # Must create CookieManager every render so its hidden JS component stays
-    # in the page. Caching it in session_state and skipping creation on later
-    # renders meant the iframe never re-rendered and get_all() returned stale
-    # data.
-    st.session_state.cookie_manager = stx.CookieManager(key='cookie_manager_main')
-    cookies = st.session_state.cookie_manager.get_all()
-    if cookies:
-        st.session_state.cookies = cookies
-    elif 'cookies_checked' not in st.session_state:
-        # First render: the browser JS component hasn't reported cookies yet.
-        # Mark as checked and rerun so the component gets a full round-trip.
-        st.session_state.cookies_checked = True
-        st.rerun()
-
-
-def get_cookies():
-    """Return cached cookies dict (populated by init_cookies)."""
-    return st.session_state.get('cookies', {})
-
-
-instructions = """
-        Use this screen to enter your team's secret key. This is used to keep
-        different team's data separate. If you want to pool efforts with
-        another team just use the same key.
-
-        Once you've entered that and selected an event data will be loaded for
-        the event.
-"""
-
-
 def _get_key(name):
-    """Get a key value, checking query params -> cookies -> session state."""
-    ret = None
-    cookies = get_cookies()
-
-    # Priority 1: Query params (from URL - for sharing)
+    """Get a key value. Priority: query params > session state."""
+    # Query params are the source of truth (persist in URL, shareable)
     if name in st.query_params:
-        ret = str(st.query_params[name])
-    # Priority 2: Cookies (for persistence across sessions)
-    elif cookies and name in cookies:
-        ret = cookies[name]
-    # Priority 3: Session state
-    elif name in st.session_state:
-        ret = st.session_state[name]
+        val = str(st.query_params[name]).strip()
+        if val:
+            st.session_state[name] = val
+            return val
+    # Fall back to session state (set by config.json or prior interaction)
+    val = st.session_state.get(name, '')
+    if isinstance(val, str):
+        val = val.strip()
+    return val if val else None
 
-    # Clean and sync
-    if ret:
-        ret = ret.strip()
-        if ret:
-            st.session_state[name] = ret
 
-    return ret if ret else None
+def _set_key(name, value):
+    """Set a key in both session state and query params."""
+    value = str(value).strip()
+    if value:
+        st.session_state[name] = value
+        st.query_params[name] = value
+    else:
+        st.session_state.pop(name, None)
+        if name in st.query_params:
+            del st.query_params[name]
 
 
 def get_secret_key():
-    """Get secret key, checking query params -> cookies -> session state."""
     return _get_key('secret_key')
 
 
 def get_event_key():
-    """Get event key, checking query params -> cookies -> session state."""
     return _get_key('event_key')
 
 
@@ -343,25 +311,44 @@ def load_data():
 
 
 def config_page():
-    """Config page - inline here to avoid circular imports"""
-    # Load cookies once
-    cookies = get_cookies()
-    cookie_manager = st.session_state.get('cookie_manager')
-
-    # Initialize session state
-    if 'secret_key' not in st.session_state:
-        st.session_state['secret_key'] = ''
-    if 'event_key' not in st.session_state:
-        st.session_state['event_key'] = ''
-
+    """Config page — set secret key and event, changes take effect immediately."""
     with st.expander('Instructions'):
-        st.write(instructions)
+        st.write("""
+        Enter your team's secret key and select an event. Changes take
+        effect immediately — just navigate to another page. Keys are stored
+        in the URL so you can bookmark or share the link.
+        """)
 
-    # Show text inputs for keys (pre-filled from cookies/query params)
-    secret_key_input = st.text_input("Secret key", value=get_secret_key() or '', key='secret_key_input')
-    event_key_input = st.text_input("Event key", value=get_event_key() or '', key='event_key_input')
+    # --- Secret Key ---
+    def _on_secret_change():
+        _set_key('secret_key', st.session_state._sk_input)
 
-    # Optional: event picker from TBA
+    st.text_input(
+        "Secret key",
+        value=get_secret_key() or '',
+        key='_sk_input',
+        on_change=_on_secret_change,
+    )
+
+    # --- Event Key: text input + browser ---
+    def _on_event_change():
+        _set_key('event_key', st.session_state._ek_input)
+        # Clear caches when event changes so stale data doesn't persist
+        load_event_data.clear()
+        load_team_data.clear()
+        load_opr_data.clear()
+        load_pit_data.clear()
+        load_matches_data.clear()
+        load_statbot_matches_data.clear()
+
+    st.text_input(
+        "Event key",
+        value=get_event_key() or '',
+        key='_ek_input',
+        on_change=_on_event_change,
+    )
+
+    # Event browser from TBA
     with st.expander("Browse events"):
         year = st.selectbox("Year", [2026, 2025], key='event_year')
         events = load_events(year)
@@ -374,45 +361,29 @@ def config_page():
                 key='event_picker',
             )
             if selected_event and st.button("Use this event"):
-                st.session_state.event_key_input = selected_event[0]
-                st.session_state.event_key = selected_event[0]
+                _set_key('event_key', selected_event[0])
+                load_event_data.clear()
+                load_team_data.clear()
+                load_opr_data.clear()
+                load_pit_data.clear()
+                load_matches_data.clear()
+                load_statbot_matches_data.clear()
                 st.rerun()
 
-    col1, col2 = st.columns(2)
+    # --- Status ---
+    sk = get_secret_key()
+    ek = get_event_key()
+    if sk and ek:
+        st.success(f"Ready — secret key: `{sk[:4]}...`, event: `{ek}`")
+    else:
+        missing = []
+        if not sk:
+            missing.append("secret key")
+        if not ek:
+            missing.append("event key")
+        st.warning(f"Missing: {', '.join(missing)}")
 
-    with col1:
-        # Save button that sets cookies, query params, and session state
-        if st.button('Save Keys', type='primary'):
-            if cookie_manager:
-                if secret_key_input:
-                    sk = secret_key_input.strip()
-                    cookie_manager.set('secret_key', sk, expires_at=None, key='set_secret_key')
-                    st.query_params['secret_key'] = sk
-                    st.session_state.secret_key = sk
-                    st.session_state.cookies['secret_key'] = sk
-                if event_key_input:
-                    ek = event_key_input.strip()
-                    cookie_manager.set('event_key', ek, expires_at=None, key='set_event_key')
-                    st.query_params['event_key'] = ek
-                    st.session_state.event_key = ek
-                    st.session_state.cookies['event_key'] = ek
-                st.success('Keys saved! They will persist across sessions. Reload the page to confirm.')
-
-    with col2:
-        # Clear button to remove saved keys
-        if st.button('Clear Saved Keys'):
-            if cookie_manager:
-                cookie_manager.delete('secret_key')
-                cookie_manager.delete('event_key')
-            st.query_params.clear()
-            st.session_state.secret_key = ''
-            st.session_state.event_key = ''
-            if 'cookies' in st.session_state:
-                st.session_state.cookies = {}
-            st.success('Keys cleared!')
-            st.rerun()
-
-    st.button('Load Data', on_click=load_data)
+    st.button('Reload All Data', on_click=load_data)
 
 
 def main():
@@ -421,9 +392,6 @@ def main():
     )
 
     st.title("Trisonics FRC Scouting")
-
-    # Read cookies once per render (before any page code runs)
-    init_cookies()
 
     def _lazy(module, func):
         """Return a wrapper that imports a page function on first use."""

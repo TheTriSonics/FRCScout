@@ -19,7 +19,7 @@ def app_status_page():
 
     # Display the current session JSON to the user w/ a "copy" box in the
     # top right. Filter out internal keys from streamlit components.
-    hidden_keys = {'cookie_manager', 'cookies_loaded', 'cookies_checked', 'get_all', 'cookie_manager_main'}
+    hidden_keys = {'_sk_input', '_ek_input'}
     obj = {}
     for k, v in st.session_state.items():
         if k in hidden_keys:
