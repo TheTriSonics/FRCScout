@@ -1,4 +1,5 @@
 import json
+import os
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -8,7 +9,8 @@ from os.path import exists
 
 pd.options.mode.copy_on_write = True
 
-base_url = "http://localhost:7071/api"
+_DEFAULT_API = "https://trisonics-scouting-api.azurewebsites.net/api"
+base_url = os.environ.get("SCOUT_API_URL", _DEFAULT_API)
 statbot_url = "https://api.statbotics.io/v3"
 
 # --- Shared column sets ---
@@ -450,10 +452,14 @@ def main():
 
 
 def load_dev_config():
+    global base_url
     cfg = 'config.json'
     if exists(cfg):
         with open(cfg) as f:
             obj = json.load(f)
+            # Pull api_url out before updating session state
+            if 'api_url' in obj:
+                base_url = obj.pop('api_url')
             st.session_state.update(obj)
 
 
