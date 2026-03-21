@@ -52,8 +52,8 @@ def pca_page():
 
     dims = 2
     dropcols = [x for x in score_vectors.columns if x.startswith('comp')]
-    score_vectors.drop(dropcols, axis=1, inplace=True)
-    A = np.array(score_vectors.drop('team_number', axis=1).to_numpy())
+    score_vectors = score_vectors.drop(columns=dropcols, errors='ignore')
+    A = np.array(score_vectors.drop(columns='team_number', errors='ignore').to_numpy())
     A -= A.mean(axis=0)
     U, Σ, V = np.linalg.svd(A, full_matrices=False)
     proj = U[:, :dims] * Σ[:dims]

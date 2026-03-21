@@ -5,8 +5,11 @@ import streamlit as st
 def app_status_page():
     """App Status/Workspace page"""
     def apply_state():
-        obj = json.loads(ta)
-        st.session_state.update(obj)
+        try:
+            obj = json.loads(ta)
+            st.session_state.update(obj)
+        except (json.JSONDecodeError, ValueError):
+            st.error("Invalid JSON")
 
     # Create text input that lets us paste in the JSON status of our app
     # and then apply it to our session

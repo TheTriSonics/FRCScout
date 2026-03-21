@@ -8,7 +8,7 @@ from os.path import exists
 
 pd.options.mode.copy_on_write = True
 
-base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
+base_url = "http://localhost:7071/api"
 statbot_url = "https://api.statbotics.io/v3"
 
 # --- Shared column sets ---
@@ -49,18 +49,16 @@ CHART_COLORS = ['#4e79a7', '#59a14f', '#f28e2b', '#e15759',
                 '#76b7b2', '#edc948', '#b07aa1', '#ff9da7',
                 '#9c755f', '#bab0ac']
 
+@alt.theme.register('trisonics', enable=True)
 def chart_theme():
-    return {
+    return alt.theme.ThemeConfig({
         'config': {
             'range': {'category': CHART_COLORS},
             'bar': {'color': CHART_COLORS[0]},
             'axis': {'labelFontSize': 12, 'titleFontSize': 13},
             'title': {'fontSize': 14},
         }
-    }
-
-alt.themes.register('trisonics', chart_theme)
-alt.themes.enable('trisonics')
+    })
 
 # --- Scouted-to-OPR column mapping for 2026 ---
 # Each entry: (scouted_col, opr_col, label)

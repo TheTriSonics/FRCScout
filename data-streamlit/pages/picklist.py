@@ -7,19 +7,10 @@ from scout import (
 
 def pick_panel(team_data):
     st.header('Pick Lists')
-    dnp_teamlist = list(zip(
-        team_data.number, team_data.name
-    ))
-    fsp_teamlist = list(zip(
-        team_data.number, team_data.name
-    ))
-    dnp_teams = st.multiselect('Do NOT Pick Teams', dnp_teamlist,
-                               format_func=lambda x: f'{x[0]} ({x[1]})',
-                               key='pick_list_dnp')
-    fsp_teams = st.multiselect('First Pick Teams', fsp_teamlist,
-                               format_func=lambda x: f'{x[0]} ({x[1]})',
-                               key='pick_list_fsp')
-    return dnp_teams, fsp_teams
+    teamlist = list(zip(team_data.number, team_data.name))
+    fmt = lambda x: f'{x[0]} ({x[1]})'
+    st.multiselect('Do NOT Pick Teams', teamlist, format_func=fmt, key='pick_list_dnp')
+    st.multiselect('First Pick Teams', teamlist, format_func=fmt, key='pick_list_fsp')
 
 
 def picklist_page():

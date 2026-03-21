@@ -71,28 +71,6 @@ def _compute_variances(score_vectors, score_cols):
 
 def clusters_page():
     """Clustering Page"""
-    # Custom CSS to change pill highlight color from red to blue in dark mode
-    st.markdown("""
-    <style>
-    @media (prefers-color-scheme: dark) {
-        button[kind="pillsActive"] {
-            background-color: rgba(28, 131, 225, 0.2) !important;
-            color: rgb(28, 131, 225) !important;
-            border-color: rgb(28, 131, 225) !important;
-        }
-
-        button[data-testid="stBaseButton-pills"]:hover {
-            background-color: rgba(28, 131, 225, 0.1) !important;
-            color: rgba(28, 131, 225, 0.8) !important;
-        }
-
-        .st-emotion-cache-191l437 {
-            background-color: rgba(28, 131, 225, 0.2) !important;
-            color: rgb(28, 131, 225) !important;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
     sk = get_secret_key()
     ek = get_event_key()
@@ -109,10 +87,10 @@ def clusters_page():
     all_teams = [(row.number, row['name']) for _, row in td.iterrows()]
     dnp = [t[0] for t in get_dnp()]
     fsp = [t[0] for t in get_fsp()]
-    show_cluster_panel(scouted_data, opr_data, dnp, fsp, all_teams)
+    show_cluster_panel(scouted_data, opr_data, dnp, fsp, all_teams, sk, ek)
 
 
-def show_cluster_panel(df, opr, dnp_nums, fsp_nums, all_teams):
+def show_cluster_panel(df, opr, dnp_nums, fsp_nums, all_teams, sk, ek):
     st.header("KMeans clusters")
     with st.expander('Instructions'):
         st.write(
@@ -164,9 +142,7 @@ capabilities of a computer at our disposal.
     fsp_show = 'none' if len(fsp_nums) == 0 else ', '.join(map(str, fsp_nums))
     exclude_dnp = st.checkbox(f'Exclude do not pick teams ({dnp_show})')
     exclude_fsp = st.checkbox(f'Exclude first pick teams ({fsp_show})')
-    if 'cluster_count' not in st.session_state:
-        st.session_state['cluster_count'] = '4'
-    cluster_count = st.text_input("Cluster Count", 4)
+    cluster_count = st.number_input("Cluster Count", min_value=1, max_value=20, value=4, step=1)
     # Filter out any team we are NOT picking from clustering
     if dnp_nums is not None and exclude_dnp:
         df = df[~df.team_number.isin(dnp_nums)]
@@ -359,8 +335,6 @@ capabilities of a computer at our disposal.
         st.altair_chart(simp_text + simp,
                         theme="streamlit",
                         width='stretch')
-    sk = get_secret_key()
-    ek = get_event_key()
     group_idx = 1
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],

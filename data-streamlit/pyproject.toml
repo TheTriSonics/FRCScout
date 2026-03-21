@@ -17,4 +17,7 @@ dependencies = [
 scout = "scout:main"
 
 [tool.uv]
-dev-dependencies = []
+dev-dependencies = ["pytest>=9.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

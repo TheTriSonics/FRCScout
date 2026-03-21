@@ -160,7 +160,8 @@ def team_detail_page():
                         if val is None or (isinstance(val, str) and not val.strip()):
                             continue
                         label = pretty_name(field)
-                        if isinstance(val, bool) or val in (0, 1) and field not in ('fuel_capacity', 'hanging_level'):
+                        is_bool = isinstance(val, bool) or (val in (0, 1) and field not in ('fuel_capacity', 'hanging_level'))
+                        if is_bool:
                             display_val = 'Yes' if val else 'No'
                         else:
                             display_val = str(val)

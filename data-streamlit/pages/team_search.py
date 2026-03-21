@@ -27,7 +27,7 @@ def _binary_stacked_chart(df, col):
         y=alt.Y('matches:Q', title='Matches'),
         color=alt.Color('result:N',
                         scale=alt.Scale(domain=['yes', 'no'],
-                                        range=['#2ca02c', '#d62728']),
+                                        range=['#59a14f', '#e15759']),
                         title='Result'),
         tooltip=['team_number', 'result', 'matches'],
         order=alt.Order('result:N', sort='descending'),
