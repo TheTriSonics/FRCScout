@@ -185,6 +185,32 @@ def team_search_page():
             st.dataframe(pct_data, column_config=col_config,
                          hide_index=True, use_container_width=True)
 
+    # --- Sparkline Trends Table ---
+    spark_cols = [c for c in chart_cols if c not in BINARY_COLS]
+    # Pick a handful of key columns for sparklines
+    spark_display = [c for c in ['auto_fuel_made', 'teleop_fuel_made',
+                                  'endgame_fuel_made', 'auto_tower_level',
+                                  'endgame_tower_level']
+                     if c in spark_cols]
+    if spark_display and len(df) > 0:
+        with st.expander("Match-by-Match Trends"):
+            spark_data = {'Team': []}
+            spark_config = {'Team': st.column_config.TextColumn('Team', width='small')}
+            teams_in_df = sorted(df['team_number'].unique())
+            for tn in teams_in_df:
+                spark_data['Team'].append(str(int(tn)))
+                team_matches = df[df['team_number'] == tn].sort_values('match_number')
+                for col in spark_display:
+                    label = pretty_name(col)
+                    if label not in spark_data:
+                        spark_data[label] = []
+                        spark_config[label] = st.column_config.LineChartColumn(
+                            label, y_min=0,
+                        )
+                    spark_data[label].append(team_matches[col].tolist())
+            st.dataframe(pd.DataFrame(spark_data), column_config=spark_config,
+                         hide_index=True, use_container_width=True)
+
     for section_name, section_filter in SECTIONS:
         section_cols = [c for c in chart_cols if section_filter(c)]
         if not section_cols:
