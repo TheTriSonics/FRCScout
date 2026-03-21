@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import altair as alt
-import plotly.graph_objects as go
+
+try:
+    import plotly.graph_objects as go
+    HAS_PLOTLY = True
+except ImportError:
+    HAS_PLOTLY = False
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
     load_pit_data, load_opr_data,
@@ -280,7 +285,9 @@ def team_detail_page():
                                     radar_teams.append(tnum)
 
                         # --- Radar chart (Plotly) ---
-                        if len(radar_teams) > 1 and len(nn_selected_cols) >= 3:
+                        if not HAS_PLOTLY:
+                            st.caption("Install plotly for radar chart visualization.")
+                        elif len(radar_teams) > 1 and len(nn_selected_cols) >= 3:
                             st.markdown("---")
                             attr_labels = [pretty_name(c) for c in nn_selected_cols]
 
