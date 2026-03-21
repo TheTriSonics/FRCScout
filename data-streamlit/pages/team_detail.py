@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import altair as alt
+import plotly.graph_objects as go
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
     load_pit_data, load_opr_data,
@@ -186,8 +187,8 @@ def team_detail_page():
             # --- Similar Teams ---
             with st.expander("Similar Teams"):
                 st.write("""
-                Find teams most similar to this one. Select the dimensions
-                that matter — only those are used for the distance calculation.
+                Find teams most similar to this one. Select dimensions,
+                then check neighbors to add them to the radar chart.
                 """)
 
                 all_avgs = scouted_data.groupby('team_number').mean(numeric_only=True).reset_index()
@@ -237,13 +238,68 @@ def team_detail_page():
 
                         sk = get_secret_key()
                         ek = get_event_key()
-                        neighbors_md = ""
-                        for _, nrow in all_avgs_copy.iterrows():
+
+                        # Neighbor list with checkboxes for radar chart
+                        st.markdown("**Nearest neighbors** (check to compare on radar)")
+                        radar_teams = [team_number]  # always include current team
+                        for rank, (_, nrow) in enumerate(all_avgs_copy.iterrows()):
                             tnum = int(nrow['team_number'])
                             dist = nrow['distance']
                             tname = next((x[1] for x in all_teams if x[0] == tnum), 'N/A')
-                            neighbors_md += f"1. [{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum}) — distance: {dist:.2f}\n"
-                        st.markdown(neighbors_md)
+                            col_link, col_check = st.columns([3, 1])
+                            with col_link:
+                                st.markdown(
+                                    f"{rank+1}. [{tnum} ({tname})](/team_detail?secret_key={sk}"
+                                    f"&event_key={ek}&team_detail_number={tnum})"
+                                    f" — distance: {dist:.2f}"
+                                )
+                            with col_check:
+                                if st.checkbox("Radar", key=f'radar_{tnum}',
+                                               value=(rank < 2)):
+                                    radar_teams.append(tnum)
+
+                        # --- Radar chart (Plotly) ---
+                        if len(radar_teams) > 1 and len(nn_selected_cols) >= 3:
+                            st.markdown("---")
+                            attr_labels = [pretty_name(c) for c in nn_selected_cols]
+
+                            fig = go.Figure()
+                            for tn in radar_teams:
+                                row = all_avgs[all_avgs['team_number'] == tn]
+                                if row.empty:
+                                    continue
+                                label = f"{tn} (this team)" if tn == team_number else str(tn)
+                                # Normalize to 0-100 percentile scale
+                                vals = []
+                                raw_vals = []
+                                for col in nn_selected_cols:
+                                    val = row[col].values[0]
+                                    col_min = all_avgs[col].min()
+                                    col_max = all_avgs[col].max()
+                                    col_range = col_max - col_min
+                                    pct = ((val - col_min) / col_range * 100) if col_range > 0 else 50
+                                    vals.append(round(pct, 1))
+                                    raw_vals.append(round(val, 1))
+                                hover = [f"{a}: {r} (P{int(p)})"
+                                         for a, r, p in zip(attr_labels, raw_vals, vals)]
+                                fig.add_trace(go.Scatterpolar(
+                                    r=vals + [vals[0]],
+                                    theta=attr_labels + [attr_labels[0]],
+                                    name=label,
+                                    fill='toself',
+                                    opacity=0.3 if tn != team_number else 0.5,
+                                    hovertext=hover + [hover[0]],
+                                    hoverinfo='text+name',
+                                ))
+                            fig.update_layout(
+                                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                                title='Attribute Comparison (percentile scale)',
+                                height=500,
+                                margin=dict(t=60, b=40, l=60, r=60),
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        elif len(nn_selected_cols) < 3:
+                            st.caption("Select at least 3 dimensions for radar chart.")
 
             # --- Consistency & Trends ---
             with st.expander("Consistency & Trends"):
