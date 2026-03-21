@@ -101,6 +101,9 @@ def clusters_page():
         st.stop()
 
     scouted_data = load_event_data(sk, ek)
+    if len(scouted_data.index) == 0:
+        st.warning("No scouting data available for this event.")
+        st.stop()
     opr_data = load_opr_data(sk, ek)
     td = load_team_data(get_event_key())
     all_teams = [(row.number, row['name']) for _, row in td.iterrows()]
@@ -166,84 +169,116 @@ capabilities of a computer at our disposal.
     cluster_count = st.text_input("Cluster Count", 4)
     # Filter out any team we are NOT picking from clustering
     if dnp_nums is not None and exclude_dnp:
-        df = df[~df.scouting_team.isin(dnp_nums)]
+        df = df[~df.team_number.isin(dnp_nums)]
     if fsp_nums is not None and exclude_fsp:
-        df = df[~df.scouting_team.isin(fsp_nums)]
+        df = df[~df.team_number.isin(fsp_nums)]
     scouted_score_vectors = (
         df
-        .groupby("scouting_team")
-        .mean(numeric_only=True)
-        .reset_index()
-    )
-    # Work on a copy to avoid mutating cached data
-    opr = opr.copy()
-    opr['teamNumber'] = opr['teamNumber'].astype(str)
-    opr_score_vectors = (
-        opr
-        .groupby("teamNumber")
+        .groupby("team_number")
         .mean(numeric_only=True)
         .reset_index()
     )
 
+    has_opr = opr is not None and len(opr.index) > 0
+    if has_opr:
+        # Work on a copy to avoid mutating cached data
+        opr = opr.copy()
+        opr['teamNumber'] = opr['teamNumber'].astype(str)
+        opr_score_vectors = (
+            opr
+            .groupby("teamNumber")
+            .mean(numeric_only=True)
+            .reset_index()
+        )
+
+    skip_cols = {'team_number', 'match_number'}
     scouted_score_cols = [
         x
-        for x in scouted_score_vectors.columns
-        if x.startswith(("auto", "tele", "endgame", "comp"))
+        for x in scouted_score_vectors.select_dtypes(include='number').columns
+        if x not in skip_cols
     ]
-    opr_score_cols = [x for x in opr_score_vectors.columns if x != 'teamNumber']
     scouted_variances = _compute_variances(scouted_score_vectors, scouted_score_cols)
-    opr_variances = _compute_variances(opr_score_vectors, opr_score_cols)
-
     scouted_avail_cols = list(zip(scouted_variances.keys(), scouted_variances.values()))
-    opr_avail_cols = list(zip(opr_variances.keys(), opr_variances.values()))
+
+    if has_opr:
+        opr_score_cols = [x for x in opr_score_vectors.columns if x != 'teamNumber']
+        opr_variances = _compute_variances(opr_score_vectors, opr_score_cols)
+        opr_avail_cols = list(zip(opr_variances.keys(), opr_variances.values()))
+    else:
+        opr_score_cols = []
+        opr_variances = {}
+        opr_avail_cols = []
 
     with st.expander("Variance of each column (informational)"):
         scouted_var_df = pd.DataFrame({
             'measure': list(scouted_variances.keys()),
             'var': list(scouted_variances.values()),
         })
-        opr_var_df = pd.DataFrame({
-            'measure': list(opr_variances.keys()),
-            'var': list(opr_variances.values()),
-        })
+        if has_opr:
+            opr_var_df = pd.DataFrame({
+                'measure': list(opr_variances.keys()),
+                'var': list(opr_variances.values()),
+            })
         col_left, col_right = st.columns(2)
         with col_left:
             st.dataframe(scouted_var_df, hide_index=True)
         with col_right:
-            st.dataframe(opr_var_df, hide_index=True)
+            if has_opr:
+                st.dataframe(opr_var_df, hide_index=True)
+            else:
+                st.info("OPR data not available yet.")
 
     # Justin's own preference here; no reason to look at point level
     # cOPR data. Dynamically detect *Points columns.
-    default_off = [
-        col for col in opr_score_vectors.columns
-        if col.endswith('Points')
-    ]
+    # Detail columns off by default — fuel_made columns are the key metrics
+    detail_suffixes = ('_missed', '_accuracy', '_scored', '_shot')
+    detail_prefixes = ('total_',)
+    detail_exact = {'win_auto'}
+    def _is_detail(name):
+        return (any(name.endswith(s) for s in detail_suffixes)
+                or any(name.startswith(p) for p in detail_prefixes)
+                or name in detail_exact)
+
     scouted_data_cols = st.pills(
         'Dimensions (scouted data)', scouted_avail_cols,
         format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
         selection_mode='multi',
-        default=[col for col in scouted_avail_cols if not col[0].startswith('pca')]
+        default=[col for col in scouted_avail_cols
+                 if not col[0].startswith('pca') and not _is_detail(col[0])]
     )
-    opr_data_cols = st.pills(
-        'Dimensions (opr data)', opr_avail_cols,
-        format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
-        selection_mode='multi',
-        default=[col for col in opr_avail_cols if not col[0].startswith('pca') and col[0] not in default_off]
-    )
+    opr_data_cols = []
+    if has_opr:
+        default_off = [
+            col for col in opr_score_vectors.columns
+            if col.endswith('Points')
+        ]
+        opr_data_cols = st.pills(
+            'Dimensions (opr data)', opr_avail_cols,
+            format_func=lambda x: f'{x[0]} ({x[1]:0.2f})',
+            selection_mode='multi',
+            default=[col for col in opr_avail_cols if not col[0].startswith('pca') and col[0] not in default_off]
+        )
 
     show_features_chart = st.checkbox('Show features chart', value=True)
 
     if len(scouted_data_cols) == 0 and len(opr_data_cols) == 0:
         return
 
-    # Make sure scouting_team and teamNumber are both strings
-    scouted_score_vectors['scouting_team'] = scouted_score_vectors['scouting_team'].astype(str)
-    # Merge scouted score vectors with opr data
-    merged_score_vectors = scouted_score_vectors.merge(
-        opr_score_vectors, left_on='scouting_team', right_on='teamNumber'
-    )
+    # Make sure team_number is a string
+    scouted_score_vectors['team_number'] = scouted_score_vectors['team_number'].astype(str)
+    # Merge scouted score vectors with opr data if available
+    if has_opr:
+        merged_score_vectors = scouted_score_vectors.merge(
+            opr_score_vectors, left_on='team_number', right_on='teamNumber'
+        )
+    else:
+        merged_score_vectors = scouted_score_vectors
     v = merged_score_vectors.loc[:, [x[0] for x in scouted_data_cols + opr_data_cols]]
-    km_labels, km_centers = _kmeans(v.to_numpy(), int(cluster_count))
+    k = min(int(cluster_count), len(v))
+    if k < 1:
+        st.warning("Not enough teams to cluster.")
+        return
+    km_labels, km_centers = _kmeans(v.to_numpy(), k)
     merged_score_vectors = _add_pca_components(
         merged_score_vectors, [x[0] for x in scouted_data_cols + opr_data_cols]
     )
@@ -262,18 +297,19 @@ capabilities of a computer at our disposal.
         }
 
     for (_row_idx, row), label in zip(merged_score_vectors.iterrows(), km_labels):
-        clusters[label]['teams'].append(str(int(row.scouting_team)))
-        teamopr = opr[opr.teamNumber == row.scouting_team]
-        if len(teamopr) == 1 and 'totalPoints' in opr.columns:
-            clusters[label]['opr_total'] += (
-                teamopr.totalPoints.values[0]
-            )
-            clusters[label]['opr_avg'] = (
-                clusters[label]['opr_total'] / len(clusters[label]['teams'])
-            )
+        clusters[label]['teams'].append(str(int(row.team_number)))
+        if has_opr:
+            teamopr = opr[opr.teamNumber == row.team_number]
+            if len(teamopr) == 1 and 'totalPoints' in opr.columns:
+                clusters[label]['opr_total'] += (
+                    teamopr.totalPoints.values[0]
+                )
+                clusters[label]['opr_avg'] = (
+                    clusters[label]['opr_total'] / len(clusters[label]['teams'])
+                )
 
     merged_score_vectors['group_label'] = [
-        _get_cluster_name(clusters, x) for x in merged_score_vectors.scouting_team
+        _get_cluster_name(clusters, x) for x in merged_score_vectors.team_number
     ]
     for label, centroid in zip(labels, centers):
         # Create a dataframe where centroid is the 'value' column and the
@@ -307,7 +343,7 @@ capabilities of a computer at our disposal.
         simp = alt.Chart(merged_score_vectors).mark_circle().encode(
             x=x_axis, y=y_axis,
             color='group_label',
-            tooltip='scouting_team',
+            tooltip='team_number',
         ).interactive()
 
         simp_text = simp.mark_text(
@@ -317,7 +353,7 @@ capabilities of a computer at our disposal.
             fontSize=20,
             dx=5,
         ).encode(
-            text='scouting_team'
+            text='team_number'
         )
 
         st.altair_chart(simp_text + simp,
@@ -329,8 +365,11 @@ capabilities of a computer at our disposal.
     for cname, cluster in sorted(clusters.items(),
                                  key=lambda x: x[1]['opr_avg'],
                                  reverse=True):
-        opr_avg = cluster['opr_total'] / len(cluster['teams'])
-        st.header(f"Group {group_idx} ({opr_avg:0.2f} OPR Avg)")
+        opr_avg = cluster['opr_total'] / len(cluster['teams']) if cluster['opr_total'] else 0
+        if has_opr:
+            st.header(f"Group {group_idx} ({opr_avg:0.2f} OPR Avg)")
+        else:
+            st.header(f"Group {group_idx}")
         main_teams = cluster['teams']
         dnp_in_cluster = [t for t in main_teams if int(t) in dnp_nums]
         fsp_in_cluster = [t for t in main_teams if int(t) in fsp_nums]
@@ -341,12 +380,13 @@ capabilities of a computer at our disposal.
         info_md = ''
         for tnum in main_teams:
             tname = next((x[1] for x in all_teams if x[0] == int(tnum)), 'N/A')
-            team_opr_row = opr[opr.teamNumber == tnum]
-            if 'totalPoints' in opr.columns and len(team_opr_row) > 0:
-                opr_val = round(team_opr_row.totalPoints.values[0], 1)
-                info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum}):  {opr_val} OPR  \n"
-            else:
-                info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum})  \n"
+            if has_opr:
+                team_opr_row = opr[opr.teamNumber == tnum]
+                if 'totalPoints' in opr.columns and len(team_opr_row) > 0:
+                    opr_val = round(team_opr_row.totalPoints.values[0], 1)
+                    info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum}):  {opr_val} OPR  \n"
+                    continue
+            info_md += f"[{tnum} ({tname})](/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={tnum})  \n"
         if len(dnp_in_cluster) > 0:
             info_md += f"DNP members: {', '.join(dnp_in_cluster)}  \n"
         if len(fsp_in_cluster) > 0:
@@ -355,7 +395,6 @@ capabilities of a computer at our disposal.
         if show_features_chart:
             feature_df = pd.DataFrame(cluster['features'])
             feature_df.sort_values('value', ascending=False, inplace=True)
-            opr_features = feature_df[feature_df['feature'].isin([x[0] for x in opr_data_cols])]
             scouted_features = feature_df[feature_df['feature'].isin([x[0] for x in scouted_data_cols])]
             chart = alt.Chart(scouted_features).mark_bar().encode(
                 x=alt.X('value:Q'),
@@ -365,12 +404,14 @@ capabilities of a computer at our disposal.
                 title='Scouted Dimensions (Descending)',
             )
             st.altair_chart(chart, width='stretch')
-            chart = alt.Chart(opr_features).mark_bar().encode(
-                x=alt.X('value:Q'),
-                y=alt.Y('feature:N', sort='-x'),
-                tooltip=['feature', 'value']
-            ).properties(
-                title='OPR Dimensions (Descending)',
-            )
-            st.altair_chart(chart, width='stretch')
+            if has_opr and len(opr_data_cols) > 0:
+                opr_features = feature_df[feature_df['feature'].isin([x[0] for x in opr_data_cols])]
+                chart = alt.Chart(opr_features).mark_bar().encode(
+                    x=alt.X('value:Q'),
+                    y=alt.Y('feature:N', sort='-x'),
+                    tooltip=['feature', 'value']
+                ).properties(
+                    title='OPR Dimensions (Descending)',
+                )
+                st.altair_chart(chart, width='stretch')
         group_idx += 1

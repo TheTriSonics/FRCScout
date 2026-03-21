@@ -1,4 +1,5 @@
 import json
+import altair as alt
 import pandas as pd
 import streamlit as st
 import extra_streamlit_components as stx
@@ -9,6 +10,62 @@ pd.options.mode.copy_on_write = True
 
 base_url = "https://trisonics-scouting-api.azurewebsites.net/api"
 statbot_url = "https://api.statbotics.io/v3"
+
+# --- Shared column sets ---
+
+# Columns that are binary (0/1 per match)
+BINARY_COLS = {
+    'auto_depot_pickup', 'auto_did_nothing', 'auto_human_station_pickup',
+    'auto_middle_pickup', 'fuel_depot_pickup', 'fuel_ground_pickup',
+    'fuel_human_pickup', 'teleop_inactive_collected_fuel',
+    'teleop_inactive_collected_fuel_lobby',
+    'teleop_inactive_collected_fuel_push',
+    'teleop_inactive_collected_fuel_refill',
+    'teleop_shoot_on_fly', 'win_auto',
+}
+
+# Columns to skip from charts (metadata, detail, computed totals)
+SKIP_COLS = {
+    'team_number', 'match_number', 'event_key', 'secret_team_key',
+    'scouter_name', 'timestamp', 'match_notes', 'auto_notes',
+    'teleop_active_defense_quality', 'teleop_inactive_defense_quality',
+    'volley_accuracy_list', 'volley_missed_list', 'volley_scored_list',
+    'auto_fuel_scored', 'auto_fuel_accuracy', 'auto_fuel_missed',
+    'teleop_fuel_scored', 'teleop_fuel_accuracy', 'teleop_fuel_missed',
+    'endgame_fuel_scored', 'endgame_fuel_accuracy', 'endgame_fuel_missed',
+    'total_fuel_made', 'total_fuel_shot', 'total_fuel_missed',
+}
+
+# Sections for organizing charts by game phase
+SECTIONS = [
+    ('Auto', lambda c: c.startswith('auto_')),
+    ('Teleop', lambda c: c.startswith('teleop_')),
+    ('Endgame', lambda c: c.startswith('endgame_')),
+    ('General', lambda c: not c.startswith(('auto_', 'teleop_', 'endgame_'))),
+]
+
+# --- Altair theme ---
+CHART_COLORS = ['#4e79a7', '#59a14f', '#f28e2b', '#e15759',
+                '#76b7b2', '#edc948', '#b07aa1', '#ff9da7',
+                '#9c755f', '#bab0ac']
+
+def chart_theme():
+    return {
+        'config': {
+            'range': {'category': CHART_COLORS},
+            'bar': {'color': CHART_COLORS[0]},
+            'axis': {'labelFontSize': 12, 'titleFontSize': 13},
+            'title': {'fontSize': 14},
+        }
+    }
+
+alt.themes.register('trisonics', chart_theme)
+alt.themes.enable('trisonics')
+
+
+def pretty_name(col):
+    """Convert column_name to Display Label."""
+    return col.replace('_', ' ').title()
 
 def init_cookies():
     """Initialize cookie manager and read cookies. Call once at the top of main()."""
@@ -118,6 +175,12 @@ def load_event_data(secret_key, event_key):
         return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
     df = pd.read_json(url)
+    if len(df.index) > 0:
+        # Normalize legacy column names
+        if 'scouting_team' in df.columns:
+            df.rename(columns={'scouting_team': 'team_number'}, inplace=True)
+        if 'match_key' in df.columns:
+            df.rename(columns={'match_key': 'match_number'}, inplace=True)
     if event_key.startswith('2025') and len(df.index) > 0:
         df['auto_coral_total'] = (
             df['auto_coral1'] + df['auto_coral2'] +
@@ -129,10 +192,20 @@ def load_event_data(secret_key, event_key):
             df['teleop_coral3'] + df['teleop_coral4']
         )
     elif event_key.startswith('2026') and len(df.index) > 0:
-        df['auto_fuel_total'] = df['auto_fuel_scored'] + df['auto_fuel_missed']
-        df['teleop_fuel_total'] = df['teleop_fuel_scored'] + df['teleop_fuel_missed']
-        df['auto_fuel_accuracy'] = df['auto_fuel_scored'] / df['auto_fuel_total'].replace(0, float('nan'))
-        df['teleop_fuel_accuracy'] = df['teleop_fuel_scored'] / df['teleop_fuel_total'].replace(0, float('nan'))
+        # *_fuel_scored is shots attempted, *_fuel_accuracy is hit %
+        # Compute actual makes and misses per phase
+        for phase in ['auto', 'teleop', 'endgame']:
+            shot_col = f'{phase}_fuel_scored'
+            acc_col = f'{phase}_fuel_accuracy'
+            if shot_col in df.columns and acc_col in df.columns:
+                df[f'{phase}_fuel_made'] = (df[shot_col] * df[acc_col] / 100).round().astype(int)
+                df[f'{phase}_fuel_missed'] = df[shot_col] - df[f'{phase}_fuel_made']
+        # Totals across all phases
+        made_cols = [c for c in df.columns if c.endswith('_fuel_made')]
+        df['total_fuel_made'] = df[made_cols].sum(axis=1)
+        shot_cols = [c for c in ['auto_fuel_scored', 'teleop_fuel_scored', 'endgame_fuel_scored'] if c in df.columns]
+        df['total_fuel_shot'] = df[shot_cols].sum(axis=1)
+        df['total_fuel_missed'] = df['total_fuel_shot'] - df['total_fuel_made']
     return df
 
 
@@ -304,6 +377,7 @@ def main():
     pg = st.navigation([
         st.Page(config_page, title='Config'),
         st.Page(_lazy('pages.team_detail', 'team_detail_page'), title='Team Details'),
+        st.Page(_lazy('pages.team_search', 'team_search_page'), title='Team Search'),
         st.Page(_lazy('pages.clusters', 'clusters_page'), title='Clustering'),
         st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists'),
         st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns'),

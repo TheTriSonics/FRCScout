@@ -1,11 +1,42 @@
-import base64
 import pandas as pd
 import streamlit as st
 import altair as alt
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
-    load_pit_data, load_opr_data
+    load_pit_data, load_opr_data,
+    BINARY_COLS, SKIP_COLS, SECTIONS, pretty_name,
 )
+
+
+def _match_bar_chart(tdf, col):
+    """Bar chart of a numeric column across matches for one team."""
+    chart_df = tdf[['match_number', col]].copy()
+    chart_df['match_number'] = chart_df['match_number'].astype(str)
+    chart = alt.Chart(chart_df).mark_bar().encode(
+        x=alt.X('match_number:N', title='Match', sort=None),
+        y=alt.Y(f'{col}:Q', title=pretty_name(col)),
+        tooltip=['match_number', alt.Tooltip(f'{col}:Q', format='.1f')],
+    ).properties(height=250)
+    return chart
+
+
+def _match_binary_stacked_chart(tdf, col):
+    """Stacked bar chart for a binary column across matches (yes/no)."""
+    chart_df = tdf[['match_number', col]].copy()
+    chart_df['match_number'] = chart_df['match_number'].astype(str)
+    chart_df['result'] = chart_df[col].map({1: 'yes', 0: 'no', True: 'yes', False: 'no'})
+    chart = alt.Chart(chart_df).mark_bar().encode(
+        x=alt.X('match_number:N', title='Match', sort=None),
+        y=alt.Y('count():Q', title=''),
+        color=alt.Color('result:N',
+                        scale=alt.Scale(domain=['yes', 'no'],
+                                        range=['#59a14f', '#e15759']),
+                        title=''),
+        tooltip=['match_number', 'result'],
+        order=alt.Order('result:N', sort='descending'),
+    ).properties(height=200)
+    return chart
+
 
 def team_detail_page():
     """Team Detail page function"""
@@ -16,12 +47,11 @@ def team_detail_page():
     st.header("Team Details")
     with st.expander('Instructions'):
         st.write("""
-        Select a team to see their detailed data.
+        Select a team to see their detailed data across all scouted matches.
         """)
 
     if secret_key is None or event_key is None:
         st.warning("Please set secret key and event key in the Config page first.")
-        st.info(f"Current URL keys: secret_key={'set' if 'secret_key' in st.query_params else 'not set'}, event_key={'set' if 'event_key' in st.query_params else 'not set'}")
         st.stop()
 
     td = load_team_data(event_key)
@@ -47,122 +77,93 @@ def team_detail_page():
         # --- Pit Scouting Summary ---
         if pdf is not None and len(pdf.index) > 0:
             st.subheader("Pit Scouting")
-            pit_row = pdf.iloc[0]
-            pit_cols = pdf.columns.tolist()
+            skip_fields = {
+                'scouter_name', 'secret_team_key', 'event_key',
+                'team_number', 'timestamp', 'image_names',
+            }
+            for pit_idx in range(len(pdf.index)):
+                pit_row = pdf.iloc[pit_idx]
+                pit_cols = pdf.columns.tolist()
+                scouter = pit_row.get('scouter_name', 'Unknown')
+                ts = pit_row.get('timestamp', '')
+                with st.expander(f"Scout: {scouter} — {ts}", expanded=(pit_idx == len(pdf.index) - 1)):
+                    # Photos
+                    if 'image_names' in pit_cols:
+                        images = pit_row.get('image_names')
+                        if isinstance(images, list) and len(images) > 0:
+                            img_cols = st.columns(min(len(images), 3))
+                            for i, img_url in enumerate(images):
+                                try:
+                                    img_cols[i % len(img_cols)].image(img_url, width=300)
+                                except Exception:
+                                    pass
 
-            # Photo
-            if 'photo_base64' in pit_cols and pd.notna(pit_row.get('photo_base64')):
-                try:
-                    img_bytes = base64.b64decode(pit_row['photo_base64'])
-                    st.image(img_bytes, caption=f"Team {team_number}", width=300)
-                except Exception:
-                    pass
+                    # Build a clean two-column table of all fields
+                    display_rows = []
+                    for field in pit_cols:
+                        if field in skip_fields:
+                            continue
+                        val = pit_row.get(field)
+                        if val is None or (isinstance(val, str) and not val.strip()):
+                            continue
+                        label = pretty_name(field)
+                        if isinstance(val, bool) or val in (0, 1) and field not in ('fuel_capacity', 'hanging_level'):
+                            display_val = 'Yes' if val else 'No'
+                        else:
+                            display_val = str(val)
+                        display_rows.append({'Field': label, 'Value': display_val})
+                    if display_rows:
+                        st.table(pd.DataFrame(display_rows).set_index('Field'))
 
-            # Key fields displayed as metrics / text
-            col1, col2, col3 = st.columns(3)
-            # Drive train
-            for field in ['drive_train', 'driveTrain', 'drivetrain']:
-                if field in pit_cols and pd.notna(pit_row.get(field)):
-                    col1.metric("Drive Train", str(pit_row[field]))
-                    break
-
-            # Fuel / game-piece capacity
-            for field in ['fuel_capacity', 'fuelCapacity', 'game_piece_capacity']:
-                if field in pit_cols and pd.notna(pit_row.get(field)):
-                    col2.metric("Capacity", pit_row[field])
-                    break
-
-            # Weight
-            for field in ['weight', 'robot_weight', 'robotWeight']:
-                if field in pit_cols and pd.notna(pit_row.get(field)):
-                    col3.metric("Weight", pit_row[field])
-                    break
-
-            # Boolean capabilities shown as yes/no chips
-            bool_fields = [c for c in pit_cols if pit_row.get(c) in [True, False, 0, 1]
-                           and c not in ['photo_base64', 'scouting_team', 'team_key']]
-            if bool_fields:
-                cap_cols = st.columns(min(len(bool_fields), 4))
-                for i, field in enumerate(bool_fields):
-                    val = pit_row[field]
-                    label = field.replace('_', ' ').title()
-                    cap_cols[i % len(cap_cols)].metric(label, "Yes" if val else "No")
-
-            # Notes
-            for field in ['notes', 'pit_notes', 'pitNotes', 'comment', 'comments']:
-                if field in pit_cols and pd.notna(pit_row.get(field)) and str(pit_row[field]).strip():
-                    st.write(f"**Notes:** {pit_row[field]}")
-                    break
-
-        # Trim team data down from the full event data to just theirs w/ Pandas
+        # --- Match Scouting Charts ---
         if len(scouted_data.index) == 0:
             st.subheader("No match data")
         else:
-            tdf = scouted_data.loc[scouted_data.scouting_team == team_number]
-            if opr_data is not None:
-                odf = opr_data.loc[opr_data.teamNumber == team_number]
+            tdf = scouted_data.loc[scouted_data.team_number == team_number].copy()
+            tdf = tdf.sort_values('match_number')
 
             if show_raw:
                 st.subheader("Team Raw Scouting Data")
                 st.dataframe(tdf, hide_index=True)
-                st.subheader("Team Raw Pit Data")
-                st.dataframe(pdf, hide_index=True)
+                if pdf is not None:
+                    st.subheader("Team Raw Pit Data")
+                    st.dataframe(pdf, hide_index=True)
 
-            # Gets a list of every column name in the dataframe
-            allcols = tdf.columns
-            # Now we can create new dataframes where we only see the auto columns
-            auton_cols = [c for c in allcols if (c.startswith("auto") and not c.endswith('total')) or c == 'match_key']
-            auton_df = tdf[auton_cols]
-            # And then teleop...
-            teleop_cols = [c for c in allcols if (c.startswith("tele") and not c.endswith('total')) or c == 'match_key']
-            teleop_df = tdf[teleop_cols]
-            # And endgame.
-            endgame_cols = [c for c in allcols if c.startswith("endgame") or c == 'match_key']
-            endgame_df = tdf[endgame_cols]
-            st.subheader("Auton")
-            st.bar_chart(auton_df, x='match_key')
+            if len(tdf.index) == 0:
+                st.info("No matches scouted for this team yet.")
+                return
 
-            st.subheader("Teleop")
-            st.bar_chart(teleop_df, x='match_key')
+            # Chart every attribute grouped by game phase
+            chart_cols = [c for c in tdf.select_dtypes(include='number').columns
+                          if c not in SKIP_COLS]
 
-            st.subheader("Endgame")
-            endgame_numeric = endgame_df.select_dtypes(include='number')
-            if not endgame_numeric.empty:
-                avg_endgame = endgame_numeric.mean().mean()
-                st.metric("Avg Endgame Score", f"{avg_endgame:.1f}")
-            st.bar_chart(endgame_df, x='match_key')
+            for section_name, section_filter in SECTIONS:
+                section_cols = [c for c in chart_cols if section_filter(c)]
+                if not section_cols:
+                    continue
+                st.subheader(section_name)
+                for col in sorted(section_cols):
+                    st.markdown(f"**{pretty_name(col)}**")
+                    if col in BINARY_COLS:
+                        chart = _match_binary_stacked_chart(tdf, col)
+                    else:
+                        chart = _match_bar_chart(tdf, col)
+                    st.altair_chart(chart, use_container_width=True)
 
-            default_off = ['teamNumber'] + [
-                col for col in (odf.columns if opr_data is not None else [])
-                if col.endswith('Points')
-            ]
-            scouted_drop = [col for col in tdf.columns if col in default_off]
+            # --- OPR summary ---
             if opr_data is not None:
-                opr_drop = [col for col in odf.columns if col in default_off]
-            scouted_features = tdf.select_dtypes(include='number').drop(columns=['scouting_team', 'match_key'])
-            # now average everything in the dataframe by number of rows
-            scouted_features = scouted_features.mean().to_frame().reset_index()
-            scouted_features.columns = ['feature', 'value']
-
-            if opr_data is not None:
-                opr_features = odf.select_dtypes(include='number').drop(columns=opr_drop)
-                opr_features = opr_features.melt(var_name='feature', value_name='value')
-            # Display the chart in Streamlit
-            chart = alt.Chart(scouted_features).mark_bar().encode(
-                x=alt.X('value:Q'),
-                y=alt.Y('feature:N', sort='-x'),
-                tooltip=['feature', 'value']
-            ).properties(
-                title='Scouted Dimensions (Descending)',
-            )
-            st.altair_chart(chart, width='stretch')
-
-            if opr_data is not None:
-                chart = alt.Chart(opr_features).mark_bar().encode(
-                    x=alt.X('value:Q'),
-                    y=alt.Y('feature:N', sort='-x'),
-                    tooltip=['feature', 'value']
-                ).properties(
-                    title='OPR Dimensions (Descending)',
-                )
-                st.altair_chart(chart, width='stretch')
+                odf = opr_data.loc[opr_data.teamNumber == team_number]
+                if not odf.empty:
+                    st.subheader("OPR Breakdown")
+                    default_off = ['teamNumber'] + [
+                        col for col in odf.columns if col.endswith('Points')
+                    ]
+                    opr_drop = [col for col in odf.columns if col in default_off]
+                    opr_features = odf.select_dtypes(include='number').drop(columns=opr_drop)
+                    opr_features = opr_features.melt(var_name='feature', value_name='value')
+                    chart = alt.Chart(opr_features).mark_bar().encode(
+                        x=alt.X('value:Q'),
+                        y=alt.Y('feature:N', sort='-x'),
+                        tooltip=['feature', alt.Tooltip('value:Q', format='.1f')],
+                    ).properties(title='OPR Dimensions (Descending)')
+                    st.altair_chart(chart, use_container_width=True)
