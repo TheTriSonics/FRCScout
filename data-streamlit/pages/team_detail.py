@@ -122,11 +122,10 @@ def team_detail_page():
                         key='team_detail_number',
                         format_func=lambda x: f'{x[0]} ({x[1]})')
     if team:
-        with st.spinner('Loading team data...'):
-            scouted_data = load_event_data(secret_key, event_key)
-            opr_data = load_opr_data(secret_key, event_key)
-            (team_number, team_name) = team
-            pdf = load_pit_data(secret_key, event_key, team_number)
+        (team_number, team_name) = team
+        scouted_data = load_event_data(secret_key, event_key)
+        pdf = load_pit_data(secret_key, event_key, team_number)
+        opr_data = load_opr_data(secret_key, event_key)
 
         # --- Pit Scouting Summary ---
         if pdf is not None and len(pdf.index) > 0:
