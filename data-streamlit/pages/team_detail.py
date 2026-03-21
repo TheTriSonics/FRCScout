@@ -184,6 +184,28 @@ def team_detail_page():
             chart_cols = [c for c in tdf.select_dtypes(include='number').columns
                           if c not in SKIP_COLS]
 
+            # --- KPI Summary Cards ---
+            # Pick the most important metrics for at-a-glance view
+            kpi_cols = [c for c in ['auto_fuel_made', 'teleop_fuel_made',
+                                    'endgame_fuel_made', 'endgame_tower_level',
+                                    'auto_tower_level']
+                        if c in tdf.columns]
+            if kpi_cols:
+                kpi_columns = st.columns(len(kpi_cols) + 1)
+                for i, col in enumerate(kpi_cols):
+                    avg = tdf[col].mean()
+                    # Delta: last 3 matches vs first 3 matches
+                    if len(tdf) >= 4:
+                        first_half = tdf[col].head(len(tdf) // 2).mean()
+                        second_half = tdf[col].tail(len(tdf) // 2).mean()
+                        delta = round(second_half - first_half, 1)
+                        delta_str = f"{delta:+.1f}"
+                    else:
+                        delta_str = None
+                    kpi_columns[i].metric(pretty_name(col), f"{avg:.1f}", delta=delta_str)
+                # Matches scouted count
+                kpi_columns[-1].metric("Matches Scouted", len(tdf))
+
             # --- Similar Teams ---
             with st.expander("Similar Teams"):
                 st.write("""
