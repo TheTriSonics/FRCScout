@@ -367,6 +367,26 @@ def team_detail_page():
                             chart = _match_bar_chart(tdf, col)
                         st.altair_chart(chart, use_container_width=True)
 
+            # --- Match Notes ---
+            note_cols = [c for c in ['match_notes', 'auto_notes'] if c in tdf.columns]
+            if note_cols:
+                has_notes = False
+                for col in note_cols:
+                    if tdf[col].dropna().astype(str).str.strip().str.len().sum() > 0:
+                        has_notes = True
+                        break
+                if has_notes:
+                    with st.expander("Match Notes"):
+                        for _, mrow in tdf.iterrows():
+                            match_num = mrow.get('match_number', '?')
+                            notes = []
+                            for col in note_cols:
+                                val = str(mrow.get(col, '')).strip()
+                                if val:
+                                    notes.append(f"**{pretty_name(col)}:** {val}")
+                            if notes:
+                                st.markdown(f"**Match {match_num}** — " + " | ".join(notes))
+
             # --- Scouted vs OPR ---
             has_opr = opr_data is not None
             odf = None
