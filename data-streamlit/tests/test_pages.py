@@ -62,6 +62,13 @@ class TestClustersPage:
         assert not at.exception, f"Clusters crashed: {at.exception}"
 
 
+class TestHeatmapPage:
+    def test_loads_without_error(self):
+        at = _make_app(os.path.join(PROJECT_ROOT, "pages", "heatmap.py"))
+        at.run()
+        assert not at.exception, f"Heatmap crashed: {at.exception}"
+
+
 class TestPicklistPage:
     def test_loads_without_error(self):
         at = _make_app(os.path.join(PROJECT_ROOT, "pages", "picklist.py"))

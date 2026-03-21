@@ -388,6 +388,7 @@ def main():
         st.Page(config_page, title='Config'),
         st.Page(_lazy('pages.team_detail', 'team_detail_page'), title='Team Details'),
         st.Page(_lazy('pages.team_search', 'team_search_page'), title='Team Search'),
+        st.Page(_lazy('pages.heatmap', 'heatmap_page'), title='Heatmap'),
         st.Page(_lazy('pages.clusters', 'clusters_page'), title='Clustering'),
         st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists'),
         st.Page(_lazy('pages.head_to_head', 'head_to_head_page'), title='Head to Head'),
