@@ -41,6 +41,13 @@ class TestConfigPage:
         assert not at.exception, f"Config page crashed: {at.exception}"
 
 
+class TestRankingsPage:
+    def test_loads_without_error(self):
+        at = _make_app(os.path.join(PROJECT_ROOT, "pages", "rankings.py"))
+        at.run()
+        assert not at.exception, f"Rankings crashed: {at.exception}"
+
+
 class TestTeamDetailPage:
     def test_loads_without_error(self):
         at = _make_app(os.path.join(PROJECT_ROOT, "pages", "team_detail.py"))
