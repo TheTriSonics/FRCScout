@@ -4,7 +4,7 @@ import altair as alt
 
 from scout import (
     load_event_data, get_event_key, get_secret_key,
-    BINARY_COLS, SKIP_COLS, SECTIONS, pretty_name,
+    BINARY_COLS, SKIP_COLS, SECTIONS, pretty_name, load_team_data,
 )
 
 
@@ -59,6 +59,14 @@ def team_search_page():
     if sk is None or ek is None:
         st.warning("Please set secret key and event key in the Config page first.")
         st.stop()
+
+    td = load_team_data(ek)
+    team_names = {row.number: row['name'] for _, row in td.iterrows()}
+
+    def _team_link(t):
+        t = int(t)
+        name = team_names.get(t, '')
+        return f"/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={t}"
 
     st.header("Team Search & Rankings")
     with st.expander('Instructions'):
@@ -166,8 +174,12 @@ def team_search_page():
         with st.expander("Percentile Rankings", expanded=True):
             # Build percentile dataframe
             pct_data = team_avgs_filtered[['team_number']].copy()
+            pct_data['link'] = pct_data['team_number'].apply(_team_link)
             pct_data['team_number'] = pct_data['team_number'].astype(str)
-            col_config = {'team_number': st.column_config.TextColumn('Team', width='small')}
+            col_config = {
+                'team_number': st.column_config.TextColumn('Team', width='small'),
+                'link': st.column_config.LinkColumn('Details', width='small', display_text='View'),
+            }
             for col in pct_cols:
                 vals = team_avgs_filtered[col]
                 col_min, col_max = vals.min(), vals.max()
@@ -194,11 +206,15 @@ def team_search_page():
                      if c in spark_cols]
     if spark_display and len(df) > 0:
         with st.expander("Match-by-Match Trends"):
-            spark_data = {'Team': []}
-            spark_config = {'Team': st.column_config.TextColumn('Team', width='small')}
+            spark_data = {'Team': [], 'Details': []}
+            spark_config = {
+                'Team': st.column_config.TextColumn('Team', width='small'),
+                'Details': st.column_config.LinkColumn('Details', width='small', display_text='View'),
+            }
             teams_in_df = sorted(df['team_number'].unique())
             for tn in teams_in_df:
                 spark_data['Team'].append(str(int(tn)))
+                spark_data['Details'].append(_team_link(tn))
                 team_matches = df[df['team_number'] == tn].sort_values('match_number')
                 for col in spark_display:
                     label = pretty_name(col)
