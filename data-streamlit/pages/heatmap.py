@@ -8,7 +8,7 @@ from scout import (
 
 
 def heatmap_page():
-    """Event Heatmap — teams vs attributes, color-coded by percentile."""
+    """Event Heatmap — attributes vs teams, color-coded by percentile."""
     sk = get_secret_key()
     ek = get_event_key()
 
@@ -21,7 +21,8 @@ def heatmap_page():
         st.write("""
         Every team and every attribute at a glance. Cells are color-coded
         by percentile — dark green = top of the event, dark red = bottom.
-        Use the section filters to focus on the attributes you care about.
+        Teams go across the top, attributes down the left. Use the filters
+        to show/hide sections or specific teams.
         """)
 
     scouted_data = load_event_data(sk, ek)
@@ -51,20 +52,46 @@ def heatmap_page():
         st.info("Select at least one section.")
         return
 
-    sort_by = st.selectbox("Sort teams by", visible_cols, format_func=pretty_name)
+    # Team filter — default to all
+    all_team_options = []
+    for _, row in team_avgs.iterrows():
+        tn = int(row['team_number'])
+        label = f"{tn} ({team_names.get(tn, '')}){team_status_label(tn)}"
+        all_team_options.append((tn, label))
 
-    # Build display dataframe
-    display = team_avgs[['team_number'] + visible_cols].copy()
+    selected_teams = st.multiselect(
+        "Teams",
+        all_team_options,
+        default=all_team_options,
+        format_func=lambda x: x[1],
+    )
+
+    if not selected_teams:
+        st.info("Select at least one team.")
+        return
+
+    selected_team_nums = [t[0] for t in selected_teams]
+    filtered = team_avgs[team_avgs['team_number'].isin(selected_team_nums)]
+
+    # Build display: attributes as rows, teams as columns
+    display = filtered[['team_number'] + visible_cols].copy()
     display['team_number'] = display['team_number'].apply(
-        lambda t: f"{int(t)} ({team_names.get(int(t), '')}){team_status_label(int(t))}"
+        lambda t: f"{int(t)}{team_status_label(int(t))}"
     )
     display = display.set_index('team_number')
     display.columns = [pretty_name(c) for c in display.columns]
-    display = display.sort_values(pretty_name(sort_by), ascending=False)
+    # Transpose: attributes down the left, teams across the top
+    display = display.T
 
-    # Apply percentile-based color gradient
-    styled = display.style.background_gradient(
-        cmap='RdYlGn', axis=0
-    ).format('{:.1f}')
+    # Apply percentile-based color gradient (across columns = across teams)
+    try:
+        styled = display.style.background_gradient(
+            cmap='RdYlGn', axis=1
+        ).format('{:.1f}')
+    except ImportError:
+        styled = display.style.background_gradient(
+            axis=1
+        ).format('{:.1f}')
 
-    st.dataframe(styled, use_container_width=True, height=min(len(display) * 35 + 50, 800))
+    st.dataframe(styled, use_container_width=True,
+                 height=min(len(display) * 35 + 50, 800))
