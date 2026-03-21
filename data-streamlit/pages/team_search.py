@@ -154,9 +154,36 @@ def team_search_page():
     if has_filters:
         df = df[df['team_number'].isin(matching_teams)]
 
-    # --- Charts by section ---
+    # --- Percentile Rankings Table ---
     chart_cols = [c for c in df.select_dtypes(include='number').columns
                   if c not in SKIP_COLS]
+
+    # Build per-team averages for the percentile table
+    team_avgs_filtered = df.groupby('team_number').mean(numeric_only=True).reset_index()
+    # Pick key numeric (non-binary) columns for the percentile table
+    pct_cols = [c for c in chart_cols if c not in BINARY_COLS]
+    if pct_cols and len(team_avgs_filtered) > 1:
+        with st.expander("Percentile Rankings", expanded=True):
+            # Build percentile dataframe
+            pct_data = team_avgs_filtered[['team_number']].copy()
+            pct_data['team_number'] = pct_data['team_number'].astype(str)
+            col_config = {'team_number': st.column_config.TextColumn('Team', width='small')}
+            for col in pct_cols:
+                vals = team_avgs_filtered[col]
+                col_min, col_max = vals.min(), vals.max()
+                col_range = col_max - col_min
+                if col_range > 0:
+                    pct_data[pretty_name(col)] = ((vals - col_min) / col_range * 100).round(0).astype(int)
+                else:
+                    pct_data[pretty_name(col)] = 50
+                col_config[pretty_name(col)] = st.column_config.ProgressColumn(
+                    pretty_name(col), min_value=0, max_value=100, format='%d%%',
+                )
+            pct_data = pct_data.sort_values(
+                pct_data.columns[1], ascending=False
+            ).reset_index(drop=True)
+            st.dataframe(pct_data, column_config=col_config,
+                         hide_index=True, use_container_width=True)
 
     for section_name, section_filter in SECTIONS:
         section_cols = [c for c in chart_cols if section_filter(c)]
