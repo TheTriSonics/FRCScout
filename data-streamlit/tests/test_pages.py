@@ -83,6 +83,13 @@ class TestHeadToHeadPage:
         assert not at.exception, f"Head to Head crashed: {at.exception}"
 
 
+class TestScoutingAccuracyPage:
+    def test_loads_without_error(self):
+        at = _make_app(os.path.join(PROJECT_ROOT, "pages", "scouting_accuracy.py"))
+        at.run()
+        assert not at.exception, f"Scouting Accuracy crashed: {at.exception}"
+
+
 class TestMatchBreakdownsPage:
     def test_loads_without_error(self):
         at = _make_app(os.path.join(PROJECT_ROOT, "pages", "match_breakdowns.py"))
