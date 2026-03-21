@@ -393,6 +393,7 @@ def main():
         st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists'),
         st.Page(_lazy('pages.head_to_head', 'head_to_head_page'), title='Head to Head'),
         st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns'),
+        st.Page(_lazy('pages.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy'),
         st.Page(_lazy('pages.what_if', 'what_if_page'), title='Alliance Builder'),
         st.Page(_lazy('pages.pca', 'pca_page'), title='PCA'),
         st.Page(_lazy('pages.app_status', 'app_status_page'), title='Workspace'),
