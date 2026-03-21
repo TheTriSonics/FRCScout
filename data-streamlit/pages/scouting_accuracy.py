@@ -271,20 +271,21 @@ def scouting_accuracy_page():
 
     team_df = pd.DataFrame(team_rows).sort_values('Avg Accuracy', ascending=False)
 
+    # Color bucket for accuracy
+    team_df['Grade'] = team_df['Avg Accuracy'].apply(
+        lambda v: 'Good' if v >= 70 else ('Fair' if v >= 40 else 'Poor')
+    )
+
     # Chart
     team_chart = alt.Chart(team_df).mark_bar().encode(
         x=alt.X('Team:N', sort=team_df['Team'].tolist(), title=''),
         y=alt.Y('Avg Accuracy:Q', title='Avg Accuracy %',
                 scale=alt.Scale(domain=[0, 100])),
-        color=alt.condition(
-            alt.datum['Avg Accuracy'] >= 70,
-            alt.value('#59a14f'),
-            alt.condition(
-                alt.datum['Avg Accuracy'] >= 40,
-                alt.value('#f28e2b'),
-                alt.value('#e15759')
-            )
-        ),
+        color=alt.Color('Grade:N',
+                        scale=alt.Scale(
+                            domain=['Good', 'Fair', 'Poor'],
+                            range=['#59a14f', '#f28e2b', '#e15759']),
+                        title=''),
         tooltip=['Team', 'Matches', alt.Tooltip('Avg Accuracy:Q', format='.1f')],
     ).properties(height=350)
     st.altair_chart(team_chart, use_container_width=True)
