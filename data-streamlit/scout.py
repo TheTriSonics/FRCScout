@@ -147,7 +147,7 @@ def _keys_missing(*args):
     return any(a is None or a == '' for a in args)
 
 
-@st.cache_data(ttl=3600, max_entries=5, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)
 def load_events(year):
     """Load event list from TBA via our API."""
     try:
@@ -160,7 +160,6 @@ def load_events(year):
     return pd.DataFrame()
 
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_team_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
@@ -168,7 +167,6 @@ def load_team_data(event_key):
     df = pd.read_json(url)
     return df
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_event_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
@@ -208,7 +206,6 @@ def load_event_data(secret_key, event_key):
     return df
 
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_matches_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
@@ -217,7 +214,6 @@ def load_matches_data(event_key):
     return df
 
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_statbot_matches_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
@@ -226,7 +222,6 @@ def load_statbot_matches_data(event_key):
     return df
 
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_pit_data(secret_key, event_key, team_key):
     if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
@@ -235,7 +230,6 @@ def load_pit_data(secret_key, event_key, team_key):
     return pit_data
 
 
-@st.cache_data(ttl=300, max_entries=10, show_spinner=False)
 def load_opr_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return None
@@ -284,12 +278,6 @@ def load_data():
     event_key = get_event_key()
 
     all_loaded = True
-    load_event_data.clear()
-    load_team_data.clear()
-    load_opr_data.clear()
-    load_matches_data.clear()
-    load_statbot_matches_data.clear()
-    load_pit_data.clear()
 
     event_data = load_event_data(secret_key, event_key)
     if len(event_data.index) > 0:
@@ -339,13 +327,6 @@ def config_page():
     # --- Event Key: text input + browser ---
     def _on_event_change():
         _set_key('event_key', st.session_state._ek_input)
-        # Clear caches when event changes so stale data doesn't persist
-        load_event_data.clear()
-        load_team_data.clear()
-        load_opr_data.clear()
-        load_pit_data.clear()
-        load_matches_data.clear()
-        load_statbot_matches_data.clear()
 
     st.text_input(
         "Event key",
@@ -368,12 +349,6 @@ def config_page():
             )
             if selected_event and st.button("Use this event"):
                 _set_key('event_key', selected_event[0])
-                load_event_data.clear()
-                load_team_data.clear()
-                load_opr_data.clear()
-                load_pit_data.clear()
-                load_matches_data.clear()
-                load_statbot_matches_data.clear()
                 st.rerun()
 
     # --- Status ---
