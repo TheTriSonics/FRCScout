@@ -588,7 +588,7 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
         query += "AND c.event_key = @event_key "
         params.append({'name': '@event_key', 'value': event_key})
     if (team_key is not None):
-        query += "AND c.scouting_team = @team_key "
+        query += "AND c.team_number = @team_key "
         params.append({'name': '@team_key', 'value': int(team_key)})
 
     print(query)
@@ -622,7 +622,7 @@ def get_robot_data(secret_team_key=None, team_key=None):
     query = """
         SELECT *
         FROM c
-        WHERE c.scouting_team = @team_key
+        WHERE c.team_number = @team_key
           AND c.secret_team_key = @secret_team_key
         ORDER BY c.ts DESC"""
     params = []
@@ -643,6 +643,19 @@ def get_robot_data(secret_team_key=None, team_key=None):
 
 
 
+def flatten_score_breakdown(d, prefix=''):
+    """Recursively flatten nested dicts in a score breakdown into
+    prefixed keys (e.g. hubScore.autoCount) so OPR works for any game year."""
+    flat = {}
+    for k, v in d.items():
+        key = f'{prefix}{k}' if prefix else k
+        if isinstance(v, dict):
+            flat.update(flatten_score_breakdown(v, prefix=f'{key}_'))
+        else:
+            flat[key] = v
+    return flat
+
+
 def http_get_opr_data(event_code):
     event_teams = get_event_teams_df(event_code)['key']
     team_dict = {key: int(key[3:]) for key in event_teams}
@@ -654,14 +667,9 @@ def http_get_opr_data(event_code):
     quals = quals.dropna(axis='index', subset=['score_breakdown'])
     for _, row in quals.iterrows():
         for color in ['blue', 'red']:
-            row['score_breakdown'][color]['auto_coral_level1'] = row['score_breakdown'][color]['autoReef']['trough']
-            row['score_breakdown'][color]['auto_coral_level2'] = row['score_breakdown'][color]['autoReef']['tba_botRowCount']
-            row['score_breakdown'][color]['auto_coral_level3'] = row['score_breakdown'][color]['autoReef']['tba_midRowCount']
-            row['score_breakdown'][color]['auto_coral_level4'] = row['score_breakdown'][color]['autoReef']['tba_topRowCount']
-            row['score_breakdown'][color]['teleop_coral_level1'] = row['score_breakdown'][color]['teleopReef']['trough']
-            row['score_breakdown'][color]['teleop_coral_level2'] = row['score_breakdown'][color]['teleopReef']['tba_botRowCount']
-            row['score_breakdown'][color]['teleop_coral_level3'] = row['score_breakdown'][color]['teleopReef']['tba_midRowCount']
-            row['score_breakdown'][color]['teleop_coral_level4'] = row['score_breakdown'][color]['teleopReef']['tba_topRowCount']
+            row['score_breakdown'][color] = flatten_score_breakdown(
+                row['score_breakdown'][color]
+            )
 
     # dictionary to keep track of who played in a match
     # had to be modified so we could work with events where not
