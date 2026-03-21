@@ -349,6 +349,46 @@ def team_detail_page():
                 else:
                     st.info("Need more than one match for consistency data.")
 
+                # Outlier detection (within the same expander)
+                if len(tdf) >= 4:
+                    st.markdown("---")
+                    st.markdown("**Outlier Matches**")
+                    st.caption("Matches where a value is more than 2 standard deviations from the team's mean.")
+                    outlier_rows = []
+                    for col in sorted(chart_cols):
+                        if col in BINARY_COLS:
+                            continue
+                        vals = tdf[col].dropna()
+                        if len(vals) < 4:
+                            continue
+                        mean = vals.mean()
+                        std = vals.std()
+                        if std < 0.01:
+                            continue
+                        for _, mrow in tdf.iterrows():
+                            val = mrow[col]
+                            if abs(val - mean) > 2 * std:
+                                direction = 'high' if val > mean else 'low'
+                                outlier_rows.append({
+                                    'Match': int(mrow['match_number']),
+                                    'Attribute': pretty_name(col),
+                                    'Value': round(val, 1),
+                                    'Team Avg': round(mean, 1),
+                                    'Flag': f"Unusually {direction}",
+                                })
+                    if outlier_rows:
+                        out_df = pd.DataFrame(outlier_rows)
+                        def _flag_color(val):
+                            if 'high' in str(val):
+                                return 'color: #f28e2b'
+                            elif 'low' in str(val):
+                                return 'color: #e15759'
+                            return ''
+                        st.dataframe(out_df.style.map(_flag_color, subset=['Flag']),
+                                     hide_index=True, use_container_width=True)
+                    else:
+                        st.caption("No outliers detected.")
+
             # --- Match charts in per-section accordions ---
             show_trends = st.checkbox("Show trend lines on charts", value=True)
 
