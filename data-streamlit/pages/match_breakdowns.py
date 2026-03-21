@@ -17,149 +17,184 @@ def match_breakdowns_page():
         st.stop()
 
     st.header('Match Breakdowns')
-    with st.expander('Instructions'):
-        st.write("""
-        Match-by-match breakdown showing alliance compositions, OPR-based
-        predictions, and actual scores. Filter by match type or team to
-        focus on specific matchups.
-        """)
 
     matches = load_matches_data(ek)
     team_data = load_team_data(ek)
+    team_names = {row.number: row['name'] for _, row in team_data.iterrows()}
 
-    qm_filter = st.checkbox('Qualifying Matches', True)
-    po_filter = st.checkbox('Playoff Matches', True)
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        qm_filter = st.checkbox('Quals', True)
+    with col_f2:
+        po_filter = st.checkbox('Playoffs', True)
+    with col_f3:
+        team_filter = st.multiselect('Team', sorted(team_data['number'].tolist()),
+                                     format_func=lambda t: f"{t} ({team_names.get(t, '')})",
+                                     placeholder='All teams')
+
+    # Determine if we should highlight a single team
+    highlight_team = team_filter[0] if len(team_filter) == 1 else None
 
     match_types = []
     if qm_filter:
         match_types.append('qm')
     if po_filter:
-        for level in ['sf', 'f']:
-            match_types.append(level)
-    team_filter = st.multiselect('Team', team_data, placeholder='Select a team')
+        match_types.extend(['sf', 'f'])
 
     oprdata = load_opr_data(sk, ek)
-    if oprdata is not None and 'totalPoints' in oprdata.columns:
-        opr_totalpoints = oprdata[['teamNumber', 'totalPoints']]
+    has_opr = oprdata is not None and 'totalPoints' in oprdata.columns
+    if has_opr:
+        opr_lookup = oprdata.set_index('teamNumber')['totalPoints'].to_dict()
     else:
-        opr_totalpoints = None
+        opr_lookup = {}
 
     matches = matches[matches['comp_level'].isin(match_types)]
-    # Order the matches dataframe by the match_number column
     matches = matches.sort_values(by='match_number').reset_index(drop=True)
 
     if len(matches.index) == 0:
-        st.subheader('No match data available yet.')
-    else:
-        n1 = pd.json_normalize(matches['alliances'])
+        st.info('No match data available yet.')
+        return
 
-        blueteams = pd.DataFrame(n1['blue.team_keys'].explode())
-        redteams = pd.DataFrame(n1['red.team_keys'].explode())
-        blueteams['blue.team_keys'] = blueteams['blue.team_keys'].str.replace('frc', '').astype(int)
-        redteams['red.team_keys'] = redteams['red.team_keys'].str.replace('frc', '').astype(int)
-        blueteams['robot_num'] = blueteams.groupby(blueteams.index).rank()
-        redteams['robot_num'] = redteams.groupby(redteams.index).rank()
-        pblue = blueteams.pivot(columns='robot_num', values='blue.team_keys')
-        pred = redteams.pivot(columns='robot_num', values='red.team_keys')
-        pblue.columns = ['blue1', 'blue2', 'blue3']
-        pred.columns = ['red1', 'red2', 'red3']
-        matches = matches.join(pblue).join(pred)
+    # Parse alliance team keys
+    n1 = pd.json_normalize(matches['alliances'])
+    for color, col_prefix in [('blue', 'blue'), ('red', 'red')]:
+        teams_col = n1[f'{color}.team_keys'].apply(
+            lambda keys: [int(k.replace('frc', '')) for k in keys] if keys else []
+        )
+        matches[f'{col_prefix}_teams'] = teams_col
 
-        if team_filter:
-            matches = matches[(matches['red1'].isin(team_filter)) |
-                        (matches['red2'].isin(team_filter)) |
-                        (matches['red3'].isin(team_filter)) |
-                        (matches['blue1'].isin(team_filter)) |
-                        (matches['blue2'].isin(team_filter)) |
-                        (matches['blue3'].isin(team_filter))]
+    # Filter by team
+    if team_filter:
+        mask = matches.apply(
+            lambda r: any(t in r['red_teams'] or t in r['blue_teams'] for t in team_filter),
+            axis=1
+        )
+        matches = matches[mask]
 
-        if opr_totalpoints is not None:
-            for color in ['blue', 'red']:
-                for index in [1, 2, 3]:
-                    matches = matches.join(
-                        opr_totalpoints.set_index('teamNumber'),
-                        on=f'{color}{index}'
-                    )
-                    matches.rename(
-                        columns={'totalPoints': f'{color}{index}_totalPoints'},
-                        inplace=True
-                    )
+    if len(matches.index) == 0:
+        st.info('No matches found for selected filters.')
+        return
 
-        statbotics = load_statbot_matches_data(get_event_key())
-        if statbotics.index.size == 0:
-            st.subheader('No statbotics data available yet.')
-            pred_detail = None
-            actual_detail = None
+    # Statbotics predictions
+    statbotics = load_statbot_matches_data(ek)
+    has_statbotics = statbotics.index.size > 0
+    pred_map = {}
+    actual_map = {}
+    if has_statbotics:
+        for _, sb in statbotics.iterrows():
+            mn = sb['match_number']
+            if sb.get('pred'):
+                pred_map[mn] = sb['pred']
+            if sb.get('result'):
+                actual_map[mn] = sb['result']
+
+    # Render each match compactly
+    for _, match in matches.iterrows():
+        mn = int(match['match_number'])
+        level = match.get('comp_level', 'qm')
+        label = f"Q{mn}" if level == 'qm' else f"{level.upper()}{mn}"
+
+        red_teams = match['red_teams']
+        blue_teams = match['blue_teams']
+
+        # OPR totals
+        red_opr = sum(opr_lookup.get(t, 0) for t in red_teams)
+        blue_opr = sum(opr_lookup.get(t, 0) for t in blue_teams)
+
+        # Predictions & actuals
+        pred = pred_map.get(mn, {})
+        actual = actual_map.get(mn, {})
+        red_pred = pred.get('red_score', None)
+        blue_pred = pred.get('blue_score', None)
+        red_actual = actual.get('red_score', None)
+        blue_actual = actual.get('blue_score', None)
+        winner = actual.get('winner', None)
+        red_win_prob = pred.get('red_win_prob', None)
+        pred_winner = pred.get('winner', None)
+        match_played = winner is not None
+
+        # Determine if highlighted team's alliance wins/is predicted to win
+        highlight_color = None
+        team_wins = None
+        if highlight_team:
+            if highlight_team in red_teams:
+                highlight_color = 'red'
+            elif highlight_team in blue_teams:
+                highlight_color = 'blue'
+            if highlight_color:
+                if match_played and winner:
+                    team_wins = (winner == highlight_color)
+                elif pred_winner:
+                    team_wins = (pred_winner == highlight_color)
+
+        # Match container
+        if match_played:
+            if team_wins is True:
+                border_icon = '🟢'
+            elif team_wins is False:
+                border_icon = '🔴'
+            else:
+                border_icon = ''
         else:
-            preds = statbotics[['comp_level', 'match_number', 'pred']]
-            preds = preds[preds['comp_level'] == 'qm']
-            pred_detail = preds.join(pd.json_normalize(preds['pred']))
+            # Unplayed — show prediction with green/red icons
+            if red_win_prob is not None and highlight_color:
+                prob = red_win_prob if highlight_color == 'red' else (1 - red_win_prob)
+                pct = prob * 100
+                icon = '🟢' if pct >= 50 else '🔴'
+                border_icon = f'{icon} {pct:.0f}% chance'
+            elif red_win_prob is not None:
+                fav = 'Red' if red_win_prob > 0.5 else 'Blue'
+                fav_pct = max(red_win_prob, 1 - red_win_prob) * 100
+                border_icon = f'{fav} {fav_pct:.0f}%'
+            else:
+                border_icon = ''
 
-            actual = statbotics[['comp_level', 'match_number', 'result']]
-            actual = actual[actual['comp_level'] == 'qm']
-            actual_detail = actual.join(pd.json_normalize(actual['result']))
+        with st.container(border=True):
+            # Header row: match label + result indicator
+            st.markdown(f"**{label}** {border_icon}")
 
-        if pred_detail is not None:
-            matches = matches.join(pred_detail.set_index('match_number')
-                                            .add_suffix('_pred'),
-                                on='match_number')
+            # Compact two-column layout
+            col_red, col_blue = st.columns(2)
 
-        if actual_detail is not None:
-            matches = matches.join(actual_detail.set_index('match_number')
-                                                .add_suffix('_actual'),
-                                on='match_number')
+            for col, color, teams, opr_total in [
+                (col_red, 'red', red_teams, red_opr),
+                (col_blue, 'blue', blue_teams, blue_opr),
+            ]:
+                with col:
+                    is_winner = (winner == color) if winner else False
+                    win_marker = ' ★' if is_winner else ''
+                    color_label = color.capitalize()
 
+                    # Team list with highlighting
+                    team_strs = []
+                    for t in teams:
+                        name = team_names.get(t, '')
+                        if highlight_team and t == highlight_team:
+                            team_strs.append(f"**`{t}`** ({name})")
+                        else:
+                            link = f"/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={t}"
+                            team_strs.append(f"[{t}]({link}) ({name})")
 
-        for panda_idx, match in matches.iterrows():
-            with st.container(border=8):
-                # Display the match number
-                st.subheader(f"Match {match['match_number']}")
-                red, blue = st.columns(2)
-                stats = {}
-                for container, color in zip([red, blue], ['red', 'blue']):
-                    with container:
-                        with st.container(border=True):
-                            alliance_opr_total = 0
-                            team_nums = []
-                            total_point_oprs = []
-                            for bot in [1, 2, 3]:
-                                team_num = match[f'{color}{bot}']
-                                team_nums.append(team_num)
-                                if opr_totalpoints is not None:
-                                    opr_total = match[f'{color}{bot}_totalPoints']
-                                else:
-                                    opr_total = 0
-                                total_point_oprs.append(opr_total)
-                                alliance_opr_total += opr_total
-                            pred_winner, actual_winner, redpct = 'none', 'none', 0
-                            if 'winner_pred' in match.keys():
-                                pred_winner = match['winner_pred'] == color
-                                actual_winner = match['winner_actual'] == color
-                                redpct = match['red_win_prob_pred'] * 100
-                            pct = redpct if color == 'red' else 100 - redpct
-                            show_star = '*' if actual_winner else ''
-                            st.markdown(f"""
-                                ### {show_star}{color.capitalize()} ({pct:.1f}%)
-                            """)
-                            team_breakdown = pd.DataFrame({
-                                'Team': team_nums,
-                                'TP OPR': total_point_oprs
-                            }).set_index('Team')
-                            st.table(team_breakdown.style.format(precision=1))
-                            score_pred, score_actual = 0, 0
-                            if f'{color}_score_pred' in match.keys():
-                                score_pred = match[f'{color}_score_pred']
-                                score_actual = match[f'{color}_score_actual']
-                            stats[color] = [
-                                alliance_opr_total,
-                                score_pred,
-                                score_actual
-                            ]
-                misc_breakdown = pd.DataFrame({
-                    'Label': ['Total TP OPR',
-                            'Score Predicted',
-                            'Score Actual'],
-                    'Red': stats['red'],
-                    'Blue': stats['blue'],
-                }).set_index('Label')
-                st.table(misc_breakdown.style.format(precision=1))
+                    # Build compact info block
+                    lines = [f"**{color_label}{win_marker}**"]
+                    for ts in team_strs:
+                        lines.append(f"- {ts}")
+
+                    info_parts = []
+                    if has_opr:
+                        info_parts.append(f"OPR: {opr_total:.0f}")
+                    score_parts = []
+                    if red_pred is not None:
+                        s_pred = red_pred if color == 'red' else blue_pred
+                        score_parts.append(f"Pred: {s_pred:.0f}")
+                    if red_actual is not None:
+                        s_actual = red_actual if color == 'red' else blue_actual
+                        if s_actual >= 0:
+                            score_parts.append(f"**Actual: {s_actual:.0f}**")
+                    if score_parts:
+                        info_parts.extend(score_parts)
+
+                    if info_parts:
+                        lines.append(" | ".join(info_parts))
+
+                    st.markdown("  \n".join(lines))
