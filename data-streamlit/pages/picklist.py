@@ -109,3 +109,6 @@ def picklist_page():
 
     styled = display.set_index('Rank').style.map(_status_color, subset=['Status'])
     st.dataframe(styled, use_container_width=True, height=min(len(display) * 35 + 50, 600))
+    csv = display.to_csv(index=False)
+    st.download_button("Download Draft Board CSV", csv, "draft_board.csv",
+                       "text/csv", key='dl_draft')

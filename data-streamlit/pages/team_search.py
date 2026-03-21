@@ -196,6 +196,11 @@ def team_search_page():
             ).reset_index(drop=True)
             st.dataframe(pct_data, column_config=col_config,
                          hide_index=True, use_container_width=True)
+            # Export
+            export_cols = [c for c in pct_data.columns if c != 'link']
+            csv = pct_data[export_cols].to_csv(index=False)
+            st.download_button("Download CSV", csv, "percentile_rankings.csv",
+                               "text/csv", key='dl_pct')
 
     # --- Sparkline Trends Table ---
     spark_cols = [c for c in chart_cols if c not in BINARY_COLS]
