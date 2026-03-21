@@ -199,6 +199,18 @@ def get_matches_for_event(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+@app.function_name(name="GetRankings")
+@app.route(route="GetRankings", auth_level=func.AuthLevel.ANONYMOUS)
+def get_rankings(req: func.HttpRequest) -> func.HttpResponse:
+    event_key = req.params.get('event_key')
+    tba = 'https://www.thebluealliance.com/api/v3'
+    key = os.environ.get('TBA_KEY')
+    headers = {'X-TBA-Auth-Key': key}
+    r = requests.get(f'{tba}/event/{event_key}/rankings', headers=headers)
+    return func.HttpResponse(r.text, status_code=r.status_code,
+                             mimetype='application/json')
+
+
 @app.function_name(name="GetTimeEntries")
 @app.route(route="GetTimeEntries", auth_level=func.AuthLevel.ANONYMOUS)
 def get_time_entries(req: func.HttpRequest) -> func.HttpResponse:

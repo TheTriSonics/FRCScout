@@ -386,6 +386,7 @@ def main():
 
     pg = st.navigation([
         st.Page(config_page, title='Config'),
+        st.Page(_lazy('pages.rankings', 'rankings_page'), title='Rankings'),
         st.Page(_lazy('pages.team_detail', 'team_detail_page'), title='Team Details'),
         st.Page(_lazy('pages.team_search', 'team_search_page'), title='Team Search'),
         st.Page(_lazy('pages.heatmap', 'heatmap_page'), title='Heatmap'),
