@@ -79,7 +79,9 @@ def pretty_name(col):
     return col.replace('_', ' ').title()
 
 def _get_key(name):
-    """Get a key value. Priority: query params > session state."""
+    """Get a key value. Priority: query params > session state.
+    Always syncs session state values up to query params so the URL
+    carries keys across page navigations."""
     # Query params are the source of truth (persist in URL, shareable)
     if name in st.query_params:
         val = str(st.query_params[name]).strip()
@@ -90,7 +92,11 @@ def _get_key(name):
     val = st.session_state.get(name, '')
     if isinstance(val, str):
         val = val.strip()
-    return val if val else None
+    if val:
+        # Sync to query params so URL always reflects current keys
+        st.query_params[name] = val
+        return val
+    return None
 
 
 def _set_key(name, value):
