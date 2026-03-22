@@ -3,7 +3,8 @@ import pandas as pd
 
 from scout import (
     load_matches_data, load_opr_data, load_team_data, get_event_key,
-    load_statbot_matches_data, get_secret_key, load_parallel
+    load_statbot_matches_data, get_secret_key, load_parallel,
+    _invalidate_session_cache,
 )
 
 def match_breakdowns_page():
@@ -24,7 +25,7 @@ def match_breakdowns_page():
     )
     team_names = {row.number: row['name'] for _, row in team_data.iterrows()}
 
-    col_f1, col_f2, col_f3 = st.columns(3)
+    col_f1, col_f2, col_f3, col_f4 = st.columns([1, 1, 2, 1])
     with col_f1:
         qm_filter = st.checkbox('Quals', True)
     with col_f2:
@@ -33,6 +34,11 @@ def match_breakdowns_page():
         team_filter = st.multiselect('Team', sorted(team_data['number'].tolist()),
                                      format_func=lambda t: f"{t} ({team_names.get(t, '')})",
                                      placeholder='Select a team')
+
+    with col_f4:
+        if st.button('Refresh'):
+            _invalidate_session_cache()
+            st.rerun()
 
     if not team_filter:
         st.info("Select a team to view their match breakdowns.")
@@ -58,7 +64,12 @@ def match_breakdowns_page():
         opr_lookup = {}
 
     matches = matches[matches['comp_level'].isin(match_types)]
-    matches = matches.sort_values(by='match_number').reset_index(drop=True)
+    # Sort: quals first by match_number, then playoffs by set_number
+    level_order = {'qm': 0, 'sf': 1, 'f': 2}
+    matches = matches.copy()
+    matches['_sort'] = matches['comp_level'].map(level_order).fillna(3) * 10000 + \
+                        matches['set_number'] * 100 + matches['match_number']
+    matches = matches.sort_values(by='_sort').reset_index(drop=True)
 
     if len(matches.index) == 0:
         st.info('No match data available yet.')
@@ -100,7 +111,15 @@ def match_breakdowns_page():
     for _, match in matches.iterrows():
         mn = int(match['match_number'])
         level = match.get('comp_level', 'qm')
-        label = f"Q{mn}" if level == 'qm' else f"{level.upper()}{mn}"
+        sn = int(match.get('set_number', 1))
+        if level == 'qm':
+            label = f"Q{mn}"
+        elif level == 'sf':
+            label = f"SF{sn}-{mn}"
+        elif level == 'f':
+            label = f"F{mn}"
+        else:
+            label = f"{level.upper()}{sn}-{mn}"
 
         red_teams = match['red_teams']
         blue_teams = match['blue_teams']
@@ -177,11 +196,13 @@ def match_breakdowns_page():
                     team_strs = []
                     for t in teams:
                         name = team_names.get(t, '')
+                        t_opr = opr_lookup.get(t, None)
+                        opr_str = f" — {t_opr:.0f} OPR" if t_opr else ""
                         if highlight_team and t == highlight_team:
-                            team_strs.append(f"**`{t}`** ({name})")
+                            team_strs.append(f"**`{t}`** ({name}){opr_str}")
                         else:
                             link = f"/team_detail?secret_key={sk}&event_key={ek}&team_detail_number={t}"
-                            team_strs.append(f"[{t}]({link}) ({name})")
+                            team_strs.append(f"[{t}]({link}) ({name}){opr_str}")
 
                     # Build compact info block
                     lines = [f"**{color_label}{win_marker}**"]
