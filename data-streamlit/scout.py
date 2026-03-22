@@ -396,6 +396,7 @@ def main():
         st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
         st.Page(_lazy('pages.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy', url_path='scouting_accuracy'),
         st.Page(_lazy('pages.what_if', 'what_if_page'), title='Alliance Builder', url_path='alliance_builder'),
+        st.Page(_lazy('pages.fuel_opr', 'fuel_opr_page'), title='Fuel OPR', url_path='fuel_opr'),
         st.Page(_lazy('pages.pca', 'pca_page'), title='PCA', url_path='pca'),
         st.Page(_lazy('pages.app_status', 'app_status_page'), title='Workspace', url_path='workspace'),
     ])
