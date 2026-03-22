@@ -10,7 +10,7 @@ except ImportError:
     HAS_PLOTLY = False
 from scout import (
     get_event_key, get_secret_key, load_event_data, load_team_data,
-    load_pit_data, load_opr_data,
+    load_pit_data, load_opr_data, load_parallel,
     BINARY_COLS, SKIP_COLS, SECTIONS, SCOUTED_OPR_MAP, pretty_name,
 )
 
@@ -128,9 +128,11 @@ def team_detail_page():
                         format_func=lambda x: f'{x[0]} ({x[1]})')
     if team:
         (team_number, team_name) = team
-        scouted_data = load_event_data(secret_key, event_key)
-        pdf = load_pit_data(secret_key, event_key, team_number)
-        opr_data = load_opr_data(secret_key, event_key)
+        scouted_data, pdf, opr_data = load_parallel(
+            (load_event_data, secret_key, event_key),
+            (load_pit_data, secret_key, event_key, team_number),
+            (load_opr_data, secret_key, event_key),
+        )
 
         # --- Pit Scouting Summary ---
         if pdf is not None and len(pdf.index) > 0:

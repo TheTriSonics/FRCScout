@@ -1,8 +1,10 @@
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 import altair as alt
 import pandas as pd
 import streamlit as st
+from streamlit_js_eval import streamlit_js_eval
 
 from os.path import exists
 
@@ -78,6 +80,23 @@ def pretty_name(col):
     """Convert column_name to Display Label."""
     return col.replace('_', ' ').title()
 
+def _load_keys_from_storage():
+    """On first load, pull saved keys from browser localStorage into
+    session state. Only runs once per session."""
+    if st.session_state.get('_keys_loaded'):
+        return
+    st.session_state['_keys_loaded'] = True
+
+    for name in ['secret_key', 'event_key']:
+        # Skip if already set via query params or session state
+        if name in st.query_params or st.session_state.get(name):
+            continue
+        # Try localStorage
+        val = streamlit_js_eval(f"localStorage.getItem('{name}')", key=f'_ls_read_{name}')
+        if val and isinstance(val, str) and val.strip():
+            st.session_state[name] = val.strip()
+
+
 def _get_key(name):
     """Get a key value. Priority: query params > session state.
     Always syncs session state values up to query params so the URL
@@ -88,7 +107,7 @@ def _get_key(name):
         if val:
             st.session_state[name] = val
             return val
-    # Fall back to session state (set by config.json or prior interaction)
+    # Fall back to session state (set by config.json, localStorage, or prior interaction)
     val = st.session_state.get(name, '')
     if isinstance(val, str):
         val = val.strip()
@@ -100,15 +119,20 @@ def _get_key(name):
 
 
 def _set_key(name, value):
-    """Set a key in both session state and query params."""
+    """Set a key in session state, query params, and browser localStorage."""
     value = str(value).strip()
     if value:
         st.session_state[name] = value
         st.query_params[name] = value
+        # Persist to browser localStorage for next visit
+        streamlit_js_eval(f"localStorage.setItem('{name}', '{value}')",
+                          key=f'_ls_write_{name}')
     else:
         st.session_state.pop(name, None)
         if name in st.query_params:
             del st.query_params[name]
+        streamlit_js_eval(f"localStorage.removeItem('{name}')",
+                          key=f'_ls_del_{name}')
 
 
 def get_secret_key():
@@ -160,20 +184,32 @@ def load_events(year):
     return pd.DataFrame()
 
 
-def load_team_data(event_key):
+def _session_cache(cache_key, fetch_fn):
+    """Cache data in session state keyed by event. Returns cached copy."""
+    if cache_key not in st.session_state:
+        st.session_state[cache_key] = fetch_fn()
+    return st.session_state[cache_key]
+
+
+def _invalidate_session_cache():
+    """Clear all cached data (call when event changes or on explicit reload)."""
+    keys_to_drop = [k for k in st.session_state if k.startswith('_data_')]
+    for k in keys_to_drop:
+        del st.session_state[k]
+
+
+def _fetch_team_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
-    url = get_team_list_url(event_key)
-    df = pd.read_json(url)
-    return df
+    return pd.read_json(get_team_list_url(event_key))
 
-def load_event_data(secret_key, event_key):
+
+def _fetch_event_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
     df = pd.read_json(url)
     if len(df.index) > 0:
-        # Normalize legacy column names
         if 'scouting_team' in df.columns:
             df.rename(columns={'scouting_team': 'team_number'}, inplace=True)
         if 'match_key' in df.columns:
@@ -183,21 +219,17 @@ def load_event_data(secret_key, event_key):
             df['auto_coral1'] + df['auto_coral2'] +
             df['auto_coral3'] + df['auto_coral4']
         )
-
         df['teleop_coral_total'] = (
             df['teleop_coral1'] + df['teleop_coral2'] +
             df['teleop_coral3'] + df['teleop_coral4']
         )
     elif event_key.startswith('2026') and len(df.index) > 0:
-        # *_fuel_scored is shots attempted, *_fuel_accuracy is hit %
-        # Compute actual makes and misses per phase
         for phase in ['auto', 'teleop', 'endgame']:
             shot_col = f'{phase}_fuel_scored'
             acc_col = f'{phase}_fuel_accuracy'
             if shot_col in df.columns and acc_col in df.columns:
                 df[f'{phase}_fuel_made'] = (df[shot_col] * df[acc_col] / 100).round().astype(int)
                 df[f'{phase}_fuel_missed'] = df[shot_col] - df[f'{phase}_fuel_made']
-        # Totals across all phases
         made_cols = [c for c in df.columns if c.endswith('_fuel_made')]
         df['total_fuel_made'] = df[made_cols].sum(axis=1)
         shot_cols = [c for c in ['auto_fuel_scored', 'teleop_fuel_scored', 'endgame_fuel_scored'] if c in df.columns]
@@ -206,39 +238,66 @@ def load_event_data(secret_key, event_key):
     return df
 
 
-def load_matches_data(event_key):
+def _fetch_matches_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
-    url = get_matches_data_url(event_key)
-    df = pd.read_json(url)
-    return df
+    return pd.read_json(get_matches_data_url(event_key))
 
 
-def load_statbot_matches_data(event_key):
+def _fetch_statbot_matches_data(event_key):
     if _keys_missing(event_key):
         return pd.DataFrame()
-    url = f'{base_url}/GetStatboticsMatches?event_key={event_key}'
-    df = pd.read_json(url)
-    return df
+    return pd.read_json(f'{base_url}/GetStatboticsMatches?event_key={event_key}')
 
 
-def load_pit_data(secret_key, event_key, team_key):
+def _fetch_pit_data(secret_key, event_key, team_key):
     if _keys_missing(secret_key, event_key):
         return pd.DataFrame()
-    url = get_pit_data_url(secret_key, event_key, team_key)
-    pit_data = pd.read_json(url)
-    return pit_data
+    return pd.read_json(get_pit_data_url(secret_key, event_key, team_key))
 
 
-def load_opr_data(secret_key, event_key):
+def _fetch_opr_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return None
-    url = get_opr_data_url(secret_key, event_key)
     try:
-        opr_data = pd.read_json(url)
-        return opr_data
+        return pd.read_json(get_opr_data_url(secret_key, event_key))
     except Exception:
         return None
+
+
+# --- Public API (session-cached) ---
+
+def load_team_data(event_key):
+    return _session_cache(f'_data_team_{event_key}',
+                          lambda: _fetch_team_data(event_key))
+
+def load_event_data(secret_key, event_key):
+    return _session_cache(f'_data_event_{event_key}',
+                          lambda: _fetch_event_data(secret_key, event_key))
+
+def load_matches_data(event_key):
+    return _session_cache(f'_data_matches_{event_key}',
+                          lambda: _fetch_matches_data(event_key))
+
+def load_statbot_matches_data(event_key):
+    return _session_cache(f'_data_statbot_{event_key}',
+                          lambda: _fetch_statbot_matches_data(event_key))
+
+def load_pit_data(secret_key, event_key, team_key):
+    return _session_cache(f'_data_pit_{event_key}_{team_key}',
+                          lambda: _fetch_pit_data(secret_key, event_key, team_key))
+
+def load_opr_data(secret_key, event_key):
+    return _session_cache(f'_data_opr_{event_key}',
+                          lambda: _fetch_opr_data(secret_key, event_key))
+
+
+def load_parallel(*loaders):
+    """Run multiple data loaders in parallel. Returns results in order.
+    Each loader is a tuple of (func, *args)."""
+    with ThreadPoolExecutor(max_workers=len(loaders)) as pool:
+        futures = [pool.submit(fn, *args) for fn, *args in loaders]
+        return [f.result() for f in futures]
 
 
 def _get_pick_list(key):
@@ -276,6 +335,9 @@ def team_status_label(team_num):
 def load_data():
     secret_key = get_secret_key()
     event_key = get_event_key()
+
+    # Clear cached data so we pull fresh
+    _invalidate_session_cache()
 
     all_loaded = True
 
@@ -327,6 +389,7 @@ def config_page():
     # --- Event Key: text input + browser ---
     def _on_event_change():
         _set_key('event_key', st.session_state._ek_input)
+        _invalidate_session_cache()
 
     st.text_input(
         "Event key",
@@ -373,6 +436,9 @@ def main():
     )
 
     st.title("Trisonics FRC Scouting")
+
+    # Load saved keys from browser localStorage (runs once per session)
+    _load_keys_from_storage()
 
     def _lazy(module, func):
         """Return a wrapper that imports a page function on first use."""
