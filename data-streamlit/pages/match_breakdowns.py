@@ -3,7 +3,7 @@ import pandas as pd
 
 from scout import (
     load_matches_data, load_opr_data, load_team_data, get_event_key,
-    load_statbot_matches_data, get_secret_key
+    load_statbot_matches_data, get_secret_key, load_parallel
 )
 
 def match_breakdowns_page():
@@ -18,8 +18,10 @@ def match_breakdowns_page():
 
     st.header('Match Breakdowns')
 
-    matches = load_matches_data(ek)
-    team_data = load_team_data(ek)
+    matches, team_data = load_parallel(
+        (load_matches_data, ek),
+        (load_team_data, ek),
+    )
     team_names = {row.number: row['name'] for _, row in team_data.iterrows()}
 
     col_f1, col_f2, col_f3 = st.columns(3)
@@ -30,7 +32,11 @@ def match_breakdowns_page():
     with col_f3:
         team_filter = st.multiselect('Team', sorted(team_data['number'].tolist()),
                                      format_func=lambda t: f"{t} ({team_names.get(t, '')})",
-                                     placeholder='All teams')
+                                     placeholder='Select a team')
+
+    if not team_filter:
+        st.info("Select a team to view their match breakdowns.")
+        st.stop()
 
     # Determine if we should highlight a single team
     highlight_team = team_filter[0] if len(team_filter) == 1 else None
@@ -41,7 +47,10 @@ def match_breakdowns_page():
     if po_filter:
         match_types.extend(['sf', 'f'])
 
-    oprdata = load_opr_data(sk, ek)
+    oprdata, statbotics = load_parallel(
+        (load_opr_data, sk, ek),
+        (load_statbot_matches_data, ek),
+    )
     has_opr = oprdata is not None and 'totalPoints' in oprdata.columns
     if has_opr:
         opr_lookup = oprdata.set_index('teamNumber')['totalPoints'].to_dict()
@@ -75,9 +84,8 @@ def match_breakdowns_page():
         st.info('No matches found for selected filters.')
         return
 
-    # Statbotics predictions
-    statbotics = load_statbot_matches_data(ek)
-    has_statbotics = statbotics.index.size > 0
+    # Statbotics predictions (already loaded in parallel above)
+    has_statbotics = statbotics is not None and statbotics.index.size > 0
     pred_map = {}
     actual_map = {}
     if has_statbotics:

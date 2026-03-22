@@ -5,7 +5,7 @@ import altair as alt
 
 from scout import (
     load_event_data, load_matches_data, load_team_data,
-    get_event_key, get_secret_key, pretty_name,
+    get_event_key, get_secret_key, pretty_name, load_parallel,
 )
 
 
@@ -133,9 +133,11 @@ def scouting_accuracy_page():
         scouts didn't (or vice versa).
         """)
 
-    scouted_data = load_event_data(sk, ek)
-    matches = load_matches_data(ek)
-    td = load_team_data(ek)
+    scouted_data, matches, td = load_parallel(
+        (load_event_data, sk, ek),
+        (load_matches_data, ek),
+        (load_team_data, ek),
+    )
     team_names = {row.number: row['name'] for _, row in td.iterrows()}
 
     if len(scouted_data.index) == 0:

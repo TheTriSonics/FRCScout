@@ -13,6 +13,7 @@ dependencies = [
     "extra-streamlit-components>=0.1.0",
     "plotly>=6.0.0",
     "matplotlib>=3.8.0",
+    "streamlit-js-eval>=1.0.0",
 ]
 
 [project.scripts]
