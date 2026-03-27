@@ -10,6 +10,7 @@ from scout import (
     load_parallel, get_event_key, get_secret_key, pretty_name, base_url,
 )
 from views.rankings import _fetch_rankings
+from views.pdf_export import generate_pdf
 
 
 def _load_saved_results(sk, ek):
@@ -130,6 +131,30 @@ def fuel_opr_page():
             )
         html += '</table>'
         st.markdown(html, unsafe_allow_html=True)
+
+        # Export to PDF button
+        if st.button("Export to PDF", type='secondary'):
+            with st.spinner("Generating PDF..."):
+                scouted_for_pdf = load_event_data(sk, ek)
+                opr_for_pdf = opr_data.copy()
+                opr_for_pdf['teamNumber'] = opr_for_pdf['teamNumber'].astype(int)
+                # Load pit data for all ranked teams in parallel
+                pit_loaders = [(load_pit_data, sk, ek, t['Team']) for t in ranked_teams]
+                pit_results = load_parallel(*pit_loaders)
+                pit_data_by_team = {
+                    t['Team']: pit_results[i]
+                    for i, t in enumerate(ranked_teams)
+                    if pit_results[i] is not None
+                }
+                pdf_bytes = generate_pdf(
+                    ranked_teams, opr_for_pdf, scouted_for_pdf,
+                    pit_data_by_team, team_names,
+                )
+            st.download_button(
+                "Download PDF", data=pdf_bytes,
+                file_name=f"scouting_report_{ek}.pdf",
+                mime="application/pdf",
+            )
 
     # Toggle to hide already-ranked teams from the chart
     ranked_team_nums = {t['Team'] for t in ranked_teams} if ranked_teams else set()
