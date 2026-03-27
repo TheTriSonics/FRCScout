@@ -79,7 +79,7 @@ def clusters_page():
         st.stop()
 
     scouted_data = load_event_data(sk, ek)
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available for this event.")
         st.stop()
     opr_data = load_opr_data(sk, ek)
@@ -155,7 +155,7 @@ capabilities of a computer at our disposal.
         .reset_index()
     )
 
-    has_opr = opr is not None and len(opr.index) > 0
+    has_opr = opr is not None and not opr.empty
     if has_opr:
         # Work on a copy to avoid mutating cached data
         opr = opr.copy()

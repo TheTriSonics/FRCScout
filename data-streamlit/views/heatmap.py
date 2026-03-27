@@ -26,7 +26,7 @@ def heatmap_page():
         """)
 
     scouted_data = load_event_data(sk, ek)
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available.")
         st.stop()
 
@@ -93,5 +93,5 @@ def heatmap_page():
             axis=1
         ).format('{:.1f}')
 
-    st.dataframe(styled, use_container_width=True,
+    st.dataframe(styled, width='stretch',
                  height=min(len(display) * 35 + 50, 800))

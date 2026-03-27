@@ -26,7 +26,7 @@ def head_to_head_page():
         """)
 
     scouted_data = load_event_data(sk, ek)
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available.")
         st.stop()
 
@@ -111,4 +111,4 @@ def head_to_head_page():
                         color=alt.Color('team_label:N', legend=None),
                         tooltip=['team_label', alt.Tooltip(f'{col}:Q', format='.1f')],
                     ).properties(height=250, title=pretty_name(col))
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')

@@ -115,7 +115,7 @@ def team_detail_page():
         st.stop()
 
     td = load_team_data(event_key)
-    all_teams = [(row.number, row['name']) for idx, row in td.iterrows()]
+    all_teams = [(row.number, row['name']) for _, row in td.iterrows()]
 
     # Check if we have team_detail_number in the query params
     if 'team_detail_number' in st.query_params:
@@ -135,12 +135,12 @@ def team_detail_page():
         )
 
         # --- Pit Notes (notes-only records) ---
-        if pdf is not None and len(pdf.index) > 0:
+        if pdf is not None and not pdf.empty:
             pit_note_rows = []
             for pit_idx in range(len(pdf.index)):
                 pit_row = pdf.iloc[pit_idx]
                 dt = pit_row.get('drive_train')
-                if dt is not None and (not isinstance(dt, float) or not pd.isna(dt)):
+                if pd.notna(dt):
                     continue
                 note_text = pit_row.get('notes', '')
                 if isinstance(note_text, str) and note_text.strip():
@@ -153,7 +153,7 @@ def team_detail_page():
                 st.table(pd.DataFrame(pit_note_rows).set_index('Scouter'))
 
         # --- Pit Scouting Summary (full records only) ---
-        if pdf is not None and len(pdf.index) > 0:
+        if pdf is not None and not pdf.empty:
             st.subheader("Pit Scouting")
             skip_fields = {
                 'scouter_name', 'secret_team_key', 'event_key',
@@ -163,7 +163,7 @@ def team_detail_page():
             for pit_idx in range(len(pdf.index)):
                 pit_row = pdf.iloc[pit_idx]
                 dt = pit_row.get('drive_train')
-                if dt is None or (isinstance(dt, float) and pd.isna(dt)):
+                if pd.isna(dt):
                     continue
                 has_full = True
                 pit_cols = pdf.columns.tolist()
@@ -187,7 +187,7 @@ def team_detail_page():
                         if field in skip_fields:
                             continue
                         val = pit_row.get(field)
-                        if val is None or (isinstance(val, float) and pd.isna(val)):
+                        if pd.isna(val):
                             continue
                         if isinstance(val, str) and not val.strip():
                             continue
@@ -204,13 +204,13 @@ def team_detail_page():
                 st.caption("No full pit scouting data.")
 
         # --- Match Scouting Charts ---
-        if len(scouted_data.index) == 0:
+        if scouted_data.empty:
             st.subheader("No match data")
         else:
             tdf = scouted_data.loc[scouted_data.team_number == team_number].copy()
             tdf = tdf.sort_values('match_number')
 
-            if len(tdf.index) == 0:
+            if tdf.empty:
                 st.info("No matches scouted for this team yet.")
                 return
 
@@ -354,7 +354,7 @@ def team_detail_page():
                                 height=500,
                                 margin=dict(t=60, b=40, l=60, r=60),
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                         elif len(nn_selected_cols) < 3:
                             st.caption("Select at least 3 dimensions for radar chart.")
 
@@ -380,7 +380,7 @@ def team_detail_page():
                               .style
                               .map(_trend_color, subset=['Trend'])
                               .format({'Consistency': '{:.0f}%', 'Trend': '{:+.2f}'}))
-                    st.dataframe(styled, use_container_width=True)
+                    st.dataframe(styled, width='stretch')
                 else:
                     st.info("Need more than one match for consistency data.")
 
@@ -420,7 +420,7 @@ def team_detail_page():
                                 return 'color: #e15759'
                             return ''
                         st.dataframe(out_df.style.map(_flag_color, subset=['Flag']),
-                                     hide_index=True, use_container_width=True)
+                                     hide_index=True, width='stretch')
                     else:
                         st.caption("No outliers detected.")
 
@@ -440,7 +440,7 @@ def team_detail_page():
                             chart = _match_bar_chart_with_trend(tdf, col)
                         else:
                             chart = _match_bar_chart(tdf, col)
-                        st.altair_chart(chart, use_container_width=True)
+                        st.altair_chart(chart, width='stretch')
 
             # --- Match Notes ---
             note_cols = [c for c in ['match_notes', 'auto_notes'] if c in tdf.columns]
@@ -519,7 +519,7 @@ def team_detail_page():
                             xOffset='Source:N',
                             tooltip=['Metric', 'Source', alt.Tooltip('Value:Q', format='.1f')],
                         ).properties(height=350)
-                        st.altair_chart(chart, use_container_width=True)
+                        st.altair_chart(chart, width='stretch')
 
                         # Difference table
                         def _diff_color(val):
@@ -534,7 +534,7 @@ def team_detail_page():
                                   .style
                                   .map(_diff_color, subset=['% Diff'])
                                   .format({'% Diff': '{:+.0f}%', 'Diff': '{:+.1f}'}))
-                        st.dataframe(styled, use_container_width=True)
+                        st.dataframe(styled, width='stretch')
                     else:
                         st.info("No matching scouted/OPR columns to compare.")
 
@@ -596,7 +596,7 @@ def team_detail_page():
 
                         r2_color = '#59a14f' if r_squared > 0.7 else ('#f28e2b' if r_squared > 0.4 else '#e15759')
                         st.markdown(f"**{label}** — R² = :{r2_color}[{r_squared:.2f}]")
-                        st.altair_chart(scatter + ref_line, use_container_width=True)
+                        st.altair_chart(scatter + ref_line, width='stretch')
 
                 # --- Full OPR Breakdown ---
                 with st.expander("Full OPR Breakdown"):
@@ -611,7 +611,7 @@ def team_detail_page():
                         y=alt.Y('feature:N', sort='-x'),
                         tooltip=['feature', alt.Tooltip('value:Q', format='.1f')],
                     ).properties(title='OPR Dimensions (Descending)')
-                    st.altair_chart(chart, use_container_width=True)
+                    st.altair_chart(chart, width='stretch')
 
             # --- Raw data (bottom) ---
             with st.expander("Raw Data"):
