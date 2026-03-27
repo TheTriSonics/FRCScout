@@ -134,15 +134,38 @@ def team_detail_page():
             (load_opr_data, secret_key, event_key),
         )
 
-        # --- Pit Scouting Summary ---
+        # --- Pit Notes (notes-only records) ---
+        if pdf is not None and len(pdf.index) > 0:
+            pit_note_rows = []
+            for pit_idx in range(len(pdf.index)):
+                pit_row = pdf.iloc[pit_idx]
+                dt = pit_row.get('drive_train')
+                if dt is not None and (not isinstance(dt, float) or not pd.isna(dt)):
+                    continue
+                note_text = pit_row.get('notes', '')
+                if isinstance(note_text, str) and note_text.strip():
+                    pit_note_rows.append({
+                        'Scouter': pit_row.get('scouter_name', ''),
+                        'Notes': note_text.strip(),
+                    })
+            if pit_note_rows:
+                st.subheader("Pit Notes")
+                st.table(pd.DataFrame(pit_note_rows).set_index('Scouter'))
+
+        # --- Pit Scouting Summary (full records only) ---
         if pdf is not None and len(pdf.index) > 0:
             st.subheader("Pit Scouting")
             skip_fields = {
                 'scouter_name', 'secret_team_key', 'event_key',
                 'team_number', 'timestamp', 'image_names',
             }
+            has_full = False
             for pit_idx in range(len(pdf.index)):
                 pit_row = pdf.iloc[pit_idx]
+                dt = pit_row.get('drive_train')
+                if dt is None or (isinstance(dt, float) and pd.isna(dt)):
+                    continue
+                has_full = True
                 pit_cols = pdf.columns.tolist()
                 scouter = pit_row.get('scouter_name', 'Unknown')
                 ts = pit_row.get('timestamp', '')
@@ -164,7 +187,9 @@ def team_detail_page():
                         if field in skip_fields:
                             continue
                         val = pit_row.get(field)
-                        if val is None or (isinstance(val, str) and not val.strip()):
+                        if val is None or (isinstance(val, float) and pd.isna(val)):
+                            continue
+                        if isinstance(val, str) and not val.strip():
                             continue
                         label = pretty_name(field)
                         is_bool = isinstance(val, bool) or (val in (0, 1) and field not in ('fuel_capacity', 'hanging_level'))
@@ -175,6 +200,8 @@ def team_detail_page():
                         display_rows.append({'Field': label, 'Value': display_val})
                     if display_rows:
                         st.table(pd.DataFrame(display_rows).set_index('Field'))
+            if not has_full:
+                st.caption("No full pit scouting data.")
 
         # --- Match Scouting Charts ---
         if len(scouted_data.index) == 0:
