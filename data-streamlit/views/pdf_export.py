@@ -9,7 +9,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
-    KeepTogether, Image,
+    Image,
 )
 
 from scout import pretty_name
@@ -117,7 +117,7 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
 
         # --- Fuel OPR Breakdown ---
         opr_row = opr_data.loc[opr_data['teamNumber'] == tn]
-        if len(opr_row) > 0:
+        if not opr_row.empty:
             r = opr_row.iloc[0]
             auto = r.get('hubScore_autoCount', 0)
             teleop = r.get('hubScore_teleopCount', 0)
@@ -168,12 +168,12 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
 
         # --- Pit Notes (notes-only records) ---
         pit_df = pit_data_by_team.get(tn)
-        if pit_df is not None and len(pit_df) > 0:
+        if pit_df is not None and not pit_df.empty:
             pit_note_rows = []
             for i in range(len(pit_df)):
                 pr = pit_df.iloc[i]
                 dt = pr.get('drive_train')
-                if dt is not None and not (isinstance(dt, float) and pd.isna(dt)):
+                if pd.notna(dt):
                     continue
                 note_text = pr.get('notes', '')
                 if isinstance(note_text, str) and note_text.strip():
@@ -191,7 +191,7 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
                 story.append(Spacer(1, 6))
 
         # --- Pit Scouting (full records only) ---
-        if pit_df is not None and len(pit_df) > 0:
+        if pit_df is not None and not pit_df.empty:
             skip_fields = {
                 'scouter_name', 'secret_team_key', 'event_key',
                 'team_number', 'timestamp', 'image_names', 'photo_base64',
@@ -201,7 +201,7 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
             for i in range(len(pit_df) - 1, -1, -1):
                 pr = pit_df.iloc[i]
                 dt = pr.get('drive_train')
-                if dt is not None and not (isinstance(dt, float) and pd.isna(dt)):
+                if pd.notna(dt):
                     full_pit_row = pr
                     break
 
@@ -218,7 +218,7 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
                     if field in skip_fields:
                         continue
                     val = full_pit_row.get(field)
-                    if val is None or (isinstance(val, float) and pd.isna(val)):
+                    if pd.isna(val):
                         continue
                     if isinstance(val, str) and not val.strip():
                         continue
