@@ -5,7 +5,7 @@ import altair as alt
 
 from scout import (
     load_event_data, load_matches_data, load_team_data,
-    get_event_key, get_secret_key, pretty_name, load_parallel,
+    get_event_key, get_secret_key, load_parallel,
 )
 
 
@@ -56,7 +56,7 @@ def _compute_scouted_alliance_totals(scouted_data, match_actuals):
             (scouted_data['team_number'].isin(teams))
         ]
 
-        if len(team_data) == 0:
+        if team_data.empty:
             continue
 
         teams_scouted = len(team_data)
@@ -140,21 +140,21 @@ def scouting_accuracy_page():
     )
     team_names = {row.number: row['name'] for _, row in td.iterrows()}
 
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available.")
         st.stop()
-    if len(matches.index) == 0:
+    if matches.empty:
         st.warning("No TBA match data available yet.")
         st.stop()
 
     # Extract TBA actuals and compute scouted totals
     match_actuals = _extract_match_actuals(matches)
-    if len(match_actuals) == 0:
+    if match_actuals.empty:
         st.warning("No qualifying match data with score breakdowns yet.")
         st.stop()
 
     scouted_totals = _compute_scouted_alliance_totals(scouted_data, match_actuals)
-    if len(scouted_totals) == 0:
+    if scouted_totals.empty:
         st.warning("No scouted matches overlap with TBA data.")
         st.stop()
 
@@ -220,7 +220,7 @@ def scouting_accuracy_page():
         tooltip=['Match', 'Alliance', alt.Tooltip('Accuracy:Q', format='.0f')],
     ).properties(height=300)
 
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width='stretch')
 
     # Table
     display_cols = ['Match', 'Alliance', 'Scouted', 'Auto', 'Auto %',
@@ -247,7 +247,7 @@ def scouting_accuracy_page():
     styled = (display_df.style
               .map(_style_row, subset=pct_cols)
               .map(_penalty_style, subset=['Penalties']))
-    st.dataframe(styled, hide_index=True, use_container_width=True)
+    st.dataframe(styled, hide_index=True, width='stretch')
 
     # --- Per-team accuracy ---
     st.subheader("Team Accuracy")
@@ -290,7 +290,7 @@ def scouting_accuracy_page():
                         title=''),
         tooltip=['Team', 'Matches', alt.Tooltip('Avg Accuracy:Q', format='.1f')],
     ).properties(height=350)
-    st.altair_chart(team_chart, use_container_width=True)
+    st.altair_chart(team_chart, width='stretch')
 
     # Summary stats
     overall_avg = match_df['_overall'].mean()
@@ -298,9 +298,9 @@ def scouting_accuracy_page():
 
     # Penalty summary
     penalty_issues = match_df[match_df['Penalties'] != 'OK']
-    if len(penalty_issues) > 0:
+    if not penalty_issues.empty:
         st.subheader("Penalty Flags")
         st.dataframe(
             penalty_issues[['Match', 'Alliance', 'Penalties']],
-            hide_index=True, use_container_width=True,
+            hide_index=True, width='stretch',
         )

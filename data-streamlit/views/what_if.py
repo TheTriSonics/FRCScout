@@ -28,7 +28,7 @@ def what_if_page():
 
     td = load_team_data(ek)
     scouted_data = load_event_data(sk, ek)
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available.")
         st.stop()
 
@@ -110,7 +110,7 @@ def what_if_page():
                     tooltip=['team', 'attribute', alt.Tooltip('value:Q', format='.1f')],
                     order=alt.Order('team:N'),
                 ).properties(height=300)
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
 
             # --- Strengths & Gaps ---
             st.markdown("**Strengths & Gaps** (vs event average)")
@@ -136,7 +136,7 @@ def what_if_page():
                          alt.Tooltip('event_avg_x3:Q', format='.1f', title='Event Avg (scaled)'),
                          alt.Tooltip('pct:Q', format='.0f', title='% Diff')],
             ).properties(height=max(200, len(comparison) * 25))
-            st.altair_chart(diff_chart, use_container_width=True)
+            st.altair_chart(diff_chart, width='stretch')
 
             # Binary capabilities coverage
             bin_cols = [c for c in chart_cols if c in BINARY_COLS]
@@ -165,7 +165,7 @@ def what_if_page():
                         return 'color: #999'
                     return ''
 
-                st.dataframe(cap_df.style.map(_highlight_missing), use_container_width=True)
+                st.dataframe(cap_df.style.map(_highlight_missing), width='stretch')
 
     # --- Alliance vs Alliance Comparison ---
     filled = {k: v for k, v in alliances.items() if v}
@@ -203,4 +203,4 @@ def what_if_page():
                 xOffset='Alliance:N',
                 tooltip=['Alliance', 'Attribute', alt.Tooltip('Value:Q', format='.1f')],
             ).properties(height=400)
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')

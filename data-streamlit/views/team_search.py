@@ -84,7 +84,7 @@ def team_search_page():
         """)
 
     scouted_data = load_event_data(sk, ek)
-    if len(scouted_data.index) == 0:
+    if scouted_data.empty:
         st.warning("No scouting data available.")
         st.stop()
 
@@ -195,7 +195,7 @@ def team_search_page():
                 pct_data.columns[1], ascending=False
             ).reset_index(drop=True)
             st.dataframe(pct_data, column_config=col_config,
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, width='stretch')
             # Export
             export_cols = [c for c in pct_data.columns if c != 'link']
             csv = pct_data[export_cols].to_csv(index=False)
@@ -209,7 +209,7 @@ def team_search_page():
                                   'endgame_fuel_made', 'auto_tower_level',
                                   'endgame_tower_level']
                      if c in spark_cols]
-    if spark_display and len(df) > 0:
+    if spark_display and not df.empty:
         with st.expander("Match-by-Match Trends"):
             spark_data = {'Team': [], 'Details': []}
             spark_config = {
@@ -230,7 +230,7 @@ def team_search_page():
                         )
                     spark_data[label].append(team_matches[col].tolist())
             st.dataframe(pd.DataFrame(spark_data), column_config=spark_config,
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, width='stretch')
 
     @st.fragment
     def _render_charts():
@@ -245,6 +245,6 @@ def team_search_page():
                     chart = _binary_stacked_chart(df, col)
                 else:
                     chart = _numeric_bar_chart(df, col)
-                st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, width='stretch')
 
     _render_charts()
