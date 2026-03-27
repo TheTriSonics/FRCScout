@@ -10,7 +10,7 @@ from os.path import exists
 
 pd.options.mode.copy_on_write = True
 
-_DEFAULT_API = "http://localhost:7071/api"
+_DEFAULT_API = "https://trisonics-scouting-api.azurewebsites.net/api"
 base_url = os.environ.get("SCOUT_API_URL", _DEFAULT_API)
 statbot_url = "https://api.statbotics.io/v3"
 
