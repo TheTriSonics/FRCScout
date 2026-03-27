@@ -456,6 +456,9 @@ def main():
 
     pg.run()
 
+    # Pin keys again after page render — some pages/widgets can clear query params.
+    _sync_keys()
+
 
 def load_dev_config():
     global base_url
