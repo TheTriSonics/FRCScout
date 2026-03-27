@@ -7,7 +7,8 @@ import urllib.request
 
 from scout import (
     load_opr_data, load_team_data, load_event_data, load_pit_data,
-    load_parallel, get_event_key, get_secret_key, pretty_name, base_url,
+    load_all_pit_data, load_parallel, get_event_key, get_secret_key,
+    pretty_name, base_url,
 )
 from views.rankings import _fetch_rankings
 from views.pdf_export import generate_pdf
@@ -109,6 +110,42 @@ def fuel_opr_page():
         axis=1,
     )
 
+    # ---- Scouting Completeness Indicator ----
+    all_team_nums = set(df['teamNumber'].tolist())
+    total_teams = len(all_team_nums)
+
+    scouted_data = load_event_data(sk, ek)
+    if scouted_data is not None and not scouted_data.empty:
+        match_scouted_teams = set(scouted_data['team_number'].unique())
+    else:
+        match_scouted_teams = set()
+
+    all_pit = load_all_pit_data(sk, ek)
+    if all_pit is not None and not all_pit.empty and 'team_number' in all_pit.columns:
+        pit_scouted_teams = set(all_pit['team_number'].unique())
+    else:
+        pit_scouted_teams = set()
+
+    match_count = len(match_scouted_teams & all_team_nums)
+    pit_count = len(pit_scouted_teams & all_team_nums)
+
+    df['has_match_scouting'] = df['teamNumber'].isin(match_scouted_teams)
+    df['has_pit_scouting'] = df['teamNumber'].isin(pit_scouted_teams)
+
+    mc1, mc2, mc3 = st.columns(3)
+    mc1.metric("Teams at Event", total_teams)
+    mc2.metric("Match Scouted", f"{match_count}/{total_teams}")
+    mc3.metric("Pit Scouted", f"{pit_count}/{total_teams}")
+
+    unscouted = all_team_nums - match_scouted_teams
+    if unscouted:
+        unscouted_names = [
+            f"{t} ({team_names.get(t, '?')})" for t in sorted(unscouted)
+        ]
+        st.caption(
+            f"Not yet match-scouted: {', '.join(unscouted_names)}"
+        )
+
     # ---- Our Pick Rankings summary table ----
     ranked_teams = _get_ranked_teams(team_names)
     if ranked_teams:
@@ -162,7 +199,7 @@ def fuel_opr_page():
 
     team_order = df['team_label'].tolist()
     melted = df.melt(
-        id_vars=['team_label', 'team_name', 'total'],
+        id_vars=['team_label', 'team_name', 'total', 'has_match_scouting'],
         value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
         var_name='phase',
         value_name='fuel_opr',
@@ -172,10 +209,16 @@ def fuel_opr_page():
         'hubScore_teleopCount': 'Teleop',
         'hubScore_endgameCount': 'Endgame',
     })
+    melted['scouting_status'] = melted['has_match_scouting'].map(
+        {True: 'Scouted', False: 'Not scouted'},
+    )
 
     selection = alt.selection_point(name="team_select", fields=['team_label'])
 
-    chart = alt.Chart(melted).mark_bar().encode(
+    # Unscouted teams render with a red dashed border so they stand out
+    chart = alt.Chart(melted).mark_bar(
+        strokeDash=[4, 2],
+    ).encode(
         y=alt.Y('team_label:N', sort=team_order, title='Team'),
         x=alt.X('fuel_opr:Q', title='Fuel OPR'),
         color=alt.Color('phase:N',
@@ -185,13 +228,32 @@ def fuel_opr_page():
                             range=['#4e79a7', '#59a14f', '#f28e2b']),
                         title='Phase'),
         order=alt.Order('phase:N', sort='ascending'),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.3)),
+        opacity=alt.condition(
+            selection,
+            alt.condition(
+                alt.datum.has_match_scouting,
+                alt.value(1),
+                alt.value(0.45),
+            ),
+            alt.value(0.2),
+        ),
+        stroke=alt.condition(
+            alt.datum.has_match_scouting,
+            alt.value(None),
+            alt.value('#e15759'),
+        ),
+        strokeWidth=alt.condition(
+            alt.datum.has_match_scouting,
+            alt.value(0),
+            alt.value(1.5),
+        ),
         tooltip=[
             alt.Tooltip('team_label:N', title='Team'),
             alt.Tooltip('team_name:N', title='Name'),
             alt.Tooltip('phase:N', title='Phase'),
             alt.Tooltip('fuel_opr:Q', format='.1f', title='Fuel OPR'),
             alt.Tooltip('total:Q', format='.1f', title='Total'),
+            alt.Tooltip('scouting_status:N', title='Scouting'),
         ],
     ).add_params(selection).properties(height=max(len(team_order) * 25, 400))
 

@@ -244,6 +244,20 @@ def _fetch_pit_data(secret_key, event_key, team_key):
     return pd.read_json(get_pit_data_url(secret_key, event_key, team_key))
 
 
+def _fetch_all_pit_data(secret_key, event_key):
+    """Fetch pit scouting data for ALL teams at an event (no team_key filter)."""
+    if _keys_missing(secret_key, event_key):
+        return pd.DataFrame()
+    url = (
+        f"{base_url}/GetPitResults"
+        f"?secret_team_key={secret_key}&event_key={event_key}"
+    )
+    try:
+        return pd.read_json(url)
+    except Exception:
+        return pd.DataFrame()
+
+
 def _fetch_opr_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return None
@@ -274,6 +288,14 @@ def load_statbot_matches_data(event_key):
 def load_pit_data(secret_key, event_key, team_key):
     return _session_cache(f'_data_pit_{event_key}_{team_key}',
                           lambda: _fetch_pit_data(secret_key, event_key, team_key))
+
+
+def load_all_pit_data(secret_key, event_key):
+    return _session_cache(
+        f'_data_allpit_{event_key}',
+        lambda: _fetch_all_pit_data(secret_key, event_key),
+    )
+
 
 def load_opr_data(secret_key, event_key):
     return _session_cache(f'_data_opr_{event_key}',
