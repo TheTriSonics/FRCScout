@@ -1,9 +1,11 @@
 import json
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 import altair as alt
 import pandas as pd
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx, add_script_run_ctx
 from streamlit_js_eval import streamlit_js_eval
 
 from os.path import exists
@@ -284,9 +286,17 @@ def load_opr_data(secret_key, event_key):
 
 def load_parallel(*loaders):
     """Run multiple data loaders in parallel. Returns results in order.
-    Each loader is a tuple of (func, *args)."""
+    Each loader is a tuple of (func, *args).
+    Propagates Streamlit's ScriptRunContext so worker threads can
+    access st.session_state (used by _session_cache)."""
+    ctx = get_script_run_ctx()
+
+    def _run(fn, *args):
+        add_script_run_ctx(threading.current_thread(), ctx)
+        return fn(*args)
+
     with ThreadPoolExecutor(max_workers=len(loaders)) as pool:
-        futures = [pool.submit(fn, *args) for fn, *args in loaders]
+        futures = [pool.submit(_run, fn, *args) for fn, *args in loaders]
         return [f.result() for f in futures]
 
 

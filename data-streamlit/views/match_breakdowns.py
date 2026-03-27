@@ -57,9 +57,12 @@ def match_breakdowns_page():
         (load_opr_data, sk, ek),
         (load_statbot_matches_data, ek),
     )
-    has_opr = oprdata is not None and 'totalPoints' in oprdata.columns
+    fuel_cols = ['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount']
+    has_opr = oprdata is not None and all(c in oprdata.columns for c in fuel_cols)
     if has_opr:
-        opr_lookup = oprdata.set_index('teamNumber')['totalPoints'].to_dict()
+        opr_tmp = oprdata[['teamNumber'] + fuel_cols].copy()
+        opr_tmp['fuelTotal'] = opr_tmp[fuel_cols].sum(axis=1)
+        opr_lookup = opr_tmp.set_index('teamNumber')['fuelTotal'].to_dict()
     else:
         opr_lookup = {}
 
