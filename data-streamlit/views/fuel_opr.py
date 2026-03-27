@@ -132,29 +132,26 @@ def fuel_opr_page():
         html += '</table>'
         st.markdown(html, unsafe_allow_html=True)
 
-        # Export to PDF button
-        if st.button("Export to PDF", type='secondary'):
-            with st.spinner("Generating PDF..."):
-                scouted_for_pdf = load_event_data(sk, ek)
-                opr_for_pdf = opr_data.copy()
-                opr_for_pdf['teamNumber'] = opr_for_pdf['teamNumber'].astype(int)
-                # Load pit data for all ranked teams in parallel
-                pit_loaders = [(load_pit_data, sk, ek, t['Team']) for t in ranked_teams]
-                pit_results = load_parallel(*pit_loaders)
-                pit_data_by_team = {
-                    t['Team']: pit_results[i]
-                    for i, t in enumerate(ranked_teams)
-                    if pit_results[i] is not None
-                }
-                pdf_bytes = generate_pdf(
-                    ranked_teams, opr_for_pdf, scouted_for_pdf,
-                    pit_data_by_team, team_names,
-                )
-            st.download_button(
-                "Download PDF", data=pdf_bytes,
-                file_name=f"scouting_report_{ek}.pdf",
-                mime="application/pdf",
-            )
+        # Generate PDF eagerly so download is one click
+        scouted_for_pdf = load_event_data(sk, ek)
+        opr_for_pdf = opr_data.copy()
+        opr_for_pdf['teamNumber'] = opr_for_pdf['teamNumber'].astype(int)
+        pit_loaders = [(load_pit_data, sk, ek, t['Team']) for t in ranked_teams]
+        pit_results = load_parallel(*pit_loaders)
+        pit_data_by_team = {
+            t['Team']: pit_results[i]
+            for i, t in enumerate(ranked_teams)
+            if pit_results[i] is not None
+        }
+        pdf_bytes = generate_pdf(
+            ranked_teams, opr_for_pdf, scouted_for_pdf,
+            pit_data_by_team, team_names,
+        )
+        st.download_button(
+            "Export to PDF", data=pdf_bytes,
+            file_name=f"scouting_report_{ek}.pdf",
+            mime="application/pdf",
+        )
 
     # Toggle to hide already-ranked teams from the chart
     ranked_team_nums = {t['Team'] for t in ranked_teams} if ranked_teams else set()
@@ -364,7 +361,39 @@ def fuel_opr_page():
     else:
         st.caption("No match notes recorded.")
 
-    # ---- Pit Scouting ----
+    # ---- Pit Notes (notes-only records, no full pit scout data) ----
+    if pit is not None and len(pit.index) > 0:
+        pit_note_rows = []
+        for pit_idx in range(len(pit.index)):
+            pit_row = pit.iloc[pit_idx]
+            # Notes-only record: drive_train is null/missing
+            dt = pit_row.get('drive_train')
+            if dt is not None and (not isinstance(dt, float) or not pd.isna(dt)):
+                continue
+            note_text = pit_row.get('notes', '')
+            if isinstance(note_text, str) and note_text.strip():
+                pit_note_rows.append({
+                    'Scouter': pit_row.get('scouter_name', ''),
+                    'Notes': note_text.strip(),
+                })
+        if pit_note_rows:
+            st.markdown("**Pit Notes**")
+            html = (
+                '<table style="width:100%;border-collapse:collapse;font-size:14px">'
+                '<tr style="border-bottom:2px solid #555;text-align:left">'
+                '<th style="width:100px;padding:4px">Scouter</th>'
+                '<th style="padding:4px">Notes</th></tr>'
+            )
+            for r in pit_note_rows:
+                html += (
+                    f'<tr style="border-bottom:1px solid #333">'
+                    f'<td style="padding:4px;white-space:nowrap">{r["Scouter"]}</td>'
+                    f'<td style="padding:4px">{r["Notes"]}</td></tr>'
+                )
+            html += '</table>'
+            st.markdown(html, unsafe_allow_html=True)
+
+    # ---- Pit Scouting (full records only) ----
     if pit is not None and len(pit.index) > 0:
         skip_fields = {
             'scouter_name', 'secret_team_key', 'event_key',
@@ -372,6 +401,10 @@ def fuel_opr_page():
         }
         for pit_idx in range(len(pit.index)):
             pit_row = pit.iloc[pit_idx]
+            # Skip notes-only records (no drive_train = not a full pit scout)
+            dt = pit_row.get('drive_train')
+            if dt is None or (isinstance(dt, float) and pd.isna(dt)):
+                continue
             scouter = pit_row.get('scouter_name', 'Unknown')
             ts = pit_row.get('timestamp', '')
             st.markdown(f"**Pit Scout:** {scouter} — {ts}")

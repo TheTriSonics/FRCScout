@@ -166,61 +166,91 @@ def generate_pdf(ranked_teams, opr_data, scouted_data, pit_data_by_team, team_na
             story.append(notes_table)
             story.append(Spacer(1, 6))
 
-        # --- Pit Scouting ---
+        # --- Pit Notes (notes-only records) ---
         pit_df = pit_data_by_team.get(tn)
+        if pit_df is not None and len(pit_df) > 0:
+            pit_note_rows = []
+            for i in range(len(pit_df)):
+                pr = pit_df.iloc[i]
+                dt = pr.get('drive_train')
+                if dt is not None and not (isinstance(dt, float) and pd.isna(dt)):
+                    continue
+                note_text = pr.get('notes', '')
+                if isinstance(note_text, str) and note_text.strip():
+                    pit_note_rows.append([
+                        str(pr.get('scouter_name', '')),
+                        Paragraph(note_text.strip(), styles['TinyBody']),
+                    ])
+            if pit_note_rows:
+                story.append(Paragraph("<b>Pit Notes</b>", styles['SectionLabel']))
+                pn_table = _make_table(
+                    [['Scouter', 'Notes']] + pit_note_rows,
+                    col_widths=[0.8 * inch, page_width - 0.8 * inch],
+                )
+                story.append(pn_table)
+                story.append(Spacer(1, 6))
+
+        # --- Pit Scouting (full records only) ---
         if pit_df is not None and len(pit_df) > 0:
             skip_fields = {
                 'scouter_name', 'secret_team_key', 'event_key',
                 'team_number', 'timestamp', 'image_names', 'photo_base64',
             }
-            # Use the most recent pit scouting entry
-            pit_row = pit_df.iloc[-1]
-            scouter = pit_row.get('scouter_name', 'Unknown')
-            ts = pit_row.get('timestamp', '')
-            story.append(Paragraph(
-                f"<b>Pit Scouting</b> &mdash; {scouter}, {ts}",
-                styles['SectionLabel'],
-            ))
+            # Find the most recent full pit scout entry
+            full_pit_row = None
+            for i in range(len(pit_df) - 1, -1, -1):
+                pr = pit_df.iloc[i]
+                dt = pr.get('drive_train')
+                if dt is not None and not (isinstance(dt, float) and pd.isna(dt)):
+                    full_pit_row = pr
+                    break
 
-            # Photo + fields side by side
-            pit_fields = []
-            for field in pit_df.columns:
-                if field in skip_fields:
-                    continue
-                val = pit_row.get(field)
-                if val is None or (isinstance(val, str) and not val.strip()):
-                    continue
-                is_bool = isinstance(val, bool) or (
-                    val in (0, 1) and field not in ('fuel_capacity', 'hanging_level')
-                )
-                display_val = ('Yes' if val else 'No') if is_bool else str(val)
-                pit_fields.append([pretty_name(field), display_val])
+            if full_pit_row is not None:
+                scouter = full_pit_row.get('scouter_name', 'Unknown')
+                ts = full_pit_row.get('timestamp', '')
+                story.append(Paragraph(
+                    f"<b>Pit Scouting</b> &mdash; {scouter}, {ts}",
+                    styles['SectionLabel'],
+                ))
 
-            # Try to fetch the photo
-            photo_flowable = None
-            images = pit_row.get('image_names')
-            if isinstance(images, list) and len(images) > 0:
-                photo_flowable = _fetch_image(images[0])
+                pit_fields = []
+                for field in pit_df.columns:
+                    if field in skip_fields:
+                        continue
+                    val = full_pit_row.get(field)
+                    if val is None or (isinstance(val, float) and pd.isna(val)):
+                        continue
+                    if isinstance(val, str) and not val.strip():
+                        continue
+                    is_bool = isinstance(val, bool) or (
+                        val in (0, 1) and field not in ('fuel_capacity', 'hanging_level')
+                    )
+                    display_val = ('Yes' if val else 'No') if is_bool else str(val)
+                    pit_fields.append([pretty_name(field), display_val])
 
-            if pit_fields:
-                mid = (len(pit_fields) + 1) // 2
-                left = pit_fields[:mid]
-                right = pit_fields[mid:]
-                while len(right) < len(left):
-                    right.append(['', ''])
-                combined = [['Field', 'Value', 'Field', 'Value']]
-                for l_row, r_row in zip(left, right):
-                    combined.append(l_row + r_row)
-                pit_table = _make_table(
-                    combined,
-                    col_widths=[page_width * 0.25, page_width * 0.25,
-                                page_width * 0.25, page_width * 0.25],
-                )
-                if photo_flowable:
-                    # Photo above the table
-                    story.append(photo_flowable)
-                    story.append(Spacer(1, 4))
-                story.append(pit_table)
+                photo_flowable = None
+                images = full_pit_row.get('image_names')
+                if isinstance(images, list) and len(images) > 0:
+                    photo_flowable = _fetch_image(images[0])
+
+                if pit_fields:
+                    mid = (len(pit_fields) + 1) // 2
+                    left = pit_fields[:mid]
+                    right = pit_fields[mid:]
+                    while len(right) < len(left):
+                        right.append(['', ''])
+                    combined = [['Field', 'Value', 'Field', 'Value']]
+                    for l_row, r_row in zip(left, right):
+                        combined.append(l_row + r_row)
+                    pit_table = _make_table(
+                        combined,
+                        col_widths=[page_width * 0.25, page_width * 0.25,
+                                    page_width * 0.25, page_width * 0.25],
+                    )
+                    if photo_flowable:
+                        story.append(photo_flowable)
+                        story.append(Spacer(1, 4))
+                    story.append(pit_table)
 
         # Page break between teams
         if idx < len(ranked_teams) - 1:
