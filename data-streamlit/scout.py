@@ -442,12 +442,12 @@ def main():
         st.Page(config_page, title='Config', url_path='config'),
         st.Page(_lazy('views.rankings', 'rankings_page'), title='Rankings', url_path='rankings'),
         st.Page(_lazy('views.fuel_opr', 'fuel_opr_page'), title='Scouting Breakdown', url_path='scouting_breakdown'),
+        st.Page(_lazy('views.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
         st.Page(_lazy('views.team_detail', 'team_detail_page'), title='Team Details', url_path='team_detail'),
         st.Page(_lazy('views.team_search', 'team_search_page'), title='Team Search', url_path='team_search'),
         st.Page(_lazy('views.heatmap', 'heatmap_page'), title='Heatmap', url_path='heatmap'),
         st.Page(_lazy('views.clusters', 'clusters_page'), title='Clustering', url_path='clusters'),
         st.Page(_lazy('views.head_to_head', 'head_to_head_page'), title='Head to Head', url_path='head_to_head'),
-        st.Page(_lazy('views.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
         st.Page(_lazy('views.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy', url_path='scouting_accuracy'),
     ])
 
