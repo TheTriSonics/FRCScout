@@ -449,7 +449,6 @@ def main():
         st.Page(_lazy('views.head_to_head', 'head_to_head_page'), title='Head to Head', url_path='head_to_head'),
         st.Page(_lazy('views.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
         st.Page(_lazy('views.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy', url_path='scouting_accuracy'),
-        st.Page(_lazy('views.what_if', 'what_if_page'), title='Alliance Builder', url_path='alliance_builder'),
     ])
 
     # Sync keys between query params and session state (no custom components).
