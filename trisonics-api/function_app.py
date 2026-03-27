@@ -326,6 +326,51 @@ def post_time_entry(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+@app.function_name(name="PostScoutingResults")
+@app.route(route="PostScoutingResults", auth_level=func.AuthLevel.ANONYMOUS)
+def post_scouting_results(req: func.HttpRequest) -> func.HttpResponse:
+    payload = req.get_json()
+    secret_key = payload.get('secret_key', '')
+    event_key = payload.get('event_key', '')
+    if not secret_key or not event_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key and event_key are required'}),
+            status_code=400
+        )
+    # Deterministic ID: one document per secret_key + event_key
+    payload['id'] = f'{secret_key}_{event_key}'
+    container = get_container('ScoutingResults')
+    container.upsert_item(payload)
+    return func.HttpResponse(json.dumps(payload), status_code=200)
+
+
+@app.function_name(name="GetScoutingResults")
+@app.route(route="GetScoutingResults", auth_level=func.AuthLevel.ANONYMOUS)
+def get_scouting_results(req: func.HttpRequest) -> func.HttpResponse:
+    secret_key = req.params.get('secret_key', '')
+    event_key = req.params.get('event_key', '')
+    if not secret_key or not event_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key and event_key are required'}),
+            status_code=400
+        )
+    container = get_container('ScoutingResults')
+    query = "SELECT * FROM c WHERE c.secret_key = @sk AND c.event_key = @ek"
+    params = [
+        {'name': '@sk', 'value': secret_key},
+        {'name': '@ek', 'value': event_key},
+    ]
+    items = list(container.query_items(
+        query=query, parameters=params, enable_cross_partition_query=True
+    ))
+    # Clean Cosmos internal fields
+    for item in items:
+        for k in list(item.keys()):
+            if k.startswith('_'):
+                del item[k]
+    return func.HttpResponse(json.dumps(items), status_code=200)
+
+
 """
 @app.function_name(name="RebuildData")
 @app.schedule(schedule="0 */1 * * * *", arg_name="req",

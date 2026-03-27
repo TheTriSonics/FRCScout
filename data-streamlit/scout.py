@@ -10,7 +10,7 @@ from os.path import exists
 
 pd.options.mode.copy_on_write = True
 
-_DEFAULT_API = "https://trisonics-scouting-api.azurewebsites.net/api"
+_DEFAULT_API = "http://localhost:7071/api"
 base_url = os.environ.get("SCOUT_API_URL", _DEFAULT_API)
 statbot_url = "https://api.statbotics.io/v3"
 
@@ -80,58 +80,48 @@ def pretty_name(col):
     """Convert column_name to Display Label."""
     return col.replace('_', ' ').title()
 
-def _load_keys_from_storage():
-    """On first load, pull saved keys from browser localStorage into
-    session state. Only runs once per session."""
-    if st.session_state.get('_keys_loaded'):
-        return
-    st.session_state['_keys_loaded'] = True
+def _sync_keys():
+    """Ensure secret_key and event_key are in both session_state and query_params.
 
-    for name in ['secret_key', 'event_key']:
-        # Skip if already set via query params or session state
-        if name in st.query_params or st.session_state.get(name):
-            continue
-        # Try localStorage
-        val = streamlit_js_eval(f"localStorage.getItem('{name}')", key=f'_ls_read_{name}')
-        if val and isinstance(val, str) and val.strip():
-            st.session_state[name] = val.strip()
+    Priority on first load: query_params > session_state (from config.json).
+    After that, session_state is the source of truth and we pin it back to
+    query_params so the URL always carries the keys (refresh-safe).
+
+    No custom components here — this must be safe to call before pg.run()."""
+    for name in ('secret_key', 'event_key'):
+        # On first load, query params seed session state
+        qp = st.query_params.get(name, '')
+        ss = st.session_state.get(name, '')
+        val = qp or ss
+        if isinstance(val, str):
+            val = val.strip()
+        if val:
+            st.session_state[name] = val
+            st.query_params[name] = val
 
 
 def _get_key(name):
-    """Get a key value. Priority: query params > session state.
-    Always syncs session state values up to query params so the URL
-    carries keys across page navigations."""
-    # Query params are the source of truth (persist in URL, shareable)
-    if name in st.query_params:
-        val = str(st.query_params[name]).strip()
-        if val:
-            st.session_state[name] = val
-            return val
-    # Fall back to session state (set by config.json, localStorage, or prior interaction)
+    """Get a key value from session state."""
     val = st.session_state.get(name, '')
     if isinstance(val, str):
         val = val.strip()
-    if val:
-        # Sync to query params so URL always reflects current keys
-        st.query_params[name] = val
-        return val
-    return None
+    return val or None
 
 
 def _set_key(name, value):
-    """Set a key in session state, query params, and browser localStorage."""
+    """Set a key in session state and query params. Also persists to
+    browser localStorage via streamlit_js_eval (safe here because this
+    only runs from config page callbacks, never in the startup path)."""
     value = str(value).strip()
     if value:
         st.session_state[name] = value
         st.query_params[name] = value
-        # Persist to browser localStorage for next visit
-        streamlit_js_eval(f"localStorage.setItem('{name}', '{value}')",
+        streamlit_js_eval(js_expressions=f"localStorage.setItem('{name}', '{value}')",
                           key=f'_ls_write_{name}')
     else:
         st.session_state.pop(name, None)
-        if name in st.query_params:
-            del st.query_params[name]
-        streamlit_js_eval(f"localStorage.removeItem('{name}')",
+        st.query_params.pop(name, None)
+        streamlit_js_eval(js_expressions=f"localStorage.removeItem('{name}')",
                           key=f'_ls_del_{name}')
 
 
@@ -371,8 +361,8 @@ def config_page():
     with st.expander('Instructions'):
         st.write("""
         Enter your team's secret key and select an event. Changes take
-        effect immediately — just navigate to another page. Keys are stored
-        in the URL so you can bookmark or share the link.
+        effect immediately — just navigate to another page. Keys are saved
+        in your browser so you won't need to re-enter them next time.
         """)
 
     # --- Secret Key ---
@@ -437,9 +427,6 @@ def main():
 
     st.title("Trisonics FRC Scouting")
 
-    # Load saved keys from browser localStorage (runs once per session)
-    _load_keys_from_storage()
-
     def _lazy(module, func):
         """Return a wrapper that imports a page function on first use."""
         def wrapper():
@@ -450,22 +437,27 @@ def main():
         wrapper.__qualname__ = func
         return wrapper
 
+    # Register pages FIRST so Streamlit recognises URL paths like /scouting_breakdown.
     pg = st.navigation([
         st.Page(config_page, title='Config', url_path='config'),
-        st.Page(_lazy('pages.rankings', 'rankings_page'), title='Rankings', url_path='rankings'),
-        st.Page(_lazy('pages.team_detail', 'team_detail_page'), title='Team Details', url_path='team_detail'),
-        st.Page(_lazy('pages.team_search', 'team_search_page'), title='Team Search', url_path='team_search'),
-        st.Page(_lazy('pages.heatmap', 'heatmap_page'), title='Heatmap', url_path='heatmap'),
-        st.Page(_lazy('pages.clusters', 'clusters_page'), title='Clustering', url_path='clusters'),
-        st.Page(_lazy('pages.picklist', 'picklist_page'), title='Pick Lists', url_path='picklist'),
-        st.Page(_lazy('pages.head_to_head', 'head_to_head_page'), title='Head to Head', url_path='head_to_head'),
-        st.Page(_lazy('pages.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
-        st.Page(_lazy('pages.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy', url_path='scouting_accuracy'),
-        st.Page(_lazy('pages.what_if', 'what_if_page'), title='Alliance Builder', url_path='alliance_builder'),
-        st.Page(_lazy('pages.fuel_opr', 'fuel_opr_page'), title='Fuel OPR', url_path='fuel_opr'),
-        st.Page(_lazy('pages.pca', 'pca_page'), title='PCA', url_path='pca'),
-        st.Page(_lazy('pages.app_status', 'app_status_page'), title='Workspace', url_path='workspace'),
+        st.Page(_lazy('views.rankings', 'rankings_page'), title='Rankings', url_path='rankings'),
+        st.Page(_lazy('views.team_detail', 'team_detail_page'), title='Team Details', url_path='team_detail'),
+        st.Page(_lazy('views.team_search', 'team_search_page'), title='Team Search', url_path='team_search'),
+        st.Page(_lazy('views.heatmap', 'heatmap_page'), title='Heatmap', url_path='heatmap'),
+        st.Page(_lazy('views.clusters', 'clusters_page'), title='Clustering', url_path='clusters'),
+        st.Page(_lazy('views.picklist', 'picklist_page'), title='Pick Lists', url_path='picklist'),
+        st.Page(_lazy('views.head_to_head', 'head_to_head_page'), title='Head to Head', url_path='head_to_head'),
+        st.Page(_lazy('views.match_breakdowns', 'match_breakdowns_page'), title='Match Breakdowns', url_path='match_breakdowns'),
+        st.Page(_lazy('views.scouting_accuracy', 'scouting_accuracy_page'), title='Scouting Accuracy', url_path='scouting_accuracy'),
+        st.Page(_lazy('views.what_if', 'what_if_page'), title='Alliance Builder', url_path='alliance_builder'),
+        st.Page(_lazy('views.fuel_opr', 'fuel_opr_page'), title='Scouting Breakdown', url_path='scouting_breakdown'),
+        st.Page(_lazy('views.pca', 'pca_page'), title='PCA', url_path='pca'),
+        st.Page(_lazy('views.app_status', 'app_status_page'), title='Workspace', url_path='workspace'),
     ])
+
+    # Sync keys between query params and session state (no custom components).
+    _sync_keys()
+
     pg.run()
 
 
