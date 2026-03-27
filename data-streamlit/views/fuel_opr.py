@@ -104,7 +104,7 @@ def fuel_opr_page():
     df = df.sort_values('total', ascending=False).reset_index(drop=True)
     df['rank'] = df['teamNumber'].map(official_ranks)
     df['team_label'] = df.apply(
-        lambda r: f"#{int(r['rank'])} · {r['teamNumber']}" if pd.notna(r['rank']) else str(r['teamNumber']),
+        lambda r: f"{r['teamNumber']} · #{int(r['rank'])}" if pd.notna(r['rank']) else str(r['teamNumber']),
         axis=1,
     )
 
@@ -205,12 +205,12 @@ def fuel_opr_page():
     if '_selected_team_label' not in st.session_state:
         return
 
-    team_num = int(st.session_state['_selected_team_label'].split('·')[1].strip())
+    team_num = int(st.session_state['_selected_team_label'].split('·')[0].strip())
     team_name = team_names.get(team_num, '')
     rank_val = official_ranks.get(team_num, '?')
 
     st.divider()
-    st.subheader(f"#{rank_val} — Team {team_num}  ·  {team_name}")
+    st.subheader(f"Ranked {rank_val} — Team {team_num}  ·  {team_name}")
 
     # ---- Pick Ranking ----
     # _pick_* keys = committed (saved) data, shown in summary table
@@ -239,7 +239,7 @@ def fuel_opr_page():
 
     col_rank, col_save = st.columns([2, 1])
     with col_rank:
-        st.selectbox("Rank", rank_options, key=edit_rank_key)
+        st.selectbox("Pick Number", rank_options, key=edit_rank_key)
     st.text_area(
         "Summary Notes", height=120,
         placeholder="Your assessment of this team based on scouting data...",
