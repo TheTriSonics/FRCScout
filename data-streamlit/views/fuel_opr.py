@@ -153,6 +153,76 @@ def fuel_opr_page():
             mime="application/pdf",
         )
 
+    # ---- Quick Team Comparison ----
+    with st.expander("Quick Team Comparison"):
+        all_teams_sorted = df['teamNumber'].tolist()
+        team_options = {tn: f"{tn} — {team_names.get(tn, '')}" for tn in all_teams_sorted}
+        compare_teams = st.multiselect(
+            "Select 2-3 teams to compare side by side",
+            options=all_teams_sorted,
+            format_func=lambda tn: team_options[tn],
+            max_selections=3,
+            key='_compare_teams',
+        )
+        if len(compare_teams) >= 2:
+            comp_rows = []
+            for tn in compare_teams:
+                row_data = df[df['teamNumber'] == tn]
+                if row_data.empty:
+                    continue
+                r = row_data.iloc[0]
+                pick = st.session_state.get(f'_pick_rank_{tn}', '—')
+                notes = st.session_state.get(f'_pick_notes_{tn}', '')
+                comp_rows.append({
+                    'team': tn,
+                    'name': team_names.get(tn, ''),
+                    'pick': pick,
+                    'auto': r['hubScore_autoCount'],
+                    'teleop': r['hubScore_teleopCount'],
+                    'endgame': r['hubScore_endgameCount'],
+                    'total': r['total'],
+                    'notes': notes.strip() if notes else '',
+                })
+            if comp_rows:
+                # Build an HTML table: columns are teams, rows are metrics
+                header = '<th style="padding:6px;text-align:left">Metric</th>'
+                for c in comp_rows:
+                    header += f'<th style="padding:6px;text-align:right">{c["team"]}<br/><span style="font-weight:normal;font-size:12px">{c["name"]}</span></th>'
+                metrics = [
+                    ('Pick #', 'pick'),
+                    ('Auto OPR', 'auto'),
+                    ('Teleop OPR', 'teleop'),
+                    ('Endgame OPR', 'endgame'),
+                    ('Total OPR', 'total'),
+                    ('Notes', 'notes'),
+                ]
+                body = ''
+                for label, key in metrics:
+                    vals = [c[key] for c in comp_rows]
+                    # Highlight the best numeric value
+                    numeric_vals = [v for v in vals if isinstance(v, (int, float))]
+                    best = max(numeric_vals) if numeric_vals else None
+                    body += f'<tr style="border-bottom:1px solid #333"><td style="padding:6px;font-weight:bold">{label}</td>'
+                    for v in vals:
+                        is_best = isinstance(v, (int, float)) and best is not None and v == best and len(numeric_vals) > 1
+                        style = 'padding:6px;text-align:right'
+                        if key == 'notes':
+                            style = 'padding:6px;text-align:left;font-size:12px;max-width:200px'
+                        if is_best:
+                            style += ';color:#59a14f;font-weight:bold'
+                        if isinstance(v, float):
+                            v = f'{v:.1f}'
+                        body += f'<td style="{style}">{v}</td>'
+                    body += '</tr>'
+                html = (
+                    '<table style="width:100%;border-collapse:collapse;font-size:14px">'
+                    f'<tr style="border-bottom:2px solid #555;text-align:left">{header}</tr>'
+                    f'{body}</table>'
+                )
+                st.markdown(html, unsafe_allow_html=True)
+        elif compare_teams:
+            st.info("Select at least 2 teams to compare.")
+
     # Toggle to hide already-ranked teams from the chart
     ranked_team_nums = {t['Team'] for t in ranked_teams} if ranked_teams else set()
     hide_ranked = st.toggle("Hide teams on pick list from chart", value=False, key='_hide_ranked') if ranked_teams else False
