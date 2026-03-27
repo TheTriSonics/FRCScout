@@ -71,7 +71,7 @@ def match_breakdowns_page():
                         matches['set_number'] * 100 + matches['match_number']
     matches = matches.sort_values(by='_sort').reset_index(drop=True)
 
-    if len(matches.index) == 0:
+    if matches.empty:
         st.info('No match data available yet.')
         return
 
@@ -91,12 +91,12 @@ def match_breakdowns_page():
         )
         matches = matches[mask]
 
-    if len(matches.index) == 0:
+    if matches.empty:
         st.info('No matches found for selected filters.')
         return
 
     # Statbotics predictions (already loaded in parallel above)
-    has_statbotics = statbotics is not None and statbotics.index.size > 0
+    has_statbotics = statbotics is not None and not statbotics.empty
     pred_map = {}
     actual_map = {}
     if has_statbotics:

@@ -83,7 +83,7 @@ def rankings_page():
     else:
         col_config = {}
 
-    st.dataframe(df, hide_index=True, use_container_width=True,
+    st.dataframe(df, hide_index=True, width='stretch',
                  column_config=col_config)
 
     # Ranking score distribution chart
@@ -95,7 +95,7 @@ def rankings_page():
                 y=alt.Y(f'{primary_col}:Q', title=primary_col),
                 tooltip=['Rank', 'Team', 'Name', f'{primary_col}:Q'],
             ).properties(height=350, title=f'{primary_col} by Rank')
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
     # W-L record chart
     wl_data = []
@@ -117,4 +117,4 @@ def rankings_page():
         tooltip=['Team', 'Result', 'Count'],
         order=alt.Order('Result:N', sort='descending'),
     ).properties(height=300, title='Win-Loss Record')
-    st.altair_chart(wl_chart, use_container_width=True)
+    st.altair_chart(wl_chart, width='stretch')

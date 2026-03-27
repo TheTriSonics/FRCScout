@@ -7,7 +7,8 @@ import urllib.request
 
 from scout import (
     load_opr_data, load_team_data, load_event_data, load_pit_data,
-    load_parallel, get_event_key, get_secret_key, pretty_name, base_url,
+    load_all_pit_data, load_parallel, get_event_key, get_secret_key,
+    pretty_name, base_url,
 )
 from views.rankings import _fetch_rankings
 from views.pdf_export import generate_pdf
@@ -23,7 +24,7 @@ def _load_saved_results(sk, ek):
         url = f'{base_url}/GetScoutingResults?secret_key={sk}&event_key={ek}'
         with urllib.request.urlopen(url, timeout=10) as resp:
             data = _json.loads(resp.read().decode())
-        if data and len(data) > 0:
+        if data:
             doc = data[0]
             for team in doc.get('teams', []):
                 tn = team['team_number']
@@ -72,7 +73,7 @@ def fuel_opr_page():
     st.caption("2026 Rebuilt — fuel scored by phase, ranked by total OPR")
 
     opr_data = load_opr_data(sk, ek)
-    if opr_data is None or len(opr_data.index) == 0:
+    if opr_data is None or opr_data.empty:
         st.warning("No OPR data available yet. Qualification matches need to be played first.")
         st.stop()
 
@@ -108,6 +109,42 @@ def fuel_opr_page():
         lambda r: f"{r['teamNumber']} · #{int(r['rank'])}" if pd.notna(r['rank']) else str(r['teamNumber']),
         axis=1,
     )
+
+    # ---- Scouting Completeness Indicator ----
+    all_team_nums = set(df['teamNumber'].tolist())
+    total_teams = len(all_team_nums)
+
+    scouted_data = load_event_data(sk, ek)
+    if scouted_data is not None and not scouted_data.empty:
+        match_scouted_teams = set(scouted_data['team_number'].unique())
+    else:
+        match_scouted_teams = set()
+
+    all_pit = load_all_pit_data(sk, ek)
+    if all_pit is not None and not all_pit.empty and 'team_number' in all_pit.columns:
+        pit_scouted_teams = set(all_pit['team_number'].unique())
+    else:
+        pit_scouted_teams = set()
+
+    match_count = len(match_scouted_teams & all_team_nums)
+    pit_count = len(pit_scouted_teams & all_team_nums)
+
+    df['has_match_scouting'] = df['teamNumber'].isin(match_scouted_teams)
+    df['has_pit_scouting'] = df['teamNumber'].isin(pit_scouted_teams)
+
+    mc1, mc2, mc3 = st.columns(3)
+    mc1.metric("Teams at Event", total_teams)
+    mc2.metric("Match Scouted", f"{match_count}/{total_teams}")
+    mc3.metric("Pit Scouted", f"{pit_count}/{total_teams}")
+
+    unscouted = all_team_nums - match_scouted_teams
+    if unscouted:
+        unscouted_names = [
+            f"{t} ({team_names.get(t, '?')})" for t in sorted(unscouted)
+        ]
+        st.caption(
+            f"Not yet match-scouted: {', '.join(unscouted_names)}"
+        )
 
     # ---- Our Pick Rankings summary table ----
     ranked_teams = _get_ranked_teams(team_names)
@@ -159,35 +196,29 @@ def fuel_opr_page():
 
     if hide_ranked:
         df = df[~df['teamNumber'].isin(ranked_team_nums)].reset_index(drop=True)
-        team_order = df['team_label'].tolist()
-        melted = df.melt(
-            id_vars=['team_label', 'team_name', 'total'],
-            value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
-            var_name='phase',
-            value_name='fuel_opr',
-        )
-        melted['phase'] = melted['phase'].map({
-            'hubScore_autoCount': 'Auto',
-            'hubScore_teleopCount': 'Teleop',
-            'hubScore_endgameCount': 'Endgame',
-        })
-    else:
-        team_order = df['team_label'].tolist()
-        melted = df.melt(
-            id_vars=['team_label', 'team_name', 'total'],
-            value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
-            var_name='phase',
-            value_name='fuel_opr',
-        )
-        melted['phase'] = melted['phase'].map({
-            'hubScore_autoCount': 'Auto',
-            'hubScore_teleopCount': 'Teleop',
-            'hubScore_endgameCount': 'Endgame',
-        })
+
+    team_order = df['team_label'].tolist()
+    melted = df.melt(
+        id_vars=['team_label', 'team_name', 'total', 'has_match_scouting'],
+        value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
+        var_name='phase',
+        value_name='fuel_opr',
+    )
+    melted['phase'] = melted['phase'].map({
+        'hubScore_autoCount': 'Auto',
+        'hubScore_teleopCount': 'Teleop',
+        'hubScore_endgameCount': 'Endgame',
+    })
+    melted['scouting_status'] = melted['has_match_scouting'].map(
+        {True: 'Scouted', False: 'Not scouted'},
+    )
 
     selection = alt.selection_point(name="team_select", fields=['team_label'])
 
-    chart = alt.Chart(melted).mark_bar().encode(
+    # Unscouted teams render with a red dashed border so they stand out
+    chart = alt.Chart(melted).mark_bar(
+        strokeDash=[4, 2],
+    ).encode(
         y=alt.Y('team_label:N', sort=team_order, title='Team'),
         x=alt.X('fuel_opr:Q', title='Fuel OPR'),
         color=alt.Color('phase:N',
@@ -197,13 +228,32 @@ def fuel_opr_page():
                             range=['#4e79a7', '#59a14f', '#f28e2b']),
                         title='Phase'),
         order=alt.Order('phase:N', sort='ascending'),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.3)),
+        opacity=alt.condition(
+            selection,
+            alt.condition(
+                alt.datum.has_match_scouting,
+                alt.value(1),
+                alt.value(0.45),
+            ),
+            alt.value(0.2),
+        ),
+        stroke=alt.condition(
+            alt.datum.has_match_scouting,
+            alt.value(None),
+            alt.value('#e15759'),
+        ),
+        strokeWidth=alt.condition(
+            alt.datum.has_match_scouting,
+            alt.value(0),
+            alt.value(1.5),
+        ),
         tooltip=[
             alt.Tooltip('team_label:N', title='Team'),
             alt.Tooltip('team_name:N', title='Name'),
             alt.Tooltip('phase:N', title='Phase'),
             alt.Tooltip('fuel_opr:Q', format='.1f', title='Fuel OPR'),
             alt.Tooltip('total:Q', format='.1f', title='Total'),
+            alt.Tooltip('scouting_status:N', title='Scouting'),
         ],
     ).add_params(selection).properties(height=max(len(team_order) * 25, 400))
 
@@ -217,7 +267,7 @@ def fuel_opr_page():
         st.dataframe(
             table.style.format({'Auto': '{:.1f}', 'Teleop': '{:.1f}',
                                 'Endgame': '{:.1f}', 'Total': '{:.1f}'}),
-            hide_index=True, use_container_width=True,
+            hide_index=True, width='stretch',
         )
 
     # --- Team detail on click ---
@@ -362,13 +412,13 @@ def fuel_opr_page():
         st.caption("No match notes recorded.")
 
     # ---- Pit Notes (notes-only records, no full pit scout data) ----
-    if pit is not None and len(pit.index) > 0:
+    if pit is not None and not pit.empty:
         pit_note_rows = []
         for pit_idx in range(len(pit.index)):
             pit_row = pit.iloc[pit_idx]
             # Notes-only record: drive_train is null/missing
             dt = pit_row.get('drive_train')
-            if dt is not None and (not isinstance(dt, float) or not pd.isna(dt)):
+            if pd.notna(dt):
                 continue
             note_text = pit_row.get('notes', '')
             if isinstance(note_text, str) and note_text.strip():
@@ -394,7 +444,7 @@ def fuel_opr_page():
             st.markdown(html, unsafe_allow_html=True)
 
     # ---- Pit Scouting (full records only) ----
-    if pit is not None and len(pit.index) > 0:
+    if pit is not None and not pit.empty:
         skip_fields = {
             'scouter_name', 'secret_team_key', 'event_key',
             'team_number', 'timestamp', 'image_names',
@@ -403,7 +453,7 @@ def fuel_opr_page():
             pit_row = pit.iloc[pit_idx]
             # Skip notes-only records (no drive_train = not a full pit scout)
             dt = pit_row.get('drive_train')
-            if dt is None or (isinstance(dt, float) and pd.isna(dt)):
+            if pd.isna(dt):
                 continue
             scouter = pit_row.get('scouter_name', 'Unknown')
             ts = pit_row.get('timestamp', '')
@@ -414,7 +464,9 @@ def fuel_opr_page():
                 if field in skip_fields:
                     continue
                 val = pit_row.get(field)
-                if val is None or (isinstance(val, str) and not val.strip()):
+                if val is None or (isinstance(val, float) and pd.isna(val)):
+                    continue
+                if isinstance(val, str) and not val.strip():
                     continue
                 label = pretty_name(field)
                 is_bool = isinstance(val, bool) or (

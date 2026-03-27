@@ -6,8 +6,6 @@ import pandas as pd
 import streamlit as st
 from streamlit_js_eval import streamlit_js_eval
 
-from os.path import exists
-
 pd.options.mode.copy_on_write = True
 
 _DEFAULT_API = "https://trisonics-scouting-api.azurewebsites.net/api"
@@ -167,7 +165,7 @@ def load_events(year):
     try:
         url = f"{base_url}/GetEvents?year={year}"
         df = pd.read_json(url)
-        if len(df.index) > 0 and 'key' in df.columns and 'name' in df.columns:
+        if not df.empty and 'key' in df.columns and 'name' in df.columns:
             return df[['key', 'name', 'state_prov']].sort_values('name').reset_index(drop=True)
     except Exception:
         pass
@@ -199,12 +197,12 @@ def _fetch_event_data(secret_key, event_key):
         return pd.DataFrame()
     url = get_scouted_data_url(secret_key, event_key)
     df = pd.read_json(url)
-    if len(df.index) > 0:
+    if not df.empty:
         if 'scouting_team' in df.columns:
             df.rename(columns={'scouting_team': 'team_number'}, inplace=True)
         if 'match_key' in df.columns:
             df.rename(columns={'match_key': 'match_number'}, inplace=True)
-    if event_key.startswith('2025') and len(df.index) > 0:
+    if event_key.startswith('2025') and not df.empty:
         df['auto_coral_total'] = (
             df['auto_coral1'] + df['auto_coral2'] +
             df['auto_coral3'] + df['auto_coral4']
@@ -213,7 +211,7 @@ def _fetch_event_data(secret_key, event_key):
             df['teleop_coral1'] + df['teleop_coral2'] +
             df['teleop_coral3'] + df['teleop_coral4']
         )
-    elif event_key.startswith('2026') and len(df.index) > 0:
+    elif event_key.startswith('2026') and not df.empty:
         for phase in ['auto', 'teleop', 'endgame']:
             shot_col = f'{phase}_fuel_scored'
             acc_col = f'{phase}_fuel_accuracy'
@@ -246,6 +244,20 @@ def _fetch_pit_data(secret_key, event_key, team_key):
     return pd.read_json(get_pit_data_url(secret_key, event_key, team_key))
 
 
+def _fetch_all_pit_data(secret_key, event_key):
+    """Fetch pit scouting data for ALL teams at an event (no team_key filter)."""
+    if _keys_missing(secret_key, event_key):
+        return pd.DataFrame()
+    url = (
+        f"{base_url}/GetPitResults"
+        f"?secret_team_key={secret_key}&event_key={event_key}"
+    )
+    try:
+        return pd.read_json(url)
+    except Exception:
+        return pd.DataFrame()
+
+
 def _fetch_opr_data(secret_key, event_key):
     if _keys_missing(secret_key, event_key):
         return None
@@ -276,6 +288,14 @@ def load_statbot_matches_data(event_key):
 def load_pit_data(secret_key, event_key, team_key):
     return _session_cache(f'_data_pit_{event_key}_{team_key}',
                           lambda: _fetch_pit_data(secret_key, event_key, team_key))
+
+
+def load_all_pit_data(secret_key, event_key):
+    return _session_cache(
+        f'_data_allpit_{event_key}',
+        lambda: _fetch_all_pit_data(secret_key, event_key),
+    )
+
 
 def load_opr_data(secret_key, event_key):
     return _session_cache(f'_data_opr_{event_key}',
@@ -332,21 +352,21 @@ def load_data():
     all_loaded = True
 
     event_data = load_event_data(secret_key, event_key)
-    if len(event_data.index) > 0:
+    if not event_data.empty:
         st.success("Scouted data loaded!")
     else:
         st.error("Scouting data not found.")
         all_loaded = False
 
     team_data = load_team_data(event_key)
-    if len(team_data.index) > 0:
+    if not team_data.empty:
         st.success("Event team list loaded!")
     else:
         st.error("Event team list failed.")
         all_loaded = False
 
     opr_data = load_opr_data(secret_key, event_key)
-    if opr_data is not None and len(opr_data.index) > 0:
+    if opr_data is not None and not opr_data.empty:
         st.success("OPR calculations loaded")
     else:
         st.warning("OPR calculation not available yet.")
@@ -392,7 +412,7 @@ def config_page():
     with st.expander("Browse events"):
         year = st.selectbox("Year", [2026, 2025], key='event_year')
         events = load_events(year)
-        if len(events.index) > 0:
+        if not events.empty:
             event_options = [(row.key, f"{row['name']} ({row.state_prov})") for _, row in events.iterrows()]
             selected_event = st.selectbox(
                 "Select an event",
@@ -463,7 +483,7 @@ def main():
 def load_dev_config():
     global base_url
     cfg = 'config.json'
-    if exists(cfg):
+    if os.path.exists(cfg):
         with open(cfg) as f:
             obj = json.load(f)
             # Pull api_url out before updating session state
