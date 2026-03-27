@@ -155,7 +155,7 @@ def fuel_opr_page():
 
     # Toggle to hide already-ranked teams from the chart
     ranked_team_nums = {t['Team'] for t in ranked_teams} if ranked_teams else set()
-    hide_ranked = st.toggle("Hide ranked teams from chart", value=False, key='_hide_ranked') if ranked_teams else False
+    hide_ranked = st.toggle("Hide teams on pick list from chart", value=False, key='_hide_ranked') if ranked_teams else False
 
     if hide_ranked:
         df = df[~df['teamNumber'].isin(ranked_team_nums)].reset_index(drop=True)
