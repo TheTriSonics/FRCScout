@@ -217,12 +217,29 @@ def team_detail_page():
             chart_cols = [c for c in tdf.select_dtypes(include='number').columns
                           if c not in SKIP_COLS]
 
+            # --- OPR data for this team (used in KPI cards and later) ---
+            has_opr = opr_data is not None
+            odf = None
+            if has_opr:
+                odf = opr_data.loc[opr_data.teamNumber == team_number]
+                if odf.empty:
+                    has_opr = False
+
             # --- KPI Summary Cards ---
             # Pick the most important metrics for at-a-glance view
             kpi_cols = [c for c in ['auto_fuel_made', 'teleop_fuel_made',
                                     'endgame_fuel_made', 'endgame_tower_level',
                                     'auto_tower_level']
                         if c in tdf.columns]
+
+            # Build lookup from scouted column -> OPR column for KPI cards
+            _opr_for_kpi = {}
+            if has_opr and odf is not None and not odf.empty:
+                opr_row = odf.iloc[0]
+                for scouted_col, opr_col, _label in SCOUTED_OPR_MAP:
+                    if opr_col in opr_row.index:
+                        _opr_for_kpi[scouted_col] = round(float(opr_row[opr_col]), 1)
+
             if kpi_cols:
                 kpi_columns = st.columns(len(kpi_cols) + 1)
                 for i, col in enumerate(kpi_cols):
@@ -235,7 +252,14 @@ def team_detail_page():
                         delta_str = f"{delta:+.1f}"
                     else:
                         delta_str = None
-                    kpi_columns[i].metric(pretty_name(col), f"{avg:.1f}", delta=delta_str)
+                    opr_val = _opr_for_kpi.get(col)
+                    help_text = f"OPR: {opr_val}" if opr_val is not None else None
+                    kpi_columns[i].metric(
+                        pretty_name(col), f"{avg:.1f}", delta=delta_str,
+                        help=help_text,
+                    )
+                    if opr_val is not None:
+                        kpi_columns[i].caption(f"OPR: {opr_val}")
                 # Matches scouted count
                 kpi_columns[-1].metric("Matches Scouted", len(tdf))
 
@@ -463,13 +487,6 @@ def team_detail_page():
                                 st.markdown(f"**Match {match_num}** — " + " | ".join(notes))
 
             # --- Scouted vs OPR ---
-            has_opr = opr_data is not None
-            odf = None
-            if has_opr:
-                odf = opr_data.loc[opr_data.teamNumber == team_number]
-                if odf.empty:
-                    has_opr = False
-
             if has_opr:
                 with st.expander("Scouted vs OPR"):
                     st.write("""
