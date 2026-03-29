@@ -13,6 +13,14 @@ from views.rankings import _fetch_rankings
 from views.pdf_export import generate_pdf
 
 
+def _fetch_rankings_cached(ek):
+    """Session-cached wrapper — avoids re-fetching rankings on every rerun."""
+    key = f'_data_rankings_{ek}'
+    if key not in st.session_state:
+        st.session_state[key] = _fetch_rankings(ek)
+    return st.session_state[key]
+
+
 def _load_saved_results(sk, ek):
     """Fetch saved scouting results from the API and seed session_state.
     Only runs once per session to avoid overwriting in-progress edits."""
@@ -71,12 +79,17 @@ def fuel_opr_page():
     st.header("Scouting Breakdown")
     st.caption("2026 Rebuilt — fuel scored by phase, ranked by total OPR")
 
-    opr_data = load_opr_data(sk, ek)
+    # Load OPR, team list, and rankings in parallel
+    opr_data, td, rankings_data = load_parallel(
+        (load_opr_data, sk, ek),
+        (load_team_data, ek),
+        (_fetch_rankings_cached, ek),
+    )
+
     if opr_data is None or len(opr_data.index) == 0:
         st.warning("No OPR data available yet. Qualification matches need to be played first.")
         st.stop()
 
-    td = load_team_data(ek)
     team_names = {row.number: row['name'] for _, row in td.iterrows()}
 
     # Check for required columns
@@ -89,8 +102,6 @@ def fuel_opr_page():
     # Load saved results from API (once per session)
     _load_saved_results(sk, ek)
 
-    # Fetch official event rankings from TBA
-    rankings_data = _fetch_rankings(ek)
     official_ranks = {}
     if rankings_data and 'rankings' in rankings_data:
         for r in rankings_data['rankings']:
@@ -132,26 +143,31 @@ def fuel_opr_page():
         html += '</table>'
         st.markdown(html, unsafe_allow_html=True)
 
-        # Generate PDF eagerly so download is one click
-        scouted_for_pdf = load_event_data(sk, ek)
-        opr_for_pdf = opr_data.copy()
-        opr_for_pdf['teamNumber'] = opr_for_pdf['teamNumber'].astype(int)
-        pit_loaders = [(load_pit_data, sk, ek, t['Team']) for t in ranked_teams]
-        pit_results = load_parallel(*pit_loaders)
-        pit_data_by_team = {
-            t['Team']: pit_results[i]
-            for i, t in enumerate(ranked_teams)
-            if pit_results[i] is not None
-        }
-        pdf_bytes = generate_pdf(
-            ranked_teams, opr_for_pdf, scouted_for_pdf,
-            pit_data_by_team, team_names,
-        )
-        st.download_button(
-            "Export to PDF", data=pdf_bytes,
-            file_name=f"scouting_report_{ek}.pdf",
-            mime="application/pdf",
-        )
+        # Lazy PDF generation — only when requested
+        if st.button("Generate PDF Report", key='_gen_pdf'):
+            with st.spinner("Generating PDF..."):
+                scouted_for_pdf = load_event_data(sk, ek)
+                opr_for_pdf = opr_data.copy()
+                opr_for_pdf['teamNumber'] = opr_for_pdf['teamNumber'].astype(int)
+                pit_loaders = [(load_pit_data, sk, ek, t['Team']) for t in ranked_teams]
+                pit_results = load_parallel(*pit_loaders)
+                pit_data_by_team = {
+                    t['Team']: pit_results[i]
+                    for i, t in enumerate(ranked_teams)
+                    if pit_results[i] is not None
+                }
+                pdf_bytes = generate_pdf(
+                    ranked_teams, opr_for_pdf, scouted_for_pdf,
+                    pit_data_by_team, team_names,
+                )
+                st.session_state['_pdf_bytes'] = pdf_bytes
+                st.session_state['_pdf_event'] = ek
+        if '_pdf_bytes' in st.session_state and st.session_state.get('_pdf_event') == ek:
+            st.download_button(
+                "Export to PDF", data=st.session_state['_pdf_bytes'],
+                file_name=f"scouting_report_{ek}.pdf",
+                mime="application/pdf",
+            )
 
     # Toggle to hide already-ranked teams from the chart
     ranked_team_nums = {t['Team'] for t in ranked_teams} if ranked_teams else set()
@@ -159,31 +175,19 @@ def fuel_opr_page():
 
     if hide_ranked:
         df = df[~df['teamNumber'].isin(ranked_team_nums)].reset_index(drop=True)
-        team_order = df['team_label'].tolist()
-        melted = df.melt(
-            id_vars=['team_label', 'team_name', 'total'],
-            value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
-            var_name='phase',
-            value_name='fuel_opr',
-        )
-        melted['phase'] = melted['phase'].map({
-            'hubScore_autoCount': 'Auto',
-            'hubScore_teleopCount': 'Teleop',
-            'hubScore_endgameCount': 'Endgame',
-        })
-    else:
-        team_order = df['team_label'].tolist()
-        melted = df.melt(
-            id_vars=['team_label', 'team_name', 'total'],
-            value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
-            var_name='phase',
-            value_name='fuel_opr',
-        )
-        melted['phase'] = melted['phase'].map({
-            'hubScore_autoCount': 'Auto',
-            'hubScore_teleopCount': 'Teleop',
-            'hubScore_endgameCount': 'Endgame',
-        })
+
+    team_order = df['team_label'].tolist()
+    melted = df.melt(
+        id_vars=['team_label', 'team_name', 'total'],
+        value_vars=['hubScore_autoCount', 'hubScore_teleopCount', 'hubScore_endgameCount'],
+        var_name='phase',
+        value_name='fuel_opr',
+    )
+    melted['phase'] = melted['phase'].map({
+        'hubScore_autoCount': 'Auto',
+        'hubScore_teleopCount': 'Teleop',
+        'hubScore_endgameCount': 'Endgame',
+    })
 
     selection = alt.selection_point(name="team_select", fields=['team_label'])
 
@@ -291,6 +295,9 @@ def fuel_opr_page():
                     'notes': notes_val.strip() if notes_val else '',
                 })
             teams.sort(key=lambda t: (t['ranking'] is None, t['ranking'] or 0))
+            # Invalidate cached PDF since rankings changed
+            st.session_state.pop('_pdf_bytes', None)
+            st.session_state.pop('_pdf_event', None)
             payload = {
                 'event_key': ek,
                 'secret_key': sk,
