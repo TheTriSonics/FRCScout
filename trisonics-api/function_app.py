@@ -29,8 +29,21 @@ except Exception as e:
     _import_errors.append(f"azure.storage.blob: {e}")
 try:
     from azure.cosmos import CosmosClient
+    from azure.cosmos import exceptions as cosmos_exceptions
+    from azure.core import MatchConditions
 except Exception as e:
     _import_errors.append(f"azure.cosmos: {e}")
+try:
+    import clustering
+except Exception as e:
+    _import_errors.append(f"clustering: {e}")
+try:
+    from azure.messaging.webpubsubservice import WebPubSubServiceClient
+except Exception as e:
+    _import_errors.append(f"azure.messaging.webpubsubservice: {e}")
+import time
+import pick_list
+import pick_votes
 from uuid import uuid4
 
 @app.function_name(name="Diagnostics")
@@ -338,10 +351,336 @@ def post_scouting_results(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400
         )
     # Deterministic ID: one document per secret_key + event_key
-    payload['id'] = f'{secret_key}_{event_key}'
+    payload['id'] = pick_list.doc_id(secret_key, event_key)
     container = get_container('ScoutingResults')
+    # Legacy full-document write (Streamlit). Keep fields it doesn't know
+    # about so the Flutter pick list doesn't lose them.
+    existing = _read_pick_list(container, payload['id'])
+    pick_list.carry_picked(payload, existing)
+    payload['version'] = (existing or {}).get('version', 0)
+    pick_list.stamp(payload, payload.get('updated_by', 'Streamlit'))
     container.upsert_item(payload)
     return func.HttpResponse(json.dumps(payload), status_code=200)
+
+
+def _read_pick_list(container, doc_id):
+    items = list(container.query_items(
+        query="SELECT * FROM c WHERE c.id = @id",
+        parameters=[{'name': '@id', 'value': doc_id}],
+        enable_cross_partition_query=True,
+    ))
+    return items[0] if items else None
+
+
+@app.function_name(name="UpdatePickListTeam")
+@app.route(route="UpdatePickListTeam", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def update_pick_list_team(req: func.HttpRequest) -> func.HttpResponse:
+    """Apply one team's pick list change to the latest stored doc.
+
+    Body: {secret_key, event_key, team_number, updated_by,
+           and any of: position (int), status ('dnp'|'decline'|'unranked'),
+           notes (str), picked (bool)}
+    Returns the full updated doc.
+    """
+    try:
+        payload = req.get_json()
+        secret_key = payload['secret_key']
+        event_key = payload['event_key']
+        team_number = int(payload['team_number'])
+    except (ValueError, KeyError, TypeError):
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key, event_key and team_number '
+                                 'are required'}),
+            status_code=400
+        )
+    if not secret_key or not event_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key and event_key are required'}),
+            status_code=400
+        )
+    container = get_container('ScoutingResults')
+    doc_id = pick_list.doc_id(secret_key, event_key)
+    # Optimistic concurrency: re-read and re-apply if someone else wrote
+    # between our read and our write.
+    for _ in range(8):
+        existing = _read_pick_list(container, doc_id)
+        doc = existing or pick_list.new_doc(secret_key, event_key)
+        try:
+            pick_list.apply_update(
+                doc, team_number,
+                position=payload.get('position'),
+                status=payload.get('status'),
+                notes=payload.get('notes'),
+                picked=payload.get('picked'),
+            )
+        except ValueError as e:
+            return func.HttpResponse(json.dumps({'error': str(e)}),
+                                     status_code=400)
+        pick_list.stamp(doc, payload.get('updated_by', ''))
+        try:
+            if existing:
+                saved = container.replace_item(
+                    item=doc_id, body=doc, etag=existing['_etag'],
+                    match_condition=MatchConditions.IfNotModified)
+            else:
+                saved = container.create_item(body=doc)
+        except (cosmos_exceptions.CosmosAccessConditionFailedError,
+                cosmos_exceptions.CosmosResourceExistsError):
+            continue
+        return func.HttpResponse(json.dumps(pick_list.strip_system(saved)),
+                                 status_code=200,
+                                 mimetype='application/json')
+    return func.HttpResponse(
+        json.dumps({'error': 'pick list is busy, try again'}),
+        status_code=409
+    )
+
+
+def _update_with_retry(container, doc_id, partition_key, make_new, mutate,
+                       updated_by):
+    """Read-modify-write one doc, retrying if someone else wrote between our
+    read and our write. Returns the saved doc, or None if it stayed busy.
+    `mutate` may raise ValueError for bad input."""
+    for _ in range(8):
+        try:
+            existing = container.read_item(item=doc_id,
+                                           partition_key=partition_key)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            existing = None
+        doc = existing or make_new()
+        mutate(doc)
+        pick_list.stamp(doc, updated_by)
+        try:
+            if existing:
+                saved = container.replace_item(
+                    item=doc_id, body=doc, etag=existing['_etag'],
+                    match_condition=MatchConditions.IfNotModified)
+            else:
+                saved = container.create_item(body=doc)
+        except (cosmos_exceptions.CosmosAccessConditionFailedError,
+                cosmos_exceptions.CosmosResourceExistsError):
+            continue
+        return pick_list.strip_system(saved)
+    return None
+
+
+_PUBSUB_HUB = 'pickboard'
+_pubsub = None
+
+
+def _pubsub_client():
+    """Web PubSub client, or None when WEBPUBSUB_CONN isn't configured (live
+    updates are then off and apps fall back to polling)."""
+    global _pubsub
+    conn = os.environ.get('WEBPUBSUB_CONN')
+    if _pubsub is None and conn:
+        _pubsub = WebPubSubServiceClient.from_connection_string(
+            conn, hub=_PUBSUB_HUB)
+    return _pubsub
+
+
+def _publish_pick_board(secret_key, event_key, kind, doc):
+    """Push a saved pick board doc to everyone watching. The write already
+    succeeded, so a failed push is only logged; apps resync on reconnect."""
+    client = _pubsub_client()
+    if client is None:
+        return
+    try:
+        client.send_to_group(
+            pick_votes.group_name(secret_key, event_key),
+            {'type': kind, 'doc': doc},
+            content_type='application/json')
+    except Exception as e:
+        logging.warning(f'Pick board publish failed: {e}')
+
+
+def _json_response(body, status_code=200):
+    return func.HttpResponse(json.dumps(body), status_code=status_code,
+                             mimetype='application/json')
+
+
+def _pick_vote_payload(req, *required):
+    """Parse a PickVotes POST body; returns (payload, error_response)."""
+    try:
+        payload = req.get_json()
+        payload['team_number'] = int(payload['team_number'])
+        missing = [k for k in ('secret_key', 'event_key', *required)
+                   if not str(payload.get(k) or '').strip()]
+    except (ValueError, KeyError, TypeError, AttributeError):
+        missing = ['team_number']
+    if missing:
+        return None, _json_response(
+            {'error': f'missing or invalid: {", ".join(missing)}'}, 400)
+    return payload, None
+
+
+@app.function_name(name="GetPickVotes")
+@app.route(route="GetPickVotes", auth_level=func.AuthLevel.ANONYMOUS)
+def get_pick_votes(req: func.HttpRequest) -> func.HttpResponse:
+    """Everyone's personal pick lists plus the shared taken list.
+
+    Params: secret_key, event_key
+    Returns: {lists: [list doc, ...], taken: taken doc or null}
+    """
+    secret_key = req.params.get('secret_key')
+    event_key = req.params.get('event_key')
+    if not secret_key or not event_key:
+        return _json_response(
+            {'error': 'secret_key and event_key are required'}, 400)
+    container = get_container('PickVotes')
+    docs = container.query_items(
+        query="SELECT * FROM c WHERE c.secret_key = @sk",
+        parameters=[{'name': '@sk', 'value': secret_key}],
+        partition_key=event_key,
+    )
+    return _json_response(pick_votes.board(list(docs)))
+
+
+@app.function_name(name="UpdatePickVote")
+@app.route(route="UpdatePickVote", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def update_pick_vote(req: func.HttpRequest) -> func.HttpResponse:
+    """Apply one team's change to one person's pick list.
+
+    Body: {secret_key, event_key, voter, team_number,
+           and any of: position (int), status ('dnp'|'unranked'),
+           notes (str)}
+    Returns the voter's updated list doc.
+    """
+    payload, error = _pick_vote_payload(req, 'voter')
+    if error:
+        return error
+    sk, ek, voter = payload['secret_key'], payload['event_key'], payload['voter']
+    try:
+        saved = _update_with_retry(
+            get_container('PickVotes'), pick_votes.list_id(sk, ek, voter), ek,
+            make_new=lambda: pick_votes.new_list(sk, ek, voter),
+            mutate=lambda doc: pick_votes.apply_vote(
+                doc, voter, payload['team_number'],
+                position=payload.get('position'),
+                status=payload.get('status'),
+                notes=payload.get('notes')),
+            updated_by=voter)
+    except ValueError as e:
+        return _json_response({'error': str(e)}, 400)
+    if saved is None:
+        return _json_response({'error': 'pick list is busy, try again'}, 409)
+    _publish_pick_board(sk, ek, 'ballot', saved)
+    return _json_response(saved)
+
+
+@app.function_name(name="SetPickTaken")
+@app.route(route="SetPickTaken", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def set_pick_taken(req: func.HttpRequest) -> func.HttpResponse:
+    """Mark a team taken (or not) by another alliance; shared by everyone.
+
+    Body: {secret_key, event_key, team_number, taken (bool), updated_by}
+    Returns the updated taken doc.
+    """
+    payload, error = _pick_vote_payload(req)
+    if error:
+        return error
+    sk, ek = payload['secret_key'], payload['event_key']
+    saved = _update_with_retry(
+        get_container('PickVotes'), pick_votes.taken_id(sk, ek), ek,
+        make_new=lambda: pick_votes.new_taken(sk, ek),
+        mutate=lambda doc: pick_votes.set_taken(
+            doc, payload['team_number'], bool(payload.get('taken'))),
+        updated_by=payload.get('updated_by', ''))
+    if saved is None:
+        return _json_response({'error': 'taken list is busy, try again'}, 409)
+    _publish_pick_board(sk, ek, 'taken', saved)
+    return _json_response(saved)
+
+
+@app.function_name(name="NegotiatePickBoard")
+@app.route(route="NegotiatePickBoard", auth_level=func.AuthLevel.ANONYMOUS)
+def negotiate_pick_board(req: func.HttpRequest) -> func.HttpResponse:
+    """WebSocket URL for live pick board updates. The token auto-joins the
+    group for this secret key + event and grants no send rights, so clients
+    only receive what the API publishes.
+
+    Params: secret_key, event_key
+    Returns: {url} or 503 when live updates aren't configured.
+    """
+    secret_key = req.params.get('secret_key')
+    event_key = req.params.get('event_key')
+    if not secret_key or not event_key:
+        return _json_response(
+            {'error': 'secret_key and event_key are required'}, 400)
+    client = _pubsub_client()
+    if client is None:
+        return _json_response({'error': 'live updates not configured'}, 503)
+    token = client.get_client_access_token(
+        groups=[pick_votes.group_name(secret_key, event_key)],
+        minutes_to_expire=180)
+    return _json_response({'url': token['url']})
+
+
+# Short-lived per-instance cache so tweaking cluster settings doesn't refetch
+# scouting data and recompute OPR from TBA on every request.
+_CLUSTER_INPUT_TTL = 60
+_cluster_inputs = {}
+
+
+def _get_cluster_inputs(secret_team_key, event_key):
+    cache_key = (secret_team_key, event_key)
+    hit = _cluster_inputs.get(cache_key)
+    if hit and time.time() - hit[0] < _CLUSTER_INPUT_TTL:
+        return hit[1], hit[2]
+    raw = get_scouting_data(secret_team_key=secret_team_key,
+                            event_key=event_key)
+    scouted = clustering.team_averages(
+        clustering.prepare_scouted(raw, event_key))
+    try:
+        opr = clustering.opr_averages(http_get_opr_data(event_key),
+                                      scouted.columns)
+    except Exception as e:
+        logging.warning(f'OPR unavailable for {event_key}: {e}')
+        opr = pd.DataFrame()
+    _cluster_inputs[cache_key] = (time.time(), scouted, opr)
+    return scouted, opr
+
+
+def _int_list(value):
+    return [int(v) for v in (value or '').split(',') if v.strip()]
+
+
+@app.function_name(name="GetClusters")
+@app.route(route="GetClusters", auth_level=func.AuthLevel.ANONYMOUS)
+def get_clusters(req: func.HttpRequest) -> func.HttpResponse:
+    """KMeans clusters of teams at an event.
+
+    Params: event_key, secret_team_key, k (default 4),
+            features (comma list; default set if omitted),
+            exclude (comma list of team numbers), scale (1/0, default 1).
+    """
+    event_key = req.params.get('event_key')
+    secret_team_key = req.params.get('secret_team_key')
+    if not event_key or not secret_team_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'event_key and secret_team_key are '
+                                 'required'}),
+            status_code=400
+        )
+    try:
+        k = int(req.params.get('k', 4))
+        exclude = _int_list(req.params.get('exclude'))
+    except ValueError:
+        return func.HttpResponse(
+            json.dumps({'error': 'k and exclude must be integers'}),
+            status_code=400
+        )
+    features = [f for f in (req.params.get('features') or '').split(',')
+                if f.strip()]
+    scale = req.params.get('scale', '1') != '0'
+    scouted, opr = _get_cluster_inputs(secret_team_key, event_key)
+    result = clustering.cluster_teams(scouted, opr, features=features, k=k,
+                                      scale=scale, exclude=exclude)
+    return func.HttpResponse(json.dumps(result), status_code=200,
+                             mimetype='application/json')
 
 
 @app.function_name(name="GetScoutingResults")
@@ -562,16 +901,20 @@ def get_event_teams_df(event_key):
     return df
 
 
+_cosmos_db = None
+
+
 def get_container(container_name: str):
-    endpoint = os.environ.get('COSMOS_ENDPOINT')
-    key = os.environ.get('COSMOS_KEY')
-    # Some hard-coded values for our datbase name and container for match
-    # results
-    db_name = 'ScoutingData'
-    client = CosmosClient(endpoint, key, consistency_level='Session')
-    db = client.get_database_client(db_name)
-    container = db.get_container_client(container_name)
-    return container
+    # Reuse one client per worker: building one costs an extra account
+    # round trip, which adds up when pick lists poll every few seconds.
+    global _cosmos_db
+    if _cosmos_db is None:
+        endpoint = os.environ.get('COSMOS_ENDPOINT')
+        key = os.environ.get('COSMOS_KEY')
+        client = CosmosClient(endpoint, key, consistency_level='Session')
+        # Hard-coded database name for all of our containers
+        _cosmos_db = client.get_database_client('ScoutingData')
+    return _cosmos_db.get_container_client(container_name)
 
 
 def get_scouting_data(secret_team_key=None, event_key=None):

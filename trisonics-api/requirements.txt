@@ -4,3 +4,4 @@ azure-storage-blob
 requests
 numpy
 pandas
+azure-messaging-webpubsubservice
