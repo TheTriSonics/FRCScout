@@ -29,8 +29,16 @@ except Exception as e:
     _import_errors.append(f"azure.storage.blob: {e}")
 try:
     from azure.cosmos import CosmosClient
+    from azure.cosmos import exceptions as cosmos_exceptions
+    from azure.core import MatchConditions
 except Exception as e:
     _import_errors.append(f"azure.cosmos: {e}")
+try:
+    import clustering
+except Exception as e:
+    _import_errors.append(f"clustering: {e}")
+import time
+import pick_list
 from uuid import uuid4
 
 @app.function_name(name="Diagnostics")
@@ -338,10 +346,154 @@ def post_scouting_results(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400
         )
     # Deterministic ID: one document per secret_key + event_key
-    payload['id'] = f'{secret_key}_{event_key}'
+    payload['id'] = pick_list.doc_id(secret_key, event_key)
     container = get_container('ScoutingResults')
+    # Legacy full-document write (Streamlit). Keep fields it doesn't know
+    # about so the Flutter pick list doesn't lose them.
+    existing = _read_pick_list(container, payload['id'])
+    pick_list.carry_picked(payload, existing)
+    payload['version'] = (existing or {}).get('version', 0)
+    pick_list.stamp(payload, payload.get('updated_by', 'Streamlit'))
     container.upsert_item(payload)
     return func.HttpResponse(json.dumps(payload), status_code=200)
+
+
+def _read_pick_list(container, doc_id):
+    items = list(container.query_items(
+        query="SELECT * FROM c WHERE c.id = @id",
+        parameters=[{'name': '@id', 'value': doc_id}],
+        enable_cross_partition_query=True,
+    ))
+    return items[0] if items else None
+
+
+@app.function_name(name="UpdatePickListTeam")
+@app.route(route="UpdatePickListTeam", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def update_pick_list_team(req: func.HttpRequest) -> func.HttpResponse:
+    """Apply one team's pick list change to the latest stored doc.
+
+    Body: {secret_key, event_key, team_number, updated_by,
+           and any of: position (int), status ('dnp'|'decline'|'unranked'),
+           notes (str), picked (bool)}
+    Returns the full updated doc.
+    """
+    try:
+        payload = req.get_json()
+        secret_key = payload['secret_key']
+        event_key = payload['event_key']
+        team_number = int(payload['team_number'])
+    except (ValueError, KeyError, TypeError):
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key, event_key and team_number '
+                                 'are required'}),
+            status_code=400
+        )
+    if not secret_key or not event_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_key and event_key are required'}),
+            status_code=400
+        )
+    container = get_container('ScoutingResults')
+    doc_id = pick_list.doc_id(secret_key, event_key)
+    # Optimistic concurrency: re-read and re-apply if someone else wrote
+    # between our read and our write.
+    for _ in range(8):
+        existing = _read_pick_list(container, doc_id)
+        doc = existing or pick_list.new_doc(secret_key, event_key)
+        try:
+            pick_list.apply_update(
+                doc, team_number,
+                position=payload.get('position'),
+                status=payload.get('status'),
+                notes=payload.get('notes'),
+                picked=payload.get('picked'),
+            )
+        except ValueError as e:
+            return func.HttpResponse(json.dumps({'error': str(e)}),
+                                     status_code=400)
+        pick_list.stamp(doc, payload.get('updated_by', ''))
+        try:
+            if existing:
+                saved = container.replace_item(
+                    item=doc_id, body=doc, etag=existing['_etag'],
+                    match_condition=MatchConditions.IfNotModified)
+            else:
+                saved = container.create_item(body=doc)
+        except (cosmos_exceptions.CosmosAccessConditionFailedError,
+                cosmos_exceptions.CosmosResourceExistsError):
+            continue
+        return func.HttpResponse(json.dumps(pick_list.strip_system(saved)),
+                                 status_code=200,
+                                 mimetype='application/json')
+    return func.HttpResponse(
+        json.dumps({'error': 'pick list is busy, try again'}),
+        status_code=409
+    )
+
+
+# Short-lived per-instance cache so tweaking cluster settings doesn't refetch
+# scouting data and recompute OPR from TBA on every request.
+_CLUSTER_INPUT_TTL = 60
+_cluster_inputs = {}
+
+
+def _get_cluster_inputs(secret_team_key, event_key):
+    cache_key = (secret_team_key, event_key)
+    hit = _cluster_inputs.get(cache_key)
+    if hit and time.time() - hit[0] < _CLUSTER_INPUT_TTL:
+        return hit[1], hit[2]
+    raw = get_scouting_data(secret_team_key=secret_team_key,
+                            event_key=event_key)
+    scouted = clustering.team_averages(
+        clustering.prepare_scouted(raw, event_key))
+    try:
+        opr = clustering.opr_averages(http_get_opr_data(event_key),
+                                      scouted.columns)
+    except Exception as e:
+        logging.warning(f'OPR unavailable for {event_key}: {e}')
+        opr = pd.DataFrame()
+    _cluster_inputs[cache_key] = (time.time(), scouted, opr)
+    return scouted, opr
+
+
+def _int_list(value):
+    return [int(v) for v in (value or '').split(',') if v.strip()]
+
+
+@app.function_name(name="GetClusters")
+@app.route(route="GetClusters", auth_level=func.AuthLevel.ANONYMOUS)
+def get_clusters(req: func.HttpRequest) -> func.HttpResponse:
+    """KMeans clusters of teams at an event.
+
+    Params: event_key, secret_team_key, k (default 4),
+            features (comma list; default set if omitted),
+            exclude (comma list of team numbers), scale (1/0, default 1).
+    """
+    event_key = req.params.get('event_key')
+    secret_team_key = req.params.get('secret_team_key')
+    if not event_key or not secret_team_key:
+        return func.HttpResponse(
+            json.dumps({'error': 'event_key and secret_team_key are '
+                                 'required'}),
+            status_code=400
+        )
+    try:
+        k = int(req.params.get('k', 4))
+        exclude = _int_list(req.params.get('exclude'))
+    except ValueError:
+        return func.HttpResponse(
+            json.dumps({'error': 'k and exclude must be integers'}),
+            status_code=400
+        )
+    features = [f for f in (req.params.get('features') or '').split(',')
+                if f.strip()]
+    scale = req.params.get('scale', '1') != '0'
+    scouted, opr = _get_cluster_inputs(secret_team_key, event_key)
+    result = clustering.cluster_teams(scouted, opr, features=features, k=k,
+                                      scale=scale, exclude=exclude)
+    return func.HttpResponse(json.dumps(result), status_code=200,
+                             mimetype='application/json')
 
 
 @app.function_name(name="GetScoutingResults")

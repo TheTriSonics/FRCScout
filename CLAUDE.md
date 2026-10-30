@@ -19,7 +19,10 @@ Before every `git push`, verify:
 ### Azure Functions API (`trisonics-api/`)
 - `function_app.py` — all endpoints defined here with inline CosmosDB access via `get_container()`.
 - Database: CosmosDB `ScoutingData` database. Containers: `MatchResults{year}`, `PitResults{year}`, `ScoutingResults` (no year suffix — pick rankings), `TimeTracking`.
-- `ScoutingResults` container: one document per `{secret_key}_{event_key}`, holds full team pick list with rankings, decline/dnp flags, and notes.
+- `ScoutingResults` container: one document per `{secret_key}_{event_key}`, holds full team pick list: `teams: [{team_number, ranking, dnp, decline, notes, picked}]` plus `version`/`updated_by`/`updated_at`. `ranking` is a dense 1..n pick order; `picked` = taken by another alliance.
+  - `UpdatePickListTeam` (POST) applies a single-team change server-side with ETag retry, so concurrent editors (Flutter app) never clobber each other. Logic lives in `pick_list.py` and is mirrored by `PickList.apply` in the RebuiltScouting Flutter app — keep them in sync.
+  - `PostScoutingResults` is the legacy full-document write (Streamlit). It preserves `picked` and bumps `version`, but still overwrites rankings with the caller's (possibly stale) copy.
+- `GetClusters` — KMeans over per-team scouted averages + OPR components (`clustering.py`, ported from `views/clusters.py` minus PCA). Inputs cached per instance for 60s.
 
 ## Pit Scouting Data Versions
 - **Notes-only records**: `drive_train` is null. Only `scouter_name` and `notes` are meaningful. Show these as "Pit Notes" separate from full pit scouting.
