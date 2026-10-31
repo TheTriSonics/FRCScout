@@ -648,6 +648,16 @@ def _int_list(value):
     return [int(v) for v in (value or '').split(',') if v.strip()]
 
 
+def _weight_map(value):
+    """'feat_a:2,feat_b:0.5' -> {'feat_a': 2.0, 'feat_b': 0.5}"""
+    out = {}
+    for pair in (value or '').split(','):
+        if pair.strip():
+            name, _, w = pair.rpartition(':')
+            out[name.strip()] = float(w)
+    return out
+
+
 @app.function_name(name="GetClusters")
 @app.route(route="GetClusters", auth_level=func.AuthLevel.ANONYMOUS)
 def get_clusters(req: func.HttpRequest) -> func.HttpResponse:
@@ -655,7 +665,8 @@ def get_clusters(req: func.HttpRequest) -> func.HttpResponse:
 
     Params: event_key, secret_team_key, k (default 4),
             features (comma list; default set if omitted),
-            exclude (comma list of team numbers), scale (1/0, default 1).
+            exclude (comma list of team numbers),
+            weights (comma list of feature:multiplier; default 1 each).
     """
     event_key = req.params.get('event_key')
     secret_team_key = req.params.get('secret_team_key')
@@ -668,19 +679,91 @@ def get_clusters(req: func.HttpRequest) -> func.HttpResponse:
     try:
         k = int(req.params.get('k', 4))
         exclude = _int_list(req.params.get('exclude'))
+        weights = _weight_map(req.params.get('weights'))
     except ValueError:
         return func.HttpResponse(
-            json.dumps({'error': 'k and exclude must be integers'}),
+            json.dumps({'error': 'k and exclude must be integers, weights '
+                                 'feature:number pairs'}),
             status_code=400
         )
     features = [f for f in (req.params.get('features') or '').split(',')
                 if f.strip()]
-    scale = req.params.get('scale', '1') != '0'
     scouted, opr = _get_cluster_inputs(secret_team_key, event_key)
     result = clustering.cluster_teams(scouted, opr, features=features, k=k,
-                                      scale=scale, exclude=exclude)
+                                      exclude=exclude,
+                                      weights=weights)
     return func.HttpResponse(json.dumps(result), status_code=200,
                              mimetype='application/json')
+
+
+def _cluster_config_id(secret_key, year):
+    return f'{secret_key}_{year}_cluster_config'
+
+
+@app.function_name(name="GetClusterConfig")
+@app.route(route="GetClusterConfig", auth_level=func.AuthLevel.ANONYMOUS)
+def get_cluster_config(req: func.HttpRequest) -> func.HttpResponse:
+    """The team's default cluster settings for a season.
+
+    Params: secret_key, year
+    Returns the config doc, or null if nobody has published one.
+    """
+    secret_key = req.params.get('secret_key')
+    year = req.params.get('year')
+    if not secret_key or not year:
+        return _json_response({'error': 'secret_key and year are required'},
+                              400)
+    try:
+        doc = get_container('ScoutingResults').read_item(
+            item=_cluster_config_id(secret_key, year), partition_key=year)
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        doc = None
+    return _json_response(pick_list.strip_system(doc) if doc else None)
+
+
+@app.function_name(name="SetClusterConfig")
+@app.route(route="SetClusterConfig", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def set_cluster_config(req: func.HttpRequest) -> func.HttpResponse:
+    """Publish the team's default cluster settings for a season. Honor
+    system: anyone with the secret key can replace it.
+
+    Body: {secret_key, year, features: [str], weights: {feature: number},
+           k (int), updated_by}
+    Stored in ScoutingResults with event_key = year as the partition, so it
+    never matches a real event's pick list.
+    """
+    try:
+        payload = req.get_json()
+        secret_key = str(payload['secret_key']).strip()
+        year = str(payload['year']).strip()
+        features = [str(f) for f in payload['features'] if str(f).strip()]
+        weights = {str(f): float(w)
+                   for f, w in (payload.get('weights') or {}).items()}
+        k = int(payload.get('k', 4))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        secret_key = year = ''
+        features = []
+    if not secret_key or not year or not features:
+        return _json_response(
+            {'error': 'secret_key, year and features are required'}, 400)
+    doc = {
+        'id': _cluster_config_id(secret_key, year), 'kind': 'cluster_config',
+        'secret_key': secret_key, 'event_key': year, 'year': year,
+        'features': features,
+        'weights': {f: min(max(w, 0.0), clustering.MAX_WEIGHT)
+                    for f, w in weights.items() if f in features},
+        'k': min(max(k, 2), 8),
+    }
+    container = get_container('ScoutingResults')
+    try:
+        existing = container.read_item(item=doc['id'], partition_key=year)
+        doc['version'] = existing.get('version', 0)
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        pass
+    pick_list.stamp(doc, payload.get('updated_by', ''))
+    saved = container.upsert_item(doc)
+    return _json_response(pick_list.strip_system(saved))
 
 
 @app.function_name(name="GetScoutingResults")
