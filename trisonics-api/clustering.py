@@ -142,11 +142,19 @@ def kmeans(data, k, n_init=10, max_iter=100, seed=1):
     return best_labels, best_centers
 
 
-def cluster_teams(scouted, opr, features=None, k=4, scale=True, exclude=()):
+MAX_WEIGHT = 3.0
+
+
+def cluster_teams(scouted, opr, features=None, k=4, exclude=(), weights=None):
     """Cluster teams and describe each group.
 
     scouted/opr are per-team frames from team_averages/opr_averages.
     features defaults to the 'default' set from available_features.
+    Every dimension is normalized (z-scored) so units don't decide the
+    clustering; profiles and team values are reported in real units.
+    weights maps feature -> influence (0..MAX_WEIGHT, default 1). KMeans
+    works on squared distance, so normalized columns are multiplied by
+    sqrt(weight): a 2x dimension counts exactly twice as much.
     """
     available = available_features(scouted, opr)
     if not features:
@@ -168,8 +176,8 @@ def cluster_teams(scouted, opr, features=None, k=4, scale=True, exclude=()):
             table = table.join(opr, how='left')
 
     result = {
-        'k': 0, 'scaled': bool(scale), 'has_opr': not opr.empty,
-        'features': used, 'available_features': available,
+        'k': 0, 'has_opr': not opr.empty,
+        'features': used, 'weights': {}, 'available_features': available,
         'strength_metric': None, 'groups': [], 'teams': [],
         'excluded': excluded, 'dropped': dropped,
     }
@@ -181,7 +189,11 @@ def cluster_teams(scouted, opr, features=None, k=4, scale=True, exclude=()):
     mean = X.mean(axis=0)
     std = X.std(axis=0)
     safe_std = np.where(std > 0, std, 1.0)
-    data = (X - mean) / safe_std if scale else X
+    data = (X - mean) / safe_std
+    w = np.array([min(max(float((weights or {}).get(f, 1.0)), 0.0),
+                      MAX_WEIGHT) for f in used])
+    data = data * np.sqrt(w)
+    result['weights'] = {f: _num(wi) for f, wi in zip(used, w) if wi != 1.0}
 
     k = max(1, min(int(k), len(table)))
     labels, _ = kmeans(data, k)
