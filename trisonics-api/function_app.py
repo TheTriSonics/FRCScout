@@ -45,6 +45,8 @@ import re
 import time
 import pick_list
 import pick_votes
+import places
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 @app.function_name(name="Diagnostics")
@@ -844,6 +846,92 @@ def post_game_score(req: func.HttpRequest) -> func.HttpResponse:
             {'error': 'secret_key, game, player and score are required'}, 400)
     saved = _game_scores_container().upsert_item(doc)
     return _json_response(pick_list.strip_system(saved))
+
+
+_places_ready = False
+
+
+def _places_container():
+    """Places (geocoded team hometowns), created on first use."""
+    global _places_ready
+    if not _places_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='Places', partition_key=PartitionKey(path='/country'))
+        _places_ready = True
+    return get_container('Places')
+
+
+@app.function_name(name="GetTeamLocations")
+@app.route(route="GetTeamLocations", auth_level=func.AuthLevel.ANONYMOUS)
+def get_team_locations(req: func.HttpRequest) -> func.HttpResponse:
+    """Where the event is and where its teams are from (US and Canada).
+
+    Params: event_key
+    Returns: {event: {state, country},
+              teams: [{team_number, city, state, country, lat, lng}, ...]}
+      state/country are codes ('MI', 'US'); lat/lng are null when the
+      place couldn't be found; teams outside the US and Canada are left out.
+    """
+    event_key = (req.params.get('event_key') or '').strip()
+    if not event_key:
+        return _json_response({'error': 'event_key is required'}, 400)
+    tba = 'https://www.thebluealliance.com/api/v3'
+    headers = {'X-TBA-Auth-Key': os.environ.get('TBA_KEY')}
+    try:
+        event = requests.get(f'{tba}/event/{event_key}', headers=headers,
+                             timeout=15).json()
+        teams = requests.get(f'{tba}/event/{event_key}/teams/simple',
+                             headers=headers, timeout=15).json()
+    except (requests.RequestException, ValueError) as e:
+        return _json_response({'error': f'TBA request failed: {e}'}, 502)
+    if not isinstance(event, dict) or not isinstance(teams, list):
+        return _json_response({'error': 'event not found'}, 404)
+    event_country = places.country_code(event.get('country'))
+
+    rows = []
+    for t in teams:
+        country = places.country_code(t.get('country'))
+        state = places.state_code(country, t.get('state_prov'))
+        city = (t.get('city') or '').strip()
+        if not country or not state or not city:
+            continue
+        rows.append({'team_number': int(t['team_number']), 'city': city,
+                     'state': state, 'country': country,
+                     'id': places.place_id(country, state, city)})
+
+    container = _places_container()
+    known = {}
+    for country in {r['country'] for r in rows}:
+        ids = list({r['id'] for r in rows if r['country'] == country})
+        for doc in container.query_items(
+                query='SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)',
+                parameters=[{'name': '@ids', 'value': ids}],
+                partition_key=country):
+            known[doc['id']] = doc
+
+    missing = {r['id']: r for r in rows if r['id'] not in known}
+    if missing:
+        def look_up(r):
+            return r, places.geocode(r['country'], r['state'], r['city'])
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for r, found in pool.map(look_up, missing.values()):
+                doc = {'id': r['id'], 'country': r['country'],
+                       'state': r['state'], 'city': r['city'],
+                       'lat': found[0] if found else None,
+                       'lng': found[1] if found else None}
+                # Remember misses too; delete the doc to retry one.
+                container.upsert_item(doc)
+                known[r['id']] = doc
+
+    return _json_response({
+        'event': {'state': places.state_code(event_country,
+                                             event.get('state_prov')),
+                  'country': event_country},
+        'teams': [{k: v for k, v in r.items() if k != 'id'}
+                  | {'lat': known[r['id']].get('lat'),
+                     'lng': known[r['id']].get('lng')} for r in rows],
+    })
 
 
 @app.function_name(name="GetScoutingResults")
