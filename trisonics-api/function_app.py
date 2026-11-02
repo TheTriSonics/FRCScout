@@ -28,7 +28,7 @@ try:
 except Exception as e:
     _import_errors.append(f"azure.storage.blob: {e}")
 try:
-    from azure.cosmos import CosmosClient
+    from azure.cosmos import CosmosClient, PartitionKey
     from azure.cosmos import exceptions as cosmos_exceptions
     from azure.core import MatchConditions
 except Exception as e:
@@ -41,9 +41,12 @@ try:
     from azure.messaging.webpubsubservice import WebPubSubServiceClient
 except Exception as e:
     _import_errors.append(f"azure.messaging.webpubsubservice: {e}")
+import re
 import time
 import pick_list
 import pick_votes
+import places
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 @app.function_name(name="Diagnostics")
@@ -764,6 +767,171 @@ def set_cluster_config(req: func.HttpRequest) -> func.HttpResponse:
     pick_list.stamp(doc, payload.get('updated_by', ''))
     saved = container.upsert_item(doc)
     return _json_response(pick_list.strip_system(saved))
+
+
+# Leaderboards for the app's games: one doc per published score in the
+# GameScores container, partitioned by secret key, so each team has its own
+# boards across all events.
+_GAME_ID = re.compile(r'^[a-z0-9-]{1,40}$')
+_GAME_SCORES_LIMIT = 1000
+_game_scores_ready = False
+
+
+def _game_scores_container():
+    """GameScores, created on first use (serverless account, no RU/s)."""
+    global _game_scores_ready
+    if not _game_scores_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='GameScores', partition_key=PartitionKey(path='/secret_key'))
+        _game_scores_ready = True
+    return get_container('GameScores')
+
+
+def _game_scores(container, secret_key, game):
+    return [pick_list.strip_system(d) for d in container.query_items(
+        query=f"SELECT TOP {_GAME_SCORES_LIMIT} * FROM c WHERE c.game = @game "
+              "ORDER BY c.score DESC",
+        parameters=[{'name': '@game', 'value': game}],
+        partition_key=secret_key,
+    )]
+
+
+@app.function_name(name="GetGameScores")
+@app.route(route="GetGameScores", auth_level=func.AuthLevel.ANONYMOUS)
+def get_game_scores(req: func.HttpRequest) -> func.HttpResponse:
+    """A game's leaderboard for one secret key, across all events.
+
+    Params: secret_key, game (e.g. 'name-that-team')
+    Returns: [{id, game, player, score, event_key, created_at}, ...]
+             highest score first, at most 1000.
+    """
+    secret_key = (req.params.get('secret_key') or '').strip()
+    game = (req.params.get('game') or '').strip()
+    if not secret_key or not _GAME_ID.match(game):
+        return _json_response({'error': 'secret_key and game are required'},
+                              400)
+    return _json_response(
+        _game_scores(_game_scores_container(), secret_key, game))
+
+
+@app.function_name(name="PostGameScore")
+@app.route(route="PostGameScore", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def post_game_score(req: func.HttpRequest) -> func.HttpResponse:
+    """Publish one finished game's score. Honor system, like the rest.
+
+    Body: {id (client uuid, makes retries safe), secret_key, game, player,
+           score (int), event_key}
+    Returns the saved score doc.
+    """
+    try:
+        payload = req.get_json()
+        doc = {
+            'id': str(payload.get('id') or uuid4()).strip(),
+            'kind': 'game_score',
+            'secret_key': str(payload['secret_key']).strip(),
+            'game': str(payload['game']).strip(),
+            'player': str(payload['player']).strip()[:60],
+            'score': int(payload['score']),
+            'event_key': str(payload.get('event_key') or '').strip(),
+            'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+        }
+    except (ValueError, KeyError, TypeError, AttributeError):
+        doc = None
+    if (doc is None or not doc['secret_key'] or not doc['player']
+            or not _GAME_ID.match(doc['game'])
+            or not 0 <= doc['score'] <= 100000):
+        return _json_response(
+            {'error': 'secret_key, game, player and score are required'}, 400)
+    saved = _game_scores_container().upsert_item(doc)
+    return _json_response(pick_list.strip_system(saved))
+
+
+_places_ready = False
+
+
+def _places_container():
+    """Places (geocoded team hometowns), created on first use."""
+    global _places_ready
+    if not _places_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='Places', partition_key=PartitionKey(path='/country'))
+        _places_ready = True
+    return get_container('Places')
+
+
+@app.function_name(name="GetTeamLocations")
+@app.route(route="GetTeamLocations", auth_level=func.AuthLevel.ANONYMOUS)
+def get_team_locations(req: func.HttpRequest) -> func.HttpResponse:
+    """Where the event is and where its teams are from (US and Canada).
+
+    Params: event_key
+    Returns: {event: {state, country},
+              teams: [{team_number, city, state, country, lat, lng}, ...]}
+      state/country are codes ('MI', 'US'); lat/lng are null when the
+      place couldn't be found; teams outside the US and Canada are left out.
+    """
+    event_key = (req.params.get('event_key') or '').strip()
+    if not event_key:
+        return _json_response({'error': 'event_key is required'}, 400)
+    tba = 'https://www.thebluealliance.com/api/v3'
+    headers = {'X-TBA-Auth-Key': os.environ.get('TBA_KEY')}
+    try:
+        event = requests.get(f'{tba}/event/{event_key}', headers=headers,
+                             timeout=15).json()
+        teams = requests.get(f'{tba}/event/{event_key}/teams/simple',
+                             headers=headers, timeout=15).json()
+    except (requests.RequestException, ValueError) as e:
+        return _json_response({'error': f'TBA request failed: {e}'}, 502)
+    if not isinstance(event, dict) or not isinstance(teams, list):
+        return _json_response({'error': 'event not found'}, 404)
+    event_country = places.country_code(event.get('country'))
+
+    rows = []
+    for t in teams:
+        country = places.country_code(t.get('country'))
+        state = places.state_code(country, t.get('state_prov'))
+        city = (t.get('city') or '').strip()
+        if not country or not state or not city:
+            continue
+        rows.append({'team_number': int(t['team_number']), 'city': city,
+                     'state': state, 'country': country,
+                     'id': places.place_id(country, state, city)})
+
+    container = _places_container()
+    known = {}
+    for country in {r['country'] for r in rows}:
+        ids = list({r['id'] for r in rows if r['country'] == country})
+        for doc in container.query_items(
+                query='SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)',
+                parameters=[{'name': '@ids', 'value': ids}],
+                partition_key=country):
+            known[doc['id']] = doc
+
+    missing = {r['id']: r for r in rows if r['id'] not in known}
+    if missing:
+        def look_up(r):
+            return r, places.geocode(r['country'], r['state'], r['city'])
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for r, found in pool.map(look_up, missing.values()):
+                doc = {'id': r['id'], 'country': r['country'],
+                       'state': r['state'], 'city': r['city'],
+                       'lat': found[0] if found else None,
+                       'lng': found[1] if found else None}
+                # Remember misses too; delete the doc to retry one.
+                container.upsert_item(doc)
+                known[r['id']] = doc
+
+    return _json_response({
+        'event': {'state': places.state_code(event_country,
+                                             event.get('state_prov')),
+                  'country': event_country},
+        'teams': [{k: v for k, v in r.items() if k != 'id'}
+                  | {'lat': known[r['id']].get('lat'),
+                     'lng': known[r['id']].get('lng')} for r in rows],
+    })
 
 
 @app.function_name(name="GetScoutingResults")
