@@ -28,7 +28,7 @@ try:
 except Exception as e:
     _import_errors.append(f"azure.storage.blob: {e}")
 try:
-    from azure.cosmos import CosmosClient
+    from azure.cosmos import CosmosClient, PartitionKey
     from azure.cosmos import exceptions as cosmos_exceptions
     from azure.core import MatchConditions
 except Exception as e:
@@ -41,6 +41,7 @@ try:
     from azure.messaging.webpubsubservice import WebPubSubServiceClient
 except Exception as e:
     _import_errors.append(f"azure.messaging.webpubsubservice: {e}")
+import re
 import time
 import pick_list
 import pick_votes
@@ -763,6 +764,85 @@ def set_cluster_config(req: func.HttpRequest) -> func.HttpResponse:
         pass
     pick_list.stamp(doc, payload.get('updated_by', ''))
     saved = container.upsert_item(doc)
+    return _json_response(pick_list.strip_system(saved))
+
+
+# Leaderboards for the app's games: one doc per published score in the
+# GameScores container, partitioned by secret key, so each team has its own
+# boards across all events.
+_GAME_ID = re.compile(r'^[a-z0-9-]{1,40}$')
+_GAME_SCORES_LIMIT = 1000
+_game_scores_ready = False
+
+
+def _game_scores_container():
+    """GameScores, created on first use (serverless account, no RU/s)."""
+    global _game_scores_ready
+    if not _game_scores_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='GameScores', partition_key=PartitionKey(path='/secret_key'))
+        _game_scores_ready = True
+    return get_container('GameScores')
+
+
+def _game_scores(container, secret_key, game):
+    return [pick_list.strip_system(d) for d in container.query_items(
+        query=f"SELECT TOP {_GAME_SCORES_LIMIT} * FROM c WHERE c.game = @game "
+              "ORDER BY c.score DESC",
+        parameters=[{'name': '@game', 'value': game}],
+        partition_key=secret_key,
+    )]
+
+
+@app.function_name(name="GetGameScores")
+@app.route(route="GetGameScores", auth_level=func.AuthLevel.ANONYMOUS)
+def get_game_scores(req: func.HttpRequest) -> func.HttpResponse:
+    """A game's leaderboard for one secret key, across all events.
+
+    Params: secret_key, game (e.g. 'name-that-team')
+    Returns: [{id, game, player, score, event_key, created_at}, ...]
+             highest score first, at most 1000.
+    """
+    secret_key = (req.params.get('secret_key') or '').strip()
+    game = (req.params.get('game') or '').strip()
+    if not secret_key or not _GAME_ID.match(game):
+        return _json_response({'error': 'secret_key and game are required'},
+                              400)
+    return _json_response(
+        _game_scores(_game_scores_container(), secret_key, game))
+
+
+@app.function_name(name="PostGameScore")
+@app.route(route="PostGameScore", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def post_game_score(req: func.HttpRequest) -> func.HttpResponse:
+    """Publish one finished game's score. Honor system, like the rest.
+
+    Body: {id (client uuid, makes retries safe), secret_key, game, player,
+           score (int), event_key}
+    Returns the saved score doc.
+    """
+    try:
+        payload = req.get_json()
+        doc = {
+            'id': str(payload.get('id') or uuid4()).strip(),
+            'kind': 'game_score',
+            'secret_key': str(payload['secret_key']).strip(),
+            'game': str(payload['game']).strip(),
+            'player': str(payload['player']).strip()[:60],
+            'score': int(payload['score']),
+            'event_key': str(payload.get('event_key') or '').strip(),
+            'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+        }
+    except (ValueError, KeyError, TypeError, AttributeError):
+        doc = None
+    if (doc is None or not doc['secret_key'] or not doc['player']
+            or not _GAME_ID.match(doc['game'])
+            or not 0 <= doc['score'] <= 100000):
+        return _json_response(
+            {'error': 'secret_key, game, player and score are required'}, 400)
+    saved = _game_scores_container().upsert_item(doc)
     return _json_response(pick_list.strip_system(saved))
 
 
