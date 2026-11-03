@@ -862,6 +862,139 @@ def _places_container():
     return get_container('Places')
 
 
+def _team_rows(teams):
+    """US/Canadian TBA teams as rows with state/country codes and a place id
+    (teams without a usable city/state are left out)."""
+    rows = []
+    for t in teams:
+        country = places.country_code(t.get('country'))
+        state = places.state_code(country, t.get('state_prov'))
+        city = (t.get('city') or '').strip()
+        if not country or not state or not city:
+            continue
+        rows.append({'team_number': int(t['team_number']),
+                     'nickname': (t.get('nickname') or '').strip(),
+                     'city': city, 'state': state, 'country': country,
+                     'id': places.place_id(country, state, city)})
+    return rows
+
+
+def _attach_locations(rows):
+    """Adds lat/lng to each row from the Places cache, geocoding (and
+    caching) places not seen before."""
+    container = _places_container()
+    known = {}
+    for country in {r['country'] for r in rows}:
+        ids = list({r['id'] for r in rows if r['country'] == country})
+        for doc in container.query_items(
+                query='SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)',
+                parameters=[{'name': '@ids', 'value': ids}],
+                partition_key=country):
+            known[doc['id']] = doc
+
+    missing = {r['id']: r for r in rows if r['id'] not in known}
+    if missing:
+        def look_up(r):
+            return r, places.geocode(r['country'], r['state'], r['city'])
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for r, found in pool.map(look_up, missing.values()):
+                doc = {'id': r['id'], 'country': r['country'],
+                       'state': r['state'], 'city': r['city'],
+                       'lat': found[0] if found else None,
+                       'lng': found[1] if found else None}
+                # Remember misses too; delete the doc to retry one.
+                container.upsert_item(doc)
+                known[r['id']] = doc
+    for r in rows:
+        r['lat'] = known[r['id']].get('lat')
+        r['lng'] = known[r['id']].get('lng')
+    return rows
+
+
+# Every team active in a season, from TBA, kept per worker for a few hours.
+_season_teams = {}
+_SEASON_TEAMS_TTL = 6 * 3600
+
+
+def _tba_json(path):
+    r = requests.get(f'https://www.thebluealliance.com/api/v3{path}',
+                     headers={'X-TBA-Auth-Key': os.environ.get('TBA_KEY')},
+                     timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+
+def _teams_for_season(year):
+    cached = _season_teams.get(year)
+    if cached and time.time() - cached[0] < _SEASON_TEAMS_TTL:
+        return cached[1]
+    teams = []
+    # Pages of 500; fetch a batch at a time until one comes back empty.
+    page = 0
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        while True:
+            batch = list(pool.map(
+                lambda i: _tba_json(f'/teams/{year}/{i}/simple'),
+                range(page, page + 6)))
+            for chunk in batch:
+                teams.extend(chunk or [])
+            if any(not chunk for chunk in batch) or page > 40:
+                break
+            page += 6
+    _season_teams[year] = (time.time(), teams)
+    return teams
+
+
+@app.function_name(name="GetStateTeams")
+@app.route(route="GetStateTeams", auth_level=func.AuthLevel.ANONYMOUS)
+def get_state_teams(req: func.HttpRequest) -> func.HttpResponse:
+    """Every team active in a season in the same state/province as a team,
+    for the app's statewide games.
+
+    Params: team_number, year, locations (1 to include lat/lng; slower the
+            first time a state's towns are looked up)
+    Returns: {state, country, year, teams: [{team_number, nickname, city,
+              state, country[, lat, lng]}, ...]}
+      year is the season actually used: the previous one if TBA has no
+      teams for the requested year yet. US and Canada only.
+    """
+    try:
+        team_number = int(req.params.get('team_number'))
+        year = int(req.params.get('year'))
+    except (TypeError, ValueError):
+        return _json_response({'error': 'team_number and year are required'},
+                              400)
+    with_locations = req.params.get('locations') in ('1', 'true')
+    try:
+        home = _tba_json(f'/team/frc{team_number}/simple')
+    except requests.HTTPError:
+        return _json_response({'error': f'team {team_number} not found'}, 404)
+    except requests.RequestException as e:
+        return _json_response({'error': f'TBA request failed: {e}'}, 502)
+    country = places.country_code(home.get('country'))
+    state = places.state_code(country, home.get('state_prov'))
+    if not state:
+        return _json_response(
+            {'error': 'statewide games need a US or Canadian team'}, 404)
+
+    try:
+        teams = _teams_for_season(year)
+        if not teams:
+            year -= 1
+            teams = _teams_for_season(year)
+    except requests.RequestException as e:
+        return _json_response({'error': f'TBA request failed: {e}'}, 502)
+    rows = [r for r in _team_rows(teams)
+            if r['country'] == country and r['state'] == state]
+    if with_locations:
+        _attach_locations(rows)
+    rows.sort(key=lambda r: r['team_number'])
+    return _json_response({
+        'state': state, 'country': country, 'year': year,
+        'teams': [{k: v for k, v in r.items() if k != 'id'} for r in rows],
+    })
+
+
 @app.function_name(name="GetTeamLocations")
 @app.route(route="GetTeamLocations", auth_level=func.AuthLevel.ANONYMOUS)
 def get_team_locations(req: func.HttpRequest) -> func.HttpResponse:
@@ -889,48 +1022,14 @@ def get_team_locations(req: func.HttpRequest) -> func.HttpResponse:
         return _json_response({'error': 'event not found'}, 404)
     event_country = places.country_code(event.get('country'))
 
-    rows = []
-    for t in teams:
-        country = places.country_code(t.get('country'))
-        state = places.state_code(country, t.get('state_prov'))
-        city = (t.get('city') or '').strip()
-        if not country or not state or not city:
-            continue
-        rows.append({'team_number': int(t['team_number']), 'city': city,
-                     'state': state, 'country': country,
-                     'id': places.place_id(country, state, city)})
-
-    container = _places_container()
-    known = {}
-    for country in {r['country'] for r in rows}:
-        ids = list({r['id'] for r in rows if r['country'] == country})
-        for doc in container.query_items(
-                query='SELECT * FROM c WHERE ARRAY_CONTAINS(@ids, c.id)',
-                parameters=[{'name': '@ids', 'value': ids}],
-                partition_key=country):
-            known[doc['id']] = doc
-
-    missing = {r['id']: r for r in rows if r['id'] not in known}
-    if missing:
-        def look_up(r):
-            return r, places.geocode(r['country'], r['state'], r['city'])
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            for r, found in pool.map(look_up, missing.values()):
-                doc = {'id': r['id'], 'country': r['country'],
-                       'state': r['state'], 'city': r['city'],
-                       'lat': found[0] if found else None,
-                       'lng': found[1] if found else None}
-                # Remember misses too; delete the doc to retry one.
-                container.upsert_item(doc)
-                known[r['id']] = doc
-
+    rows = _team_rows(teams)
+    _attach_locations(rows)
     return _json_response({
         'event': {'state': places.state_code(event_country,
                                              event.get('state_prov')),
                   'country': event_country},
-        'teams': [{k: v for k, v in r.items() if k != 'id'}
-                  | {'lat': known[r['id']].get('lat'),
-                     'lng': known[r['id']].get('lng')} for r in rows],
+        'teams': [{k: v for k, v in r.items() if k not in ('id', 'nickname')}
+                  for r in rows],
     })
 
 
