@@ -46,6 +46,8 @@ import time
 import pick_list
 import pick_votes
 import places
+import scout_schedule
+import secrets
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
@@ -846,6 +848,202 @@ def post_game_score(req: func.HttpRequest) -> func.HttpResponse:
             {'error': 'secret_key, game, player and score are required'}, 400)
     saved = _game_scores_container().upsert_item(doc)
     return _json_response(pick_list.strip_system(saved))
+
+
+# Match-scouting schedules: who scouts which station when (see
+# scout_schedule.py). Honor system, like the rest: anyone with the secret key
+# can register a name or publish a schedule.
+_schedule_containers_ready = False
+
+
+def _schedule_container(name):
+    """Scouters / ScoutSchedules, created on first use."""
+    global _schedule_containers_ready
+    if not _schedule_containers_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        for cid in ('Scouters', 'ScoutSchedules'):
+            _cosmos_db.create_container_if_not_exists(
+                id=cid, partition_key=PartitionKey(path='/event_key'))
+        _schedule_containers_ready = True
+    return get_container(name)
+
+
+def _key_params(req):
+    sk = (req.params.get('secret_key') or '').strip()
+    ek = (req.params.get('event_key') or '').strip()
+    return sk, ek
+
+
+@app.function_name(name="RegisterScouter")
+@app.route(route="RegisterScouter", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def register_scouter(req: func.HttpRequest) -> func.HttpResponse:
+    """Record that a scouter name is in use for a secret key + event.
+
+    Body: {secret_key, event_key, scouter_name, first_seen (optional, for
+           seeding)}
+    Keeps first_seen and calendar_token from the first registration.
+    Returns the scouter doc (including calendar_token).
+    """
+    try:
+        payload = req.get_json()
+        sk = str(payload['secret_key']).strip()
+        ek = str(payload['event_key']).strip()
+        name = str(payload['scouter_name']).strip()[:60]
+        key = pick_votes.voter_key(name)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        sk = ek = name = ''
+    if not sk or not ek or not name:
+        return _json_response(
+            {'error': 'secret_key, event_key and scouter_name are required'},
+            400)
+    saved = _register_scouter(sk, ek, name, payload.get('first_seen'))
+    return _json_response(pick_list.strip_system(saved))
+
+
+def _register_scouter(sk, ek, name, first_seen=None):
+    """Upsert a scouter doc, keeping first_seen and calendar_token."""
+    container = _schedule_container('Scouters')
+    doc_id = scout_schedule.scouter_id(sk, ek, name)
+    now = scout_schedule.now_iso()
+    seeded = str(first_seen or '').strip()
+    try:
+        doc = container.read_item(doc_id, partition_key=ek)
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        doc = {'id': doc_id, 'kind': 'scouter', 'secret_key': sk,
+               'event_key': ek, 'scouter_name': name,
+               'name_key': pick_votes.voter_key(name),
+               'first_seen': seeded or now,
+               'calendar_token': secrets.token_urlsafe(16)}
+    if seeded and seeded < doc['first_seen']:
+        doc['first_seen'] = seeded
+    doc['last_seen'] = max(now, doc.get('last_seen', ''))
+    return container.upsert_item(doc)
+
+
+@app.function_name(name="GetScouters")
+@app.route(route="GetScouters", auth_level=func.AuthLevel.ANONYMOUS)
+def get_scouters(req: func.HttpRequest) -> func.HttpResponse:
+    """Registered scouter names for a secret key + event, by name.
+
+    Params: secret_key, event_key
+    Returns: [{scouter_name, first_seen, last_seen}, ...]
+    """
+    sk, ek = _key_params(req)
+    if not sk or not ek:
+        return _json_response(
+            {'error': 'secret_key and event_key are required'}, 400)
+    docs = _schedule_container('Scouters').query_items(
+        query="SELECT c.scouter_name, c.first_seen, c.last_seen FROM c "
+              "WHERE c.secret_key = @sk",
+        parameters=[{'name': '@sk', 'value': sk}], partition_key=ek)
+    rows = sorted(docs, key=lambda r: r['scouter_name'].lower())
+    return _json_response(rows)
+
+
+def _schedules(sk, ek):
+    docs = _schedule_container('ScoutSchedules').query_items(
+        query="SELECT * FROM c WHERE c.secret_key = @sk",
+        parameters=[{'name': '@sk', 'value': sk}], partition_key=ek)
+    rows = [pick_list.strip_system(d) for d in docs]
+    rows.sort(key=lambda d: d.get('published_at', ''), reverse=True)
+    return rows
+
+
+@app.function_name(name="PublishSchedule")
+@app.route(route="PublishSchedule", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def publish_schedule(req: func.HttpRequest) -> func.HttpResponse:
+    """Publish (replace) one person's scouting schedule for an event.
+
+    Body: {secret_key, event_key, published_by,
+           shifts: [{scouter_name, station, first_match, last_match}]}
+    Returns the saved schedule doc.
+    """
+    try:
+        payload = req.get_json()
+        sk = str(payload['secret_key']).strip()
+        ek = str(payload['event_key']).strip()
+        by = str(payload['published_by']).strip()[:60]
+        doc_id = scout_schedule.schedule_id(sk, ek, by)
+        shifts = scout_schedule.clean_shifts(payload.get('shifts'))
+    except (KeyError, TypeError, AttributeError):
+        return _json_response(
+            {'error': 'secret_key, event_key, published_by and shifts '
+                      'are required'}, 400)
+    except ValueError as e:
+        return _json_response({'error': str(e)}, 400)
+    if not sk or not ek or not by:
+        return _json_response(
+            {'error': 'secret_key, event_key and published_by are required'},
+            400)
+    doc = {'id': doc_id, 'kind': 'schedule', 'secret_key': sk,
+           'event_key': ek, 'published_by': by,
+           'published_at': scout_schedule.now_iso(), 'shifts': shifts}
+    saved = _schedule_container('ScoutSchedules').upsert_item(doc)
+    return _json_response(pick_list.strip_system(saved))
+
+
+@app.function_name(name="GetSchedules")
+@app.route(route="GetSchedules", auth_level=func.AuthLevel.ANONYMOUS)
+def get_schedules(req: func.HttpRequest) -> func.HttpResponse:
+    """Every published schedule for a secret key + event, newest first.
+
+    Params: secret_key, event_key
+    """
+    sk, ek = _key_params(req)
+    if not sk or not ek:
+        return _json_response(
+            {'error': 'secret_key and event_key are required'}, 400)
+    return _json_response(_schedules(sk, ek))
+
+
+_qual_times_cache = {}
+_QUAL_TIMES_TTL = 300
+
+
+def _event_qual_times(event_key):
+    cached = _qual_times_cache.get(event_key)
+    if cached and time.time() - cached[0] < _QUAL_TIMES_TTL:
+        return cached[1]
+    times = scout_schedule.qual_times(
+        _tba_json(f'/event/{event_key}/matches/simple'))
+    _qual_times_cache[event_key] = (time.time(), times)
+    return times
+
+
+@app.function_name(name="ScheduleCalendar")
+@app.route(route="ScheduleCalendar", auth_level=func.AuthLevel.ANONYMOUS)
+def schedule_calendar(req: func.HttpRequest) -> func.HttpResponse:
+    """A scouter's shifts as an iCalendar feed (subscribe by URL).
+
+    Params: token (the scouter's calendar_token)
+    Uses the newest schedule for the token's secret key + event.
+    """
+    token = (req.params.get('token') or '').strip()
+    scouter = None
+    if token:
+        found = list(_schedule_container('Scouters').query_items(
+            query="SELECT * FROM c WHERE c.calendar_token = @t",
+            parameters=[{'name': '@t', 'value': token}],
+            enable_cross_partition_query=True))
+        scouter = found[0] if found else None
+    if scouter is None:
+        return func.HttpResponse('Unknown calendar token', status_code=404,
+                                 mimetype='text/plain')
+    sk, ek = scouter['secret_key'], scouter['event_key']
+    schedules = _schedules(sk, ek)
+    try:
+        times = _event_qual_times(ek) if schedules else {}
+    except Exception as e:
+        logging.warning(f'Calendar: TBA match times failed for {ek}: {e}')
+        times = {}
+    body = scout_schedule.build_calendar(
+        secret_key=sk, event_key=ek, scouter_name=scouter['scouter_name'],
+        schedule=schedules[0] if schedules else None, times=times)
+    return func.HttpResponse(
+        body, status_code=200, mimetype='text/calendar', charset='utf-8',
+        headers={'Cache-Control': 'max-age=300'})
 
 
 _places_ready = False
