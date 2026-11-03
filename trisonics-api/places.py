@@ -74,6 +74,10 @@ def _city_names(city):
     """The city as TBA has it, then without 'Township' and the like."""
     city = (city or '').strip()
     names = [city]
+    # 'Ann Arbor, City of' -> 'Ann Arbor'
+    m = re.match(r'^(.*?),\s*(city|town|village|township) of$', city, flags=re.I)
+    if m:
+        names.append(m.group(1).strip())
     short = re.sub(r'\s+(charter\s+)?(township|twp\.?)$', '', city,
                    flags=re.I).strip()
     if short and short != city:
