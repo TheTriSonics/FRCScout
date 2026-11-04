@@ -99,3 +99,9 @@ other). Needs the Slack app's bot events `message.channels`, `message.groups`
 and `message.mpim` (scopes `channels:history`, `groups:history`,
 `mpim:history`). Each message is answered once across instances: the worker
 claims it with an empty blob in container `slack-claims`.
+
+## Vernacular
+
+`vernacular.md` holds team slang and nicknames ("worlds", "GVSU", "states"),
+one `term: meaning` line each, sent in the system prompt. Add a line and
+redeploy (`func azure functionapp publish trisonics-chat --python`).

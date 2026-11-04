@@ -18,6 +18,11 @@ import season_2026 as season
 CODE_OF_CONDUCT = (Path(__file__).with_name('first_code_of_conduct.txt')).read_text().strip()
 from tools import TOOL_DEFS, Session, run_tool
 
+# Team slang and nicknames ("worlds", "GVSU"): vernacular.md, minus # comments.
+VERNACULAR = '\n'.join(
+    line for line in (Path(__file__).with_name('vernacular.md')).read_text().splitlines()
+    if line.strip() and not line.lstrip().startswith('#'))
+
 FOUNDRY_RESOURCE = os.environ.get('FOUNDRY_RESOURCE', 'trisonics-foundry')
 DEPLOYMENT = os.environ.get('FOUNDRY_DEPLOYMENT', 'scout-chat')
 EFFORT = os.environ.get('SCOUT_CHAT_EFFORT', 'medium')
@@ -113,6 +118,12 @@ try to handle it yourself: briefly and kindly tell them to talk to a team
 mentor or event leadership now.
 
 {CODE_OF_CONDUCT}
+
+## How people here talk
+Nicknames and slang the askers use, with what they mean in the data. Use them
+to understand questions (e.g. look up the event they name with find_event);
+answer in the same words.
+{VERNACULAR}
 
 Game context:
 {season.GAME_NOTES}
