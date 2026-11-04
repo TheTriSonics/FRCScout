@@ -492,6 +492,55 @@ def similar_teams(s: Session, team: int, count: int = 5):
     }
 
 
+import ast
+import math
+import operator
+
+_OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+        ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
+        ast.Pow: operator.pow, ast.USub: operator.neg, ast.UAdd: operator.pos}
+_FUNCS_MATH = {name: getattr(math, name) for name in (
+    'sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'radians', 'degrees',
+    'log', 'log10', 'exp', 'floor', 'ceil', 'hypot', 'comb', 'factorial')}
+_FUNCS_MATH.update(abs=abs, round=round, min=min, max=max, sum=sum,
+                   mean=statistics.fmean, median=statistics.median, stdev=statistics.stdev)
+_CONSTS = {'pi': math.pi, 'e': math.e}
+
+
+def _eval(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return node.value
+    if isinstance(node, ast.Name) and node.id in _CONSTS:
+        return _CONSTS[node.id]
+    if isinstance(node, (ast.List, ast.Tuple)):
+        return [_eval(e) for e in node.elts]
+    if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
+        left, right = _eval(node.left), _eval(node.right)
+        if isinstance(node.op, ast.Pow) and abs(right) > 100:
+            raise ValueError('exponent too large')
+        return _OPS[type(node.op)](left, right)
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _OPS:
+        return _OPS[type(node.op)](_eval(node.operand))
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in _FUNCS_MATH \
+            and not node.keywords:
+        return _FUNCS_MATH[node.func.id](*[_eval(a) for a in node.args])
+    raise ValueError(f'not allowed: {ast.dump(node)[:60]}')
+
+
+def calculate(s: Session, expressions: list):
+    """Evaluate arithmetic safely (numbers, + - * / // % **, math functions)."""
+    out = []
+    for expr in expressions[:20]:
+        try:
+            if len(expr) > 300:
+                raise ValueError('expression too long')
+            val = _eval(ast.parse(expr, mode='eval').body)
+            out.append({'expression': expr, 'result': round(val, 6) if isinstance(val, float) else val})
+        except Exception as e:
+            out.append({'expression': expr, 'error': str(e)})
+    return {'results': out}
+
+
 def scouters(s: Session):
     return {'scouters': [{'name': x.get('scouter_name'), 'last_seen': x.get('last_seen'),
                           'slack_linked': x.get('slack_linked')}
@@ -634,6 +683,14 @@ TOOLS = [
      'Use for "who is like X", alternatives to a pick, or what makes a team distinctive.',
      _schema({'team': TEAM, 'count': {'type': 'integer', 'description': 'How many (default 5, max 10)'}},
              ['team'])),
+    (calculate, 'calculate',
+     'Exact arithmetic. Use it for every calculation you report (robot speeds, gear ratios, '
+     'sums, averages, percentages, probabilities) instead of doing math in your head. Python '
+     'syntax: + - * / // % **, pi, e, sqrt, sin/cos/tan, log, exp, hypot, comb, round, min, max, '
+     'sum, mean, median, stdev (lists like [1,2,3]).',
+     _schema({'expressions': {'type': 'array', 'items': {'type': 'string'},
+                              'description': 'One or more expressions, e.g. ["6000/6.12*pi*4/720"]'}},
+             ['expressions'])),
     (find_event, 'find_event',
      'Look up event keys by name, nickname, place or acronym (e.g. "GVSU", "Ferris State", '
      '"state championship", "Traverse City"). year defaults to this season.',
