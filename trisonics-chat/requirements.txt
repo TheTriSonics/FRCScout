@@ -1,3 +1,5 @@
 azure-functions
 anthropic>=2.4
 azure-cosmos
+duckdb>=2.0,<3
+azure-storage-blob

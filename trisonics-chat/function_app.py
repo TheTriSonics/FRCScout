@@ -132,3 +132,28 @@ def _answer(job):
         'seconds': round(time.time() - t0, 1),
         'usage': chat.usage if chat else None,
         'cost': round(chat.cost(), 4) if chat else None}))
+
+
+# --- History lake refresh (off by default) ---
+# The timer is disabled by the app setting AzureWebJobs.HistoryRefresh.Disabled
+# (infra param historyRefreshEnabled); HISTORY_REFRESH_SCHEDULE sets how often.
+# Only events running now are re-pulled; see history/refresh.py.
+
+@app.function_name(name='HistoryRefresh')
+@app.timer_trigger(arg_name='timer', schedule='%HISTORY_REFRESH_SCHEDULE%', run_on_startup=False)
+def history_refresh(timer: func.TimerRequest) -> None:
+    from history import refresh
+    refresh.refresh()
+
+
+@app.function_name(name='HistoryRefreshNow')
+@app.route(route='HistoryRefreshNow', methods=['POST'], auth_level=func.AuthLevel.FUNCTION)
+def history_refresh_now(req: func.HttpRequest) -> func.HttpResponse:
+    """Run a refresh by hand (needs the function key). Optional ?date=YYYY-MM-DD
+    pretends it's that day, ?days_after=N keeps events N days past their end."""
+    import datetime as dt
+    from history import refresh
+    day = req.params.get('date')
+    out = refresh.refresh(today=dt.date.fromisoformat(day) if day else None,
+                          days_after=int(req.params.get('days_after', 1)))
+    return _json(out)
