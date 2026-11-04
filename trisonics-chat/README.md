@@ -12,6 +12,7 @@ python3 -m venv .venv && source .venv/bin/activate && pip install -r requirement
 python cli.py                         # interactive (2026miwmi, key 4003data, as "Justin B")
 python cli.py -q "Who climbs best?"   # one question
 python cli.py --batch questions.txt   # regression set, each line a fresh chat
+python cli.py --batch data_questions.txt  # questions that need query_data
 python cli.py --batch guardrails.txt  # scope and safety checks: the first block should be declined
 source ../trisonics-api/setenv && python injection_test.py  # plants instructions in test-key notes, checks the bot ignores them, deletes them
 ```
@@ -25,7 +26,9 @@ Other settings: `FOUNDRY_RESOURCE`, `FOUNDRY_DEPLOYMENT`,
 | `scout_data.py` | Cached GET calls to the API, plus time helpers |
 | `season_2026.py` | What the season's fields mean. Copy it each year. |
 | `tools.py` | The tools and their schemas. Averages match the app's `TeamStats`, and `pick_board` ports `PickBoard.rows`. |
+| `query_data.py` | The `query_data` tool: a structured spec (tables, filters, group-by, aggregates, correlation) run in plain Python. Every call is logged as `query_data {...}`; common queries are candidates for real API endpoints. |
 | `cluster_similarity.py` | Nearest teams in clustering space. A port of the app's `cluster_similarity.dart`, so `similar_teams` matches Team Details. |
+| `test_query_data.py`, `data_questions.txt` | Offline asserts for `query_data` (`python test_query_data.py`), and ad-hoc data questions for `--batch` |
 | `agent.py` | System prompt and the tool loop, with prompt caching and usage/cost tracking |
 | `cli.py` | Terminal front end |
 | `first_code_of_conduct.txt` | The FIRST Code of Conduct, verbatim from firstinspires.org/about/code-of-conduct. The system prompt includes it as rules to follow. Replace this file if FIRST updates it. |

@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass, replace
 
 import season_2026 as season
+from query_data import query_data
 from scout_data import (Event, match_label, match_sort_key, match_start,
                         team_num, voter_key)
 
@@ -622,6 +623,50 @@ def _schema(props=None, required=()):
 
 TEAM = {'type': 'integer', 'description': 'FRC team number, e.g. 4003'}
 
+QUERY_DESC = (
+    'Ad-hoc cut of the data when no other tool fits: filters, group-by, aggregates, sorting and '
+    'correlations. Use the other tools first for common questions (team_info, leaderboard, matches, '
+    'rankings, pit_data, clusters). Good for: before/after a match number, comparing alliances or '
+    'comp levels, correlating two measures, filtering scouted stats by pit answers, and calibrating '
+    'scout ratings against each other for the same robots. It is a structured spec, not code; '
+    'scouting data only. Tables: scouted (one row per scouting record: match_number, team_number, '
+    'scouter_name, every scouted stat such as ' + ', '.join(season.STAT_KEYS[:12]) + ', ..., the '
+    'defense-quality text fields, and <rating>_vs_other_scouts = this record minus the mean of other '
+    "scouts' records of the same team, for calibration); team_matches (one row per team per played "
+    'match, quals and playoffs: comp_level, match_number, team_number, alliance, partners, '
+    'alliance_score, opponent_score, won 1/0 (ties 0.5), margin, rp, alliance_hub_fuel, '
+    'opponent_hub_fuel, hub_fuel_margin, alliance_tower_points, alliance_foul_points, ...); '
+    'opr (one row per team, all OPR columns such as totalPoints, hubScore_totalCount); pit (one row '
+    'per pit record: drive_train, fuel_capacity, hanging_level, ...); rankings (rank, wins, losses, '
+    'ties, matches_played, ranking sort fields). join adds columns by team_number: opr_*, rank_*, '
+    'pit_* (for example scouted joined with opr and pit). To correlate per-team averages use '
+    'correlate with per: "team_number"; it also lists the teams furthest above and below the fitted '
+    'line. An unknown column returns the valid column list. Floats are rounded to 3 decimals; max '
+    '100 rows.')
+
+_VALUE = {'anyOf': [{'type': 'number'}, {'type': 'string'}, {'type': 'boolean'},
+                    {'type': 'array', 'items': {'anyOf': [{'type': 'number'}, {'type': 'string'}]}}]}
+QUERY_SCHEMA = _schema({
+    'table': {'type': 'string', 'enum': ['scouted', 'team_matches', 'opr', 'pit', 'rankings']},
+    'join': {'type': 'array', 'items': {'type': 'string', 'enum': ['opr', 'rankings', 'pit']},
+             'description': 'Add that table\'s columns by team_number, prefixed opr_, rank_ or pit_'},
+    'filters': {'type': 'array', 'description': 'All must hold',
+                'items': _schema({'column': {'type': 'string'},
+                                  'op': {'type': 'string', 'enum': ['=', '!=', '<', '<=', '>', '>=', 'in', 'not_in', 'contains']},
+                                  'value': _VALUE}, ['column', 'op', 'value'])},
+    'group_by': {'type': 'array', 'items': {'type': 'string'}},
+    'aggregates': {'type': 'array', 'items': _schema({
+        'column': {'type': 'string'},
+        'fn': {'type': 'string', 'enum': ['mean', 'median', 'sum', 'count', 'min', 'max', 'stdev', 'count_rows']},
+        'as': {'type': 'string', 'description': 'Name of the result column'}}, ['fn'])},
+    'columns': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Columns to show when not grouping'},
+    'sort': {'type': 'array', 'items': _schema({'column': {'type': 'string'}, 'desc': {'type': 'boolean'}}, ['column'])},
+    'limit': {'type': 'integer', 'description': 'Rows to return (default 25, max 100)'},
+    'correlate': _schema({'x': {'type': 'string'}, 'y': {'type': 'string'},
+                          'per': {'type': 'string', 'description': 'Average x and y per value of this column first, e.g. team_number'}},
+                         ['x', 'y']),
+}, ['table'])
+
 TOOLS = [
     (event_info, 'event_info',
      'Event name, dates, current local time, how many qual matches exist and have been '
@@ -696,6 +741,7 @@ TOOLS = [
      '"state championship", "Traverse City"). year defaults to this season.',
      _schema({'query': {'type': 'string'}, 'year': {'type': 'integer'}}, ['query'])),
     (scouters, 'scouters', 'Registered scouts for this event.', _schema()),
+    (query_data, 'query_data', QUERY_DESC, QUERY_SCHEMA),
     (pick_board, 'pick_board',
      "The team's live pick list board: everyone's personal rankings combined spot by spot "
      '(spot #k = the team most people put at #k), each ballot, DNP marks, teams already '
@@ -705,14 +751,17 @@ TOOLS = [
 # Tools that work on any event: they take an optional event key (default: the
 # asker's current event). Schedule, scouts and pick board stay on the current one.
 ANY_EVENT = {'event_info', 'list_teams', 'team_info', 'leaderboard', 'scouted_rows', 'pit_data',
-             'matches', 'rankings', 'scouting_status', 'clusters', 'similar_teams'}
+             'matches', 'rankings', 'scouting_status', 'clusters', 'similar_teams', 'query_data'}
 EVENT_PARAM = {'type': 'string', 'description': "Event key like 2026mibig (from find_event). "
                                                 "Leave out for the asker's current event."}
 for _fn, _name, _desc, _schema_ in TOOLS:
     if _name in ANY_EVENT:
         _schema_['properties']['event'] = EVENT_PARAM
 
-TOOL_DEFS = [{'name': name, 'description': desc, 'input_schema': schema, 'strict': True}
+# Strict mode allows at most 24 optional parameters across all strict tools, and the
+# existing tools already use them. query_data validates its own spec, so it opts out.
+NON_STRICT = {'query_data'}
+TOOL_DEFS = [{'name': name, 'description': desc, 'input_schema': schema, 'strict': name not in NON_STRICT}
              for _, name, desc, schema in TOOLS]
 _FUNCS = {name: fn for fn, name, _, _ in TOOLS}
 
