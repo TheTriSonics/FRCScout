@@ -412,6 +412,86 @@ def find_event(s: Session, query: str, year: int = None):
         for _, _, e in hits[:8]]}
 
 
+# --- clusters (same settings resolution as the app's ClusterProvider, minus
+# per-device custom configs: the team default, else the API's defaults) ---
+
+def _feature_label(name, source):
+    """Same as the app's ClusterFeature.label: hubScore_teleopCount ->
+    OPR Hub Score Teleop Count."""
+    words = ' '.join(w[:1].upper() + w[1:] for w in
+                     re.split(r'[_\s]+', re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', name)) if w)
+    return f'OPR {words}' if source == 'opr' and not words.startswith('Opr') else words
+
+
+def _clustering(s: Session):
+    from scout_data import get
+    year = int(s.event_key[:4])
+    cfg = get('GetClusterConfig', secret_key=s.secret_key, year=year)
+    params = {'event_key': s.event_key, 'secret_team_key': s.secret_key, 'k': 4}
+    if cfg and cfg.get('features'):
+        params['features'] = ','.join(cfg['features'])
+        params['k'] = int(cfg.get('k') or 4)
+        if cfg.get('weights'):
+            params['weights'] = ','.join(f'{f}:{w}' for f, w in cfg['weights'].items())
+        source = f"team default published by {cfg.get('updated_by')} ({(cfg.get('updated_at') or '')[:10]})"
+    else:
+        source = 'built-in defaults (no team default published)'
+    result = get('GetClusters', **params)
+    src = {f['name']: f.get('source') for f in result.get('available_features') or []}
+    labels = {f: _feature_label(f, src.get(f)) for f in src}
+    return result, source, labels
+
+
+def clusters(s: Session):
+    result, source, labels = _clustering(s)
+    if not result.get('groups'):
+        return {'error': 'Not enough data to cluster this event yet.', 'settings': source}
+    names = s.event.team_names()
+    metric = result.get('strength_metric')
+    weights = result.get('weights') or {}
+    return {
+        'settings': source,
+        'dimensions': [labels.get(f, f) + (f' (x{weights[f]} weight)' if f in weights else '')
+                       for f in result.get('features') or []],
+        'groups_strongest_first': [{
+            'group': g['group'],
+            'teams': [f'{t} {names.get(t) or ""}'.strip() for t in g['teams']],
+            'strength': f"avg {labels.get(metric, metric)} {g.get('strength')}" if metric else None,
+            'stands_out_on': [f"{labels.get(p['feature'], p['feature'])}: {p['mean']} vs event "
+                              f"{p['event_mean']} ({(p['z'] or 0):+.1f} SD)" for p in g['profile'][:4]],
+        } for g in result['groups']],
+        'not_clustered': {'excluded': result.get('excluded'), 'no_opr_yet': result.get('dropped')},
+    }
+
+
+def similar_teams(s: Session, team: int, count: int = 5):
+    from cluster_similarity import ClusterSpace
+    result, source, labels = _clustering(s)
+    space = ClusterSpace(result)
+    if team not in space.coords:
+        return {'error': f'Team {team} is not in the clustering (no scouting or OPR data).',
+                'settings': source}
+    names = s.event.team_names()
+    near = space.neighbors(team, max(1, min(count, 10)))
+    for n in near:
+        n['name'] = names.get(n['team'])
+    dist = space.distinctions(team, [n['team'] for n in near])
+    return {
+        'settings': source,
+        'team': team, 'name': names.get(team), 'group': space.group.get(team),
+        'group_mates': [t for t, g in space.group.items() if g == space.group.get(team) and t != team],
+        'nearest': near,
+        'what_sets_it_apart': [{
+            'dimension': labels.get(d['feature'], d['feature']),
+            'share_of_difference_pct': d['share_pct'],
+            'value': d['value'], 'event_mean': d['event_mean'], 'z': d['z'],
+            'neighbors': d['neighbor_values'],
+        } for d in dist[:6] if d['share_pct'] >= 1],
+        'note': 'Similarity = closeness across all clustering dimensions (z-scored, weighted). '
+                'closer_than_pct_of_pairs = share of team pairs at the event that are farther apart.',
+    }
+
+
 def scouters(s: Session):
     return {'scouters': [{'name': x.get('scouter_name'), 'last_seen': x.get('last_seen'),
                           'slack_linked': x.get('slack_linked')}
@@ -544,6 +624,16 @@ TOOLS = [
      'awards at each. Use for which events/competitions a team went to, how it did elsewhere, '
      'or its season so far. year defaults to this season.',
      _schema({'team': TEAM, 'year': {'type': 'integer'}}, ['team'])),
+    (clusters, 'clusters',
+     "KMeans groups of the event's teams over the team's default clustering dimensions "
+     '(scouted averages and OPR), strongest group first, with what each group stands out on. '
+     'Use for "what kinds of robots are here", tiers, or groupings.', _schema()),
+    (similar_teams, 'similar_teams',
+     "A team's nearest teams in the same clustering space (the same math as Team Details in "
+     'the app), its cluster group, and which dimensions set it apart from the average robot. '
+     'Use for "who is like X", alternatives to a pick, or what makes a team distinctive.',
+     _schema({'team': TEAM, 'count': {'type': 'integer', 'description': 'How many (default 5, max 10)'}},
+             ['team'])),
     (find_event, 'find_event',
      'Look up event keys by name, nickname, place or acronym (e.g. "GVSU", "Ferris State", '
      '"state championship", "Traverse City"). year defaults to this season.',
@@ -558,7 +648,7 @@ TOOLS = [
 # Tools that work on any event: they take an optional event key (default: the
 # asker's current event). Schedule, scouts and pick board stay on the current one.
 ANY_EVENT = {'event_info', 'list_teams', 'team_info', 'leaderboard', 'scouted_rows', 'pit_data',
-             'matches', 'rankings', 'scouting_status'}
+             'matches', 'rankings', 'scouting_status', 'clusters', 'similar_teams'}
 EVENT_PARAM = {'type': 'string', 'description': "Event key like 2026mibig (from find_event). "
                                                 "Leave out for the asker's current event."}
 for _fn, _name, _desc, _schema_ in TOOLS:

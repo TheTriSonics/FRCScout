@@ -12,6 +12,7 @@ python3 -m venv .venv && source .venv/bin/activate && pip install -r requirement
 python cli.py                         # interactive (2026miwmi, key 4003data, as "Justin B")
 python cli.py -q "Who climbs best?"   # one question
 python cli.py --batch questions.txt   # regression set, each line a fresh chat
+python cli.py --batch guardrails.txt  # scope and safety checks: the first block should be declined
 ```
 
 The Foundry key comes from `FOUNDRY_API_KEY`, or from `az` if you're logged in.
@@ -22,7 +23,8 @@ Other settings: `FOUNDRY_RESOURCE`, `FOUNDRY_DEPLOYMENT`,
 |---|---|
 | `scout_data.py` | Cached GET calls to the API, plus time helpers |
 | `season_2026.py` | What the season's fields mean. Copy it each year. |
-| `tools.py` | The 12 tools and their schemas. Averages match the app's `TeamStats`, and `pick_board` ports `PickBoard.rows`. |
+| `tools.py` | The tools and their schemas. Averages match the app's `TeamStats`, and `pick_board` ports `PickBoard.rows`. |
+| `cluster_similarity.py` | Nearest teams in clustering space. A port of the app's `cluster_similarity.dart`, so `similar_teams` matches Team Details. |
 | `agent.py` | System prompt and the tool loop, with prompt caching and usage/cost tracking |
 | `cli.py` | Terminal front end |
 
