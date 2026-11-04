@@ -18,7 +18,8 @@ Environment:
   API_PUBLIC_URL     base for the redirect URI ({base}/api/SlackCallback);
                      default: taken from the request URL. Every team's Slack
                      app registers this same redirect URL.
-  SLACK_FAKE=1       LOCAL TESTING ONLY; ignored in Azure (WEBSITE_INSTANCE_ID).
+  SLACK_FAKE=1       LOCAL TESTING ONLY: needs LOCAL_DEV=1 too, and is ignored
+                     anywhere that looks like Azure (see local_dev).
                      Gives secret key zz-claude-test a simulated Slack (any
                      team number) without a SlackConfigs doc; SLACK_FAKE_TEAM
                      changes the simulated workspace
@@ -64,10 +65,21 @@ def now_iso():
     return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 
 
+# Set by Azure App Service / Functions hosts (Windows and Linux plans).
+AZURE_MARKERS = ('WEBSITE_INSTANCE_ID', 'WEBSITE_SITE_NAME', 'WEBSITE_OWNER_NAME',
+                 'CONTAINER_NAME', 'WEBSITE_DEPLOYMENT_ID')
+
+
+def local_dev(env):
+    """Local-only tools are on: LOCAL_DEV=1 (only ever in a developer's own
+    setenv) and nothing that looks like an Azure host. Off by default."""
+    return (str(env.get('LOCAL_DEV', '')).strip() == '1'
+            and not any(env.get(k) for k in AZURE_MARKERS))
+
+
 def fake_enabled(env):
-    """SLACK_FAKE=1 counts only outside Azure, so production can't have it."""
-    return (str(env.get('SLACK_FAKE', '')).strip() == '1'
-            and not env.get('WEBSITE_INSTANCE_ID'))
+    """SLACK_FAKE=1 counts only in local dev, so production can't have it."""
+    return str(env.get('SLACK_FAKE', '')).strip() == '1' and local_dev(env)
 
 
 def redirect_uri(env, request_url=''):

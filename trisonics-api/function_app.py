@@ -1003,8 +1003,8 @@ def _slack_configs_container():
 def _slack_config(secret_key, team_number, request_url):
     """One team's Slack config (see slack_link.load_config) or None."""
     if (os.environ.get('SLACK_FAKE', '').strip() == '1'
-            and os.environ.get('WEBSITE_INSTANCE_ID')):
-        logging.error('SLACK_FAKE is set in Azure; ignoring it')
+            and not slack_link.local_dev(os.environ)):
+        logging.error('SLACK_FAKE is set outside local dev; ignoring it')
     sk = str(secret_key or '').strip()
     tn = slack_link.parse_team_number(team_number)
     if not sk or tn is None:
@@ -1444,10 +1444,11 @@ def shift_reminders_timer(timer: func.TimerRequest) -> None:
 @app.route(route="ShiftRemindersNow", methods=["POST"],
            auth_level=func.AuthLevel.ANONYMOUS)
 def shift_reminders_now(req: func.HttpRequest) -> func.HttpResponse:
-    """LOCAL TESTING ONLY (404 in Azure): run the reminder pass now.
+    """LOCAL TESTING ONLY (404 unless slack_link.local_dev: LOCAL_DEV=1 and
+    not in Azure): run the reminder pass now.
     Params: dry_run=1 to list what would be sent without sending; now=<unix
     seconds> to pretend it's another time (dry runs only)."""
-    if os.environ.get('WEBSITE_INSTANCE_ID'):
+    if not slack_link.local_dev(os.environ):
         return func.HttpResponse(status_code=404)
     dry = (req.params.get('dry_run') or '') == '1'
     now = None
