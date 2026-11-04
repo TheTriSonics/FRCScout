@@ -55,6 +55,10 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
                      req.headers.get('X-Slack-Retry-Reason'), payload.get('event_id'))
     if not _queued.add(payload.get('event_id')):
         return _json({'ok': True})  # this instance already queued it
+    logging.info('SlackEvents: %s', json.dumps({
+        'event_id': payload.get('event_id'), 'type': ev.get('type'), 'subtype': ev.get('subtype'),
+        'channel_type': ev.get('channel_type'), 'thread': bool(ev.get('thread_ts')),
+        'bot': bool(ev.get('bot_id'))}))
     auth = (payload.get('authorizations') or [{}])[0]
     bot = auth.get('user_id')
     is_msg = ev.get('type') == 'message'
@@ -98,6 +102,7 @@ def _answer(job):
         return
     ev, token = job['event'], cfg['bot_token']
     if job.get('followup') and not slack_bot.follows_bot(token, ev, job.get('bot_user_id')):
+        logging.info('SlackWorker: thread reply %s not a follow-up; skipped', ev['ts'])
         return  # people talking in a thread the bot was in, not to the bot
     # One answer per Slack message, across instances (Slack can deliver the
     # same message as two events, e.g. a DM that also mentions the bot).

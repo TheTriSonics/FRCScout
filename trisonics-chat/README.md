@@ -93,8 +93,8 @@ SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
 
 ## Thread follow-ups
 
-In a channel thread the bot answers a reply without an @mention only when the
-message right before it is the bot's (otherwise people are talking to each
+In a channel thread the bot answers a reply without an @mention when nobody
+but the asker has posted since its last reply (otherwise people are talking to each
 other). Needs the Slack app's bot events `message.channels`, `message.groups`
 and `message.mpim` (scopes `channels:history`, `groups:history`,
 `mpim:history`). Each message is answered once across instances: the worker

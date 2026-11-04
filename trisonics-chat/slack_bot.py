@@ -152,14 +152,17 @@ def history(token, ev, bot_user_id):
 
 
 def follows_bot(token, ev, bot_user_id):
-    """True if the message just before [ev] in its thread is the bot's."""
+    """True if the bot has replied in [ev]'s thread and nobody but this user
+    has posted since its last reply (so it's a follow-up, not people talking
+    to each other)."""
     msgs = api(token, 'conversations.replies', channel=ev['channel'], ts=ev['thread_ts'],
-               limit=100).get('messages') or []
-    before = [m for m in msgs if float(m.get('ts', 0)) < float(ev['ts'])]
-    if not before:
+               limit=200).get('messages') or []
+    before = sorted((m for m in msgs if float(m.get('ts', 0)) < float(ev['ts'])),
+                    key=lambda m: float(m['ts']))
+    mine = [i for i, m in enumerate(before) if m.get('user') == bot_user_id or m.get('bot_id')]
+    if not mine:
         return False
-    last = max(before, key=lambda m: float(m['ts']))
-    return last.get('user') == bot_user_id or bool(last.get('bot_id'))
+    return all(m.get('user') == ev.get('user') for m in before[mine[-1] + 1:])
 
 
 _claims = None
