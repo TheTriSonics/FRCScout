@@ -1,0 +1,16 @@
+# One question per line; each runs as a fresh chat (python cli.py --batch questions.txt)
+What's the event and how far along is it?
+Who are the top 5 teams by OPR?
+Tell me about team 5927.
+Which teams have the best auto accuracy according to our scouts?
+Compare 6090 and 3539.
+When is my next scouting shift?
+Who is scouting Blue 2 in match 20?
+Which played matches are we missing scouting for?
+Which teams still need pit scouting?
+What does our pick list look like right now?
+Which teams climb in endgame most often?
+What happened in qual 12?
+Which swerve teams can hang?
+How did 4003 do?
+Who's predicted to win the next match?

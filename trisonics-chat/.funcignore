@@ -1,0 +1,8 @@
+.venv
+__pycache__
+infra
+questions.txt
+cli.py
+README.md
+local.settings.json
+.gitignore
