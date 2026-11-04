@@ -83,6 +83,8 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
     # Show it was heard right away; the worker replaces this with the answer.
     placeholder = slack_bot.api(token, 'chat.postMessage', channel=ev['channel'],
                                 thread_ts=slack_bot.reply_thread(ev), text=slack_bot.PLACEHOLDER)
+    if placeholder.get('ok'):
+        slack_bot.pending_add(cfg['id'], placeholder['channel'], placeholder['ts'])
     out.set(json.dumps({
         'config_id': cfg['id'], 'event_id': payload.get('event_id'),
         'bot_user_id': bot, 'followup': followup,
@@ -124,6 +126,7 @@ def _answer(job):
         """Replace the placeholder SlackEvents posted (or post, if it couldn't)."""
         if ph:
             r = slack_bot.api(token, 'chat.update', channel=ph['channel'], ts=ph['ts'], text=text)
+            slack_bot.pending_done(ph['channel'], ph['ts'])
             if r.get('ok'):
                 return
         slack_bot.api(token, 'chat.postMessage', channel=ev['channel'],
@@ -158,6 +161,14 @@ def _answer(job):
         'seconds': round(time.time() - t0, 1),
         'usage': chat.usage if chat else None,
         'cost': round(chat.cost(), 4) if chat else None}))
+
+
+@app.function_name(name='SlackWatchdog')
+@app.timer_trigger(arg_name='timer', schedule='0 */2 * * * *', run_on_startup=False)
+def slack_watchdog(timer: func.TimerRequest) -> None:
+    """A worker that died mid-answer leaves "Looking that up" up forever;
+    replace any placeholder older than 5 minutes with an apology."""
+    slack_bot.sweep_stuck()
 
 
 # --- History lake refresh (off by default) ---
