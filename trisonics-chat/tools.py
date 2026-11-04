@@ -6,7 +6,8 @@ sends back to the model as JSON.
 """
 import statistics
 import time
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 
 import season_2026 as season
 from scout_data import (Event, match_label, match_sort_key, match_start,
@@ -367,9 +368,48 @@ def scout_schedule(s: Session, person: str = None):
     }
 
 
+LEVELS = {'f': 'the finals', 'sf': 'the semifinals', 'qf': 'the quarterfinals', 'ef': 'the eighthfinals'}
+
+
 def team_events(s: Session, team: int, year: int = None):
     from scout_data import get
-    return get('GetTeamEvents', team_number=team, year=year or int(s.event_key[:4]))
+    out = get('GetTeamEvents', team_number=team, year=year or int(s.event_key[:4]))
+    for e in (out or {}).get('events', []):
+        p = e.get('playoff')
+        if p:
+            # Double-elim brackets label every match 'sf'; the round is what counts.
+            stage = p.pop('bracket_round', None) or LEVELS.get(p.get('level'), p.get('level'))
+            p.pop('level', None)
+            p['result'] = 'won the event' if p.get('status') == 'won' else f"{p.get('status')} in {stage}"
+    return out
+
+
+def find_event(s: Session, query: str, year: int = None):
+    from scout_data import get
+    year = year or int(s.event_key[:4])
+    q = query.lower().strip()
+    words = [w for w in re.split(r'[^a-z0-9]+', q) if w]
+    events = get('GetEvents', year=year) or []
+    home = s.event.info().get('state_prov')  # rank our own state's events first
+    hits = []
+    for e in events:
+        name = e.get('name') or ''
+        initials = ''.join(w[0] for w in re.split(r'[^A-Za-z0-9]+', name) if w and w[0].isupper()).lower()
+        hay = ' '.join(str(e.get(k) or '') for k in (
+            'key', 'event_code', 'name', 'short_name', 'city', 'state_prov', 'location_name')).lower()
+        if q == e.get('key') or q == (e.get('event_code') or '').lower():
+            score = 100
+        elif words and all(w in hay or w in initials for w in words):
+            score = 10 + sum(w in (e.get('short_name') or '').lower() for w in words) \
+                + (5 if home and e.get('state_prov') == home else 0)
+        else:
+            continue
+        hits.append((score, e.get('start_date') or '', e))
+    hits.sort(key=lambda h: (-h[0], h[1]))
+    return {'year': year, 'matches': [
+        {'event_key': e['key'], 'name': e.get('name'), 'type': e.get('event_type_string'),
+         'start_date': e.get('start_date'), 'city': e.get('city'), 'state_prov': e.get('state_prov')}
+        for _, _, e in hits[:8]]}
 
 
 def scouters(s: Session):
@@ -504,12 +544,26 @@ TOOLS = [
      'awards at each. Use for which events/competitions a team went to, how it did elsewhere, '
      'or its season so far. year defaults to this season.',
      _schema({'team': TEAM, 'year': {'type': 'integer'}}, ['team'])),
+    (find_event, 'find_event',
+     'Look up event keys by name, nickname, place or acronym (e.g. "GVSU", "Ferris State", '
+     '"state championship", "Traverse City"). year defaults to this season.',
+     _schema({'query': {'type': 'string'}, 'year': {'type': 'integer'}}, ['query'])),
     (scouters, 'scouters', 'Registered scouts for this event.', _schema()),
     (pick_board, 'pick_board',
      "The team's live pick list board: everyone's personal rankings combined spot by spot "
      '(spot #k = the team most people put at #k), each ballot, DNP marks, teams already '
      'taken by other alliances, and notes.', _schema()),
 ]
+
+# Tools that work on any event: they take an optional event key (default: the
+# asker's current event). Schedule, scouts and pick board stay on the current one.
+ANY_EVENT = {'event_info', 'list_teams', 'team_info', 'leaderboard', 'scouted_rows', 'pit_data',
+             'matches', 'rankings', 'scouting_status'}
+EVENT_PARAM = {'type': 'string', 'description': "Event key like 2026mibig (from find_event). "
+                                                "Leave out for the asker's current event."}
+for _fn, _name, _desc, _schema_ in TOOLS:
+    if _name in ANY_EVENT:
+        _schema_['properties']['event'] = EVENT_PARAM
 
 TOOL_DEFS = [{'name': name, 'description': desc, 'input_schema': schema, 'strict': True}
              for _, name, desc, schema in TOOLS]
@@ -520,4 +574,10 @@ def run_tool(session: Session, name: str, args: dict):
     fn = _FUNCS.get(name)
     if not fn:
         return {'error': f'unknown tool {name}'}
-    return fn(session, **(args or {}))
+    args = dict(args or {})
+    event = str(args.pop('event', '') or '').strip().lower()
+    if event and name in ANY_EVENT and event != session.event_key:
+        if not re.fullmatch(r'\d{4}[a-z0-9]+', event):
+            return {'error': f'{event!r} is not an event key; use find_event to get one.'}
+        session = replace(session, event_key=event)
+    return fn(session, **args)
