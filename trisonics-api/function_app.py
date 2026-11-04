@@ -49,6 +49,7 @@ import places
 import scout_schedule
 import shift_reminders
 import slack_link
+import team_events
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
@@ -1555,6 +1556,44 @@ def _teams_for_season(year):
             page += 6
     _season_teams[year] = (time.time(), teams)
     return teams
+
+
+_team_events_cache = {}
+_TEAM_EVENTS_TTL = 600
+
+
+@app.function_name(name="GetTeamEvents")
+@app.route(route="GetTeamEvents", auth_level=func.AuthLevel.ANONYMOUS)
+def get_team_events(req: func.HttpRequest) -> func.HttpResponse:
+    """Every event a team attended in a season, with its qual rank and
+    record, alliance, playoff result and awards at each (from TBA).
+
+    Params: team_number, year
+    Returns: {team_number, events: [...]} (see team_events.season)
+    """
+    try:
+        tn = int(req.params.get('team_number'))
+        year = int(req.params.get('year'))
+    except (TypeError, ValueError):
+        return _json_response(
+            {'error': 'team_number and year are required integers'}, 400)
+    cached = _team_events_cache.get((tn, year))
+    if cached and time.time() - cached[0] < _TEAM_EVENTS_TTL:
+        return _json_response(cached[1])
+    key = f'frc{tn}'
+    try:
+        events = _tba_json(f'/team/{key}/events/{year}')
+        statuses = _tba_json(f'/team/{key}/events/{year}/statuses')
+        awards = _tba_json(f'/team/{key}/awards/{year}')
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else 502
+        if status == 404:
+            return _json_response({'error': f'no team {tn}'}, 404)
+        logging.error('GetTeamEvents: TBA %s for %s/%s', status, tn, year)
+        return _json_response({'error': 'TBA request failed'}, 502)
+    out = team_events.season(tn, events, statuses, awards)
+    _team_events_cache[(tn, year)] = (time.time(), out)
+    return _json_response(out)
 
 
 @app.function_name(name="GetStateTeams")
