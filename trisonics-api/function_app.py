@@ -47,7 +47,8 @@ import pick_list
 import pick_votes
 import places
 import scout_schedule
-import secrets
+import shift_reminders
+import slack_link
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
@@ -882,8 +883,8 @@ def register_scouter(req: func.HttpRequest) -> func.HttpResponse:
 
     Body: {secret_key, event_key, scouter_name, first_seen (optional, for
            seeding)}
-    Keeps first_seen and calendar_token from the first registration.
-    Returns the scouter doc (including calendar_token).
+    Keeps first_seen from the first registration.
+    Returns the scouter doc.
     """
     try:
         payload = req.get_json()
@@ -897,12 +898,30 @@ def register_scouter(req: func.HttpRequest) -> func.HttpResponse:
         return _json_response(
             {'error': 'secret_key, event_key and scouter_name are required'},
             400)
-    saved = _register_scouter(sk, ek, name, payload.get('first_seen'))
-    return _json_response(pick_list.strip_system(saved))
+    link = None
+    link_token = str(payload.get('link_token') or '').strip()
+    if link_token:
+        # Only a token Slack sign-in handed out can attach a Slack identity;
+        # a stale one just registers the name without it.
+        link = _find_link(link_token)
+        # A link only counts under the secret key it was made for.
+        if link is not None and link.get('secret_key') != sk:
+            link = None
+        if link is None:
+            logging.warning('RegisterScouter: unknown link_token')
+    saved = _register_scouter(sk, ek, name, payload.get('first_seen'), link)
+    out = pick_list.strip_system(saved)
+    out['slack_linked'] = bool(out.pop('slack_user_id', None))
+    out.pop('slack_team_id', None)
+    out.pop('calendar_token', None)  # old docs; the feed is gone
+    if link_token:
+        out['link_valid'] = link is not None
+    return _json_response(out)
 
 
-def _register_scouter(sk, ek, name, first_seen=None):
-    """Upsert a scouter doc, keeping first_seen and calendar_token."""
+def _register_scouter(sk, ek, name, first_seen=None, link=None):
+    """Upsert a scouter doc, keeping first_seen. A
+    verified Slack [link] doc adds the Slack user (never from the client)."""
     container = _schedule_container('Scouters')
     doc_id = scout_schedule.scouter_id(sk, ek, name)
     now = scout_schedule.now_iso()
@@ -913,11 +932,14 @@ def _register_scouter(sk, ek, name, first_seen=None):
         doc = {'id': doc_id, 'kind': 'scouter', 'secret_key': sk,
                'event_key': ek, 'scouter_name': name,
                'name_key': pick_votes.voter_key(name),
-               'first_seen': seeded or now,
-               'calendar_token': secrets.token_urlsafe(16)}
+               'first_seen': seeded or now}
     if seeded and seeded < doc['first_seen']:
         doc['first_seen'] = seeded
     doc['last_seen'] = max(now, doc.get('last_seen', ''))
+    if link:
+        doc['slack_user_id'] = link['slack_user_id']
+        doc['slack_team_id'] = link['slack_team_id']
+        doc['slack_name'] = link['slack_name']
     return container.upsert_item(doc)
 
 
@@ -927,18 +949,299 @@ def get_scouters(req: func.HttpRequest) -> func.HttpResponse:
     """Registered scouter names for a secret key + event, by name.
 
     Params: secret_key, event_key
-    Returns: [{scouter_name, first_seen, last_seen}, ...]
+    Returns: [{scouter_name, first_seen, last_seen, slack_linked}, ...]
     """
     sk, ek = _key_params(req)
     if not sk or not ek:
         return _json_response(
             {'error': 'secret_key and event_key are required'}, 400)
     docs = _schedule_container('Scouters').query_items(
-        query="SELECT c.scouter_name, c.first_seen, c.last_seen FROM c "
-              "WHERE c.secret_key = @sk",
+        query="SELECT c.scouter_name, c.first_seen, c.last_seen, "
+              "c.slack_user_id FROM c WHERE c.secret_key = @sk",
         parameters=[{'name': '@sk', 'value': sk}], partition_key=ek)
-    rows = sorted(docs, key=lambda r: r['scouter_name'].lower())
+    rows = []
+    for d in docs:
+        # Say whether a name is linked, never to whom.
+        d['slack_linked'] = bool(d.pop('slack_user_id', None))
+        rows.append(d)
+    rows.sort(key=lambda r: r['scouter_name'].lower())
     return _json_response(rows)
+
+
+# Sign in with Slack: see slack_link.py. SlackLinks holds short-lived login
+# sessions and the permanent links (hashes of the tokens handed to apps).
+_slack_ready = False
+
+
+def _slack_container():
+    """SlackLinks, created on first use; per-item TTL on for sessions."""
+    global _slack_ready
+    if not _slack_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='SlackLinks', partition_key=PartitionKey(path='/id'),
+            default_ttl=-1)
+        _slack_ready = True
+    return get_container('SlackLinks')
+
+
+_slack_configs_ready = False
+
+
+def _slack_configs_container():
+    """SlackConfigs (per-team Slack app credentials), created on first use.
+    Filled in by hand for now; never returned by any endpoint."""
+    global _slack_configs_ready
+    if not _slack_configs_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='SlackConfigs', partition_key=PartitionKey(path='/secret_key'))
+        _slack_configs_ready = True
+    return get_container('SlackConfigs')
+
+
+def _slack_config(secret_key, team_number, request_url):
+    """One team's Slack config (see slack_link.load_config) or None."""
+    if (os.environ.get('SLACK_FAKE', '').strip() == '1'
+            and os.environ.get('WEBSITE_INSTANCE_ID')):
+        logging.error('SLACK_FAKE is set in Azure; ignoring it')
+    sk = str(secret_key or '').strip()
+    tn = slack_link.parse_team_number(team_number)
+    if not sk or tn is None:
+        return None
+    doc = None
+    if not (slack_link.fake_enabled(os.environ)
+            and sk == slack_link.FAKE_TEAM_KEY):
+        rows = list(_slack_configs_container().query_items(
+            query="SELECT * FROM c WHERE c.secret_key = @sk AND "
+                  "c.team_number = @tn",
+            parameters=[{'name': '@sk', 'value': sk},
+                        {'name': '@tn', 'value': tn}],
+            partition_key=sk))
+        doc = rows[0] if rows else None
+    return slack_link.load_config(os.environ, request_url, sk, tn, doc)
+
+
+def _find_link(link_token):
+    h = slack_link.hash_token(link_token)
+    rows = list(_slack_container().query_items(
+        query="SELECT * FROM c WHERE c.kind = 'link' AND "
+              "ARRAY_CONTAINS(c.link_token_hashes, @h)",
+        parameters=[{'name': '@h', 'value': h}],
+        enable_cross_partition_query=True))
+    return rows[0] if rows else None
+
+
+@app.function_name(name="SlackLinkAvailable")
+@app.route(route="SlackLinkAvailable", auth_level=func.AuthLevel.ANONYMOUS)
+def slack_link_available(req: func.HttpRequest) -> func.HttpResponse:
+    """Whether a team can link Slack. Params: secret_key, team_number.
+    Returns {available: bool} and nothing else about the config."""
+    try:
+        cfg = _slack_config(req.params.get('secret_key'),
+                            req.params.get('team_number'), req.url)
+    except Exception as e:
+        logging.exception('SlackLinkAvailable failed: %s', type(e).__name__)
+        return _json_response({'error': 'Could not check Slack'}, 500)
+    return _json_response({'available': cfg is not None})
+
+
+@app.function_name(name="SlackLinkStart")
+@app.route(route="SlackLinkStart", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def slack_link_start(req: func.HttpRequest) -> func.HttpResponse:
+    """Begin a Slack sign-in for a team. Body: {secret_key, team_number}.
+    Returns {session_id, authorize_url}: open the URL in a browser tab and
+    poll SlackLinkStatus with the session_id. 503 when that team has no
+    Slack set up."""
+    try:
+        payload = req.get_json()
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    try:
+        cfg = _slack_config(payload.get('secret_key'),
+                            payload.get('team_number'), req.url)
+        if cfg is None:
+            return _json_response({'error': slack_link.NOT_CONFIGURED}, 503)
+        session = slack_link.new_login_session(cfg)
+        _slack_container().create_item(session)
+        return _json_response({
+            'session_id': session['id'],
+            'authorize_url': slack_link.authorize_url(cfg, session)})
+    except Exception as e:
+        logging.exception('SlackLinkStart failed: %s', type(e).__name__)
+        return _json_response({'error': 'Could not start Slack sign-in'}, 500)
+
+
+def _slack_exchange(cfg, code, nonce):
+    """Trade the code for the signed-in user (dict of user_id/team_id/name)."""
+    if cfg['fake']:
+        if code != slack_link.FAKE_CODE:
+            raise slack_link.LinkError('Slack sign-in failed')
+        return slack_link.fake_user(os.environ)
+    r = requests.post(slack_link.TOKEN_URL, data={
+        'client_id': cfg['client_id'], 'client_secret': cfg['client_secret'],
+        'code': code, 'redirect_uri': cfg['redirect_uri'],
+        'grant_type': 'authorization_code'}, timeout=15)
+    try:
+        body = r.json()
+    except ValueError:
+        body = {}
+    if r.status_code != 200 or not body.get('ok') or not body.get('id_token'):
+        # Slack's error name (e.g. invalid_code) is safe; never log secrets.
+        logging.error('Slack token exchange failed: %s %s', r.status_code,
+                      body.get('error', 'no error given'))
+        raise slack_link.LinkError(
+            'Slack did not accept that sign-in — start again from the app')
+    claims = slack_link.decode_jwt_payload(body['id_token'])
+    return slack_link.user_from_claims(claims, cfg['client_id'], nonce)
+
+
+@app.function_name(name="SlackCallback")
+@app.route(route="SlackCallback", methods=["GET"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def slack_callback(req: func.HttpRequest) -> func.HttpResponse:
+    """Slack sends the browser here after sign-in. Shows a small page; the
+    app learns the result by polling SlackLinkStatus."""
+    def html(ok, msg, status=200):
+        return func.HttpResponse(slack_link.page(ok, msg), status_code=status,
+                                 mimetype='text/html')
+    expired = 'This sign-in link expired — start again from the app'
+    state = (req.params.get('state') or '').strip()
+    code = (req.params.get('code') or '').strip()
+    try:
+        container = _slack_container()
+        rows = list(container.query_items(
+            query="SELECT * FROM c WHERE c.kind = 'login' AND c.state = @s",
+            parameters=[{'name': '@s', 'value': state}],
+            enable_cross_partition_query=True)) if state else []
+        session = next((r for r in rows
+                        if slack_link.same_secret(r.get('state'), state)), None)
+        if session is not None and session.get('status') == 'done':
+            return html(True, 'This sign-in already finished. You can close '
+                        'this tab and go back to the scouting app.')
+        if session is None or session.get('status') != 'pending':
+            return html(False, expired, 400)
+        if not code:
+            session.update(status='error', error='Slack sign-in was cancelled')
+            container.upsert_item(session)
+            return html(False, 'Slack sign-in was cancelled. You can close '
+                        'this tab and try again from the app.', 400)
+        # The team's config is looked up again from the session (never
+        # from anything in this URL).
+        cfg = _slack_config(session.get('secret_key'),
+                            session.get('team_number'), req.url)
+        if cfg is None:
+            session.update(status='error', error=slack_link.NOT_CONFIGURED)
+            container.upsert_item(session)
+            return html(False, slack_link.NOT_CONFIGURED, 503)
+        try:
+            user = _slack_exchange(cfg, code, session['nonce'])
+            slack_link.check_workspace(cfg, user['team_id'])
+        except slack_link.LinkError as e:
+            session.update(status='error', error=str(e))
+            container.upsert_item(session)
+            return html(False, str(e), 400)
+        link_token = slack_link.new_link_token()
+        now = slack_link.now_iso()
+        lid = slack_link.link_id(user['team_id'], user['user_id'],
+                                 cfg['secret_key'])
+        try:
+            link = container.read_item(lid, partition_key=lid)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            link = {'id': lid, 'kind': 'link', 'created': now,
+                    'secret_key': cfg['secret_key'],
+                    'slack_user_id': user['user_id'],
+                    'slack_team_id': user['team_id']}
+        link['slack_name'] = user['name']
+        link['updated'] = now
+        slack_link.add_token_hash(link, slack_link.hash_token(link_token))
+        container.upsert_item(link)
+        session.update(status='done', result=slack_link.result_for(
+            user, link_token))
+        container.upsert_item(session)
+        return html(True, f"Linked as {user['name']}. You can close this tab "
+                    'and go back to the scouting app.')
+    except Exception as e:
+        logging.exception('SlackCallback failed: %s', type(e).__name__)
+        return html(False, 'Something went wrong. Start again from the app.',
+                    500)
+
+
+@app.function_name(name="SlackLinkStatus")
+@app.route(route="SlackLinkStatus", auth_level=func.AuthLevel.ANONYMOUS)
+def slack_link_status(req: func.HttpRequest) -> func.HttpResponse:
+    """Poll a sign-in. Params: session_id.
+    Returns {status: 'pending'} | {status: 'done', slack_user_id,
+    slack_team_id, slack_name, link_token} | {status: 'error', error}. A
+    finished session is returned once, then deleted."""
+    sid = (req.params.get('session_id') or '').strip()
+    gone = {'status': 'error',
+            'error': 'This sign-in expired — start again'}
+    if not sid:
+        return _json_response({'error': 'session_id is required'}, 400)
+    try:
+        container = _slack_container()
+        try:
+            session = container.read_item(sid, partition_key=sid)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return _json_response(gone, 404)
+        if session.get('kind') != 'login':
+            return _json_response(gone, 404)
+        status = session.get('status')
+        if status == 'pending':
+            return _json_response({'status': 'pending'})
+        container.delete_item(sid, partition_key=sid)
+        if status == 'done':
+            return _json_response({'status': 'done', **session['result']})
+        return _json_response({'status': 'error',
+                               'error': session.get('error', 'Failed')})
+    except Exception as e:
+        logging.exception('SlackLinkStatus failed: %s', type(e).__name__)
+        return _json_response({'error': 'Could not check Slack sign-in'}, 500)
+
+
+@app.function_name(name="SlackUnlink")
+@app.route(route="SlackUnlink", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def slack_unlink(req: func.HttpRequest) -> func.HttpResponse:
+    """Forget one device's link. Body: {link_token}. When it was the link's
+    last token, the link doc goes and the Slack fields leave the user's
+    Scouters docs."""
+    try:
+        token = str(req.get_json()['link_token']).strip()
+    except (ValueError, KeyError, TypeError):
+        token = ''
+    if not token:
+        return _json_response({'error': 'link_token is required'}, 400)
+    try:
+        container = _slack_container()
+        link = _find_link(token)
+        if link is None:
+            return _json_response({'unlinked': False})
+        h = slack_link.hash_token(token)
+        link['link_token_hashes'] = [
+            x for x in link.get('link_token_hashes', []) if x != h]
+        if link['link_token_hashes']:
+            container.upsert_item(link)
+            return _json_response({'unlinked': True})
+        container.delete_item(link['id'], partition_key=link['id'])
+        scouters = _schedule_container('Scouters')
+        for d in list(scouters.query_items(
+                query="SELECT * FROM c WHERE c.slack_user_id = @u AND "
+                      "c.slack_team_id = @t",
+                parameters=[{'name': '@u', 'value': link['slack_user_id']},
+                            {'name': '@t', 'value': link['slack_team_id']}],
+                enable_cross_partition_query=True)):
+            for f in ('slack_user_id', 'slack_team_id', 'slack_name'):
+                d.pop(f, None)
+            scouters.upsert_item(d)
+        return _json_response({'unlinked': True})
+    except Exception as e:
+        logging.exception('SlackUnlink failed: %s', type(e).__name__)
+        return _json_response({'error': 'Could not unlink'}, 500)
 
 
 def _schedules(sk, ek):
@@ -957,7 +1260,9 @@ def publish_schedule(req: func.HttpRequest) -> func.HttpResponse:
     """Publish (replace) one person's scouting schedule for an event.
 
     Body: {secret_key, event_key, published_by,
-           shifts: [{scouter_name, station, first_match, last_match}]}
+           shifts: [{scouter_name, station, first_match, last_match}],
+           time_offset (optional, seconds: a practice run with every match
+           time moved by this much; see shift_reminders.py)}
     Returns the saved schedule doc.
     """
     try:
@@ -980,6 +1285,9 @@ def publish_schedule(req: func.HttpRequest) -> func.HttpResponse:
     doc = {'id': doc_id, 'kind': 'schedule', 'secret_key': sk,
            'event_key': ek, 'published_by': by,
            'published_at': scout_schedule.now_iso(), 'shifts': shifts}
+    offset = shift_reminders.clean_offset(payload.get('time_offset'))
+    if offset:
+        doc['time_offset'] = offset
     saved = _schedule_container('ScoutSchedules').upsert_item(doc)
     return _json_response(pick_list.strip_system(saved))
 
@@ -1000,50 +1308,155 @@ def get_schedules(req: func.HttpRequest) -> func.HttpResponse:
 
 _qual_times_cache = {}
 _QUAL_TIMES_TTL = 300
+# Events nowhere near today (finished, or months off) change rarely.
+_QUAL_TIMES_TTL_IDLE = 6 * 3600
 
 
 def _event_qual_times(event_key):
     cached = _qual_times_cache.get(event_key)
-    if cached and time.time() - cached[0] < _QUAL_TIMES_TTL:
-        return cached[1]
+    if cached:
+        times = cached[1]
+        live = any(abs(t - time.time()) < 2 * 86400 for t in times.values())
+        ttl = _QUAL_TIMES_TTL if live or not times else _QUAL_TIMES_TTL_IDLE
+        if time.time() - cached[0] < ttl:
+            return times
     times = scout_schedule.qual_times(
         _tba_json(f'/event/{event_key}/matches/simple'))
     _qual_times_cache[event_key] = (time.time(), times)
     return times
 
 
-@app.function_name(name="ScheduleCalendar")
-@app.route(route="ScheduleCalendar", auth_level=func.AuthLevel.ANONYMOUS)
-def schedule_calendar(req: func.HttpRequest) -> func.HttpResponse:
-    """A scouter's shifts as an iCalendar feed (subscribe by URL).
+# --- Shift reminders (Slack DMs); see shift_reminders.py ---
 
-    Params: token (the scouter's calendar_token)
-    Uses the newest schedule for the token's secret key + event.
-    """
-    token = (req.params.get('token') or '').strip()
-    scouter = None
-    if token:
-        found = list(_schedule_container('Scouters').query_items(
-            query="SELECT * FROM c WHERE c.calendar_token = @t",
-            parameters=[{'name': '@t', 'value': token}],
-            enable_cross_partition_query=True))
-        scouter = found[0] if found else None
-    if scouter is None:
-        return func.HttpResponse('Unknown calendar token', status_code=404,
-                                 mimetype='text/plain')
-    sk, ek = scouter['secret_key'], scouter['event_key']
-    schedules = _schedules(sk, ek)
+_reminders_ready = False
+
+
+def _reminders_container():
+    """ShiftReminders: one doc per reminder sent (TTL 30 days)."""
+    global _reminders_ready
+    if not _reminders_ready:
+        get_container('ScoutingResults')  # make sure _cosmos_db exists
+        _cosmos_db.create_container_if_not_exists(
+            id='ShiftReminders', partition_key=PartitionKey(path='/id'),
+            default_ttl=-1)
+        _reminders_ready = True
+    return get_container('ShiftReminders')
+
+
+def _slack_post(bot_token, user, text):
+    """DM [user] as the team's bot. Returns Slack's error name or None."""
+    r = requests.post('https://slack.com/api/chat.postMessage',
+                      headers={'Authorization': f'Bearer {bot_token}'},
+                      json={'channel': user, 'text': text}, timeout=15)
     try:
-        times = _event_qual_times(ek) if schedules else {}
+        body = r.json()
+    except ValueError:
+        body = {}
+    if r.status_code == 200 and body.get('ok'):
+        return None
+    return body.get('error') or f'http {r.status_code}'
+
+
+def _run_reminders(now=None, dry_run=False):
+    """Send every reminder that's due. Returns what was (or would be) sent,
+    without message text or Slack IDs beyond what a log needs."""
+    now = int(now if now is not None else time.time())
+    report = []
+    configs = [c for c in _slack_configs_container().query_items(
+        query="SELECT * FROM c WHERE IS_DEFINED(c.bot_token)",
+        enable_cross_partition_query=True)
+        if c.get('enabled') is not False and c.get('bot_token')]
+    reminders = _reminders_container()
+
+    def was_sent(key):
+        try:
+            reminders.read_item(key, partition_key=key)
+            return True
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return False
+
+    for cfg in configs:
+        sk = cfg['secret_key']
+        schedules = list(_schedule_container('ScoutSchedules').query_items(
+            query="SELECT * FROM c WHERE c.secret_key = @sk",
+            parameters=[{'name': '@sk', 'value': sk}],
+            enable_cross_partition_query=True))
+        for ek, sched in shift_reminders.newest_by_event(schedules).items():
+            offset = shift_reminders.clean_offset(sched.get('time_offset'))
+            try:
+                times = _event_qual_times(ek)
+            except Exception as e:
+                logging.warning('Reminders: TBA times failed for %s: %s',
+                                ek, type(e).__name__)
+                continue
+            if not shift_reminders.anything_soon(
+                    shift_reminders.moved_times(times, offset), now):
+                continue
+            users = {}
+            for d in _schedule_container('Scouters').query_items(
+                    query="SELECT c.name_key, c.slack_user_id, c.slack_team_id "
+                          "FROM c WHERE c.secret_key = @sk AND "
+                          "IS_DEFINED(c.slack_user_id)",
+                    parameters=[{'name': '@sk', 'value': sk}],
+                    partition_key=ek):
+                # Only people in this team's own workspace.
+                if d.get('slack_team_id') == cfg.get('slack_team_id'):
+                    users[d['name_key']] = d['slack_user_id']
+            due = shift_reminders.due_reminders(
+                secret_key=sk, event_key=ek, schedule=sched, times=times,
+                slack_users=users, sent=was_sent, now=now)
+            for r in due:
+                row = {'event_key': ek, 'scouter_name': r['scouter_name'],
+                       'start': r['start'], 'practice': bool(offset)}
+                if dry_run:
+                    report.append({**row, 'status': 'would send',
+                                   'text': r['text']})
+                    continue
+                error = _slack_post(cfg['bot_token'], r['user'], r['text'])
+                if error:
+                    logging.error('Reminder to %s failed: %s',
+                                  r['scouter_name'], error)
+                    report.append({**row, 'status': 'failed: ' + error})
+                    continue
+                reminders.upsert_item({
+                    'id': r['key'], 'kind': 'reminder', 'secret_key': sk,
+                    **row, 'sent_at': scout_schedule.now_iso(),
+                    'ttl': shift_reminders.RECORD_TTL})
+                report.append({**row, 'status': 'sent'})
+    return report
+
+
+@app.function_name(name="ShiftReminders")
+@app.schedule(schedule="0 */5 * * * *", arg_name="timer",
+              run_on_startup=False, use_monitor=False)
+def shift_reminders_timer(timer: func.TimerRequest) -> None:
+    """Every 5 minutes: DM scouters whose shift starts soon."""
+    try:
+        report = _run_reminders()
+        if report:
+            logging.info('Shift reminders: %s', [
+                (r['scouter_name'], r['status']) for r in report])
     except Exception as e:
-        logging.warning(f'Calendar: TBA match times failed for {ek}: {e}')
-        times = {}
-    body = scout_schedule.build_calendar(
-        secret_key=sk, event_key=ek, scouter_name=scouter['scouter_name'],
-        schedule=schedules[0] if schedules else None, times=times)
-    return func.HttpResponse(
-        body, status_code=200, mimetype='text/calendar', charset='utf-8',
-        headers={'Cache-Control': 'max-age=300'})
+        logging.exception('Shift reminders failed: %s', type(e).__name__)
+
+
+@app.function_name(name="ShiftRemindersNow")
+@app.route(route="ShiftRemindersNow", methods=["POST"],
+           auth_level=func.AuthLevel.ANONYMOUS)
+def shift_reminders_now(req: func.HttpRequest) -> func.HttpResponse:
+    """LOCAL TESTING ONLY (404 in Azure): run the reminder pass now.
+    Params: dry_run=1 to list what would be sent without sending; now=<unix
+    seconds> to pretend it's another time (dry runs only)."""
+    if os.environ.get('WEBSITE_INSTANCE_ID'):
+        return func.HttpResponse(status_code=404)
+    dry = (req.params.get('dry_run') or '') == '1'
+    now = None
+    if dry and req.params.get('now'):
+        try:
+            now = int(req.params['now'])
+        except ValueError:
+            return _json_response({'error': 'now must be unix seconds'}, 400)
+    return _json_response(_run_reminders(now=now, dry_run=dry))
 
 
 _places_ready = False
