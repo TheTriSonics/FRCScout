@@ -113,6 +113,12 @@ def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
     print(f'Secret team key: {secret_team_key}')
     print(f'Team key: {team_key}')
     print(f'Event key: {event_key}')
+    if not secret_team_key or not secret_team_key.strip():
+        return func.HttpResponse(
+            json.dumps({'error': 'secret_team_key is required'}),
+            status_code=400,
+            mimetype='application/json'
+        )
     logging.error('getting pit data now')
     df = get_pit_data(secret_team_key=secret_team_key, event_key=event_key,
                       team_key=team_key)
@@ -1980,11 +1986,9 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
     ]
-    """
     if (secret_team_key is not None):
-        query += "AND c.secret_team_key = @secret_team_key "
+        query += "AND TRIM(LOWER(c.secret_team_key)) = TRIM(LOWER(@secret_team_key)) "  # noqa
         params.append({'name': '@secret_team_key', 'value': secret_team_key})
-    """
     if (event_key is not None):
         query += "AND c.event_key = @event_key "
         params.append({'name': '@event_key', 'value': event_key})
