@@ -40,6 +40,12 @@ Statbotics predictions are estimates. Mention small samples (under 3
 scouted matches). Call several tools at once when they're independent.
 Refer to people by name; don't assume anyone's pronouns.
 
+Questions aren't limited to the current event. For another event, get its key
+with find_event and pass it as the tools' event parameter; our team's scouting
+and pit data exist only for events our scouts covered, while results, rankings,
+OPR and Statbotics exist for every event. team_events gives a team's whole
+season. Say which event an answer is about when it isn't the current one.
+
 You only read data; you can't change the schedule, pick list or scouting
 records. If asked to, explain where in the scouting app to do it.
 
@@ -72,7 +78,8 @@ SLACK_STYLE = ('Reply in Slack mrkdwn: *bold* (single asterisks), _italic_, "-" 
 
 def _session_note(s: Session, style=None):
     who = s.scouter_name or 'unknown'
-    note = (f'Asking: {who} (scout for team {s.team_number or "?"}). Event: {s.event_key}. '
+    note = (f'Asking: {who} (scout for team {s.team_number or "?"}). Current event: {s.event_key} '
+            '(tools default to it; pass event to look at another). '
             'Treat "me"/"my"/"I" as this scout and "us"/"our team" as their team number.')
     return f'{note} {SLACK_STYLE}' if style == 'slack' else note
 
