@@ -34,6 +34,14 @@ param alwaysReadyHttp int = 1
 @allowed([ 512, 2048, 4096 ])
 param instanceMemoryMB int = 512
 
+@secure()
+@description('TBA read key, for the history refresh (pass it: tbaKey=$TBA_KEY from trisonics-api/setenv)')
+param tbaKey string = ''
+
+@description('History refresh timer: on/off and NCRONTAB schedule. Off until competition season.')
+param historyRefreshEnabled bool = false
+param historyRefreshSchedule string = '0 5 * * * *'
+
 param budgetAmount int = 100
 param budgetEmail string = 'justin.buist@gmail.com'
 @description('First day of a month; the budget repeats monthly from here')
@@ -101,6 +109,17 @@ resource blobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
 resource deployContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobs
   name: 'deployments'
+}
+
+resource historyContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: 'history'
+}
+
+// One empty blob per Slack message answered, so two instances never both answer it.
+resource claimsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: 'slack-claims'
 }
 
 resource queues 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' = {
@@ -187,10 +206,13 @@ resource site 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'FOUNDRY_API_KEY', value: foundry.listKeys().key1 }
         { name: 'COSMOS_ENDPOINT', value: cosmos.properties.documentEndpoint }
         { name: 'COSMOS_READ_KEY', value: cosmos.listKeys().primaryReadonlyMasterKey }
+        { name: 'TBA_KEY', value: tbaKey }
+        { name: 'HISTORY_REFRESH_SCHEDULE', value: historyRefreshSchedule }
+        { name: 'AzureWebJobs.HistoryRefresh.Disabled', value: historyRefreshEnabled ? 'false' : 'true' }
       ]
     }
   }
-  dependsOn: [ deployContainer, slackQueue, models ]
+  dependsOn: [ deployContainer, historyContainer, claimsContainer, slackQueue, models ]
 }
 
 // --- Spending alert ---

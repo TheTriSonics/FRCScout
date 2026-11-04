@@ -8,3 +8,4 @@ local.settings.json
 .gitignore
 injection_test.py
 guardrails.txt
+history/data/

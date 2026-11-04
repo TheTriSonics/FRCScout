@@ -4,6 +4,7 @@ Every tool gets a Session (who's asking, which secret key and event); the
 model never chooses the secret key. Results are plain dicts, which the agent
 sends back to the model as JSON.
 """
+import logging
 import statistics
 import time
 import re
@@ -11,6 +12,7 @@ from dataclasses import dataclass, replace
 
 import season_2026 as season
 from query_data import query_data
+import history_sql
 from scout_data import (Event, match_label, match_sort_key, match_start,
                         team_num, voter_key)
 
@@ -667,6 +669,11 @@ QUERY_SCHEMA = _schema({
                          ['x', 'y']),
 }, ['table'])
 
+def history(session, sql):
+    logging.info('history_sql %s', sql)
+    return history_sql.run(sql)
+
+
 TOOLS = [
     (event_info, 'event_info',
      'Event name, dates, current local time, how many qual matches exist and have been '
@@ -742,6 +749,13 @@ TOOLS = [
      _schema({'query': {'type': 'string'}, 'year': {'type': 'integer'}}, ['query'])),
     (scouters, 'scouters', 'Registered scouts for this event.', _schema()),
     (query_data, 'query_data', QUERY_DESC, QUERY_SCHEMA),
+    (history, 'history_sql',
+     'Read-only SQL (DuckDB) over FRC history from TBA and Statbotics, every team and event '
+     'since 2010: results, rankings, alliances, playoffs, awards, district points, EPA. Use for '
+     'questions across seasons or many events (records, streaks, head-to-head history, '
+     'who won what, how a team did in past years). One SELECT; max 200 rows, so aggregate. '
+     'Live data for the current event still comes from the other tools.\n' + history_sql.SCHEMA,
+     _schema({'sql': {'type': 'string'}}, ['sql'])),
     (pick_board, 'pick_board',
      "The team's live pick list board: everyone's personal rankings combined spot by spot "
      '(spot #k = the team most people put at #k), each ballot, DNP marks, teams already '

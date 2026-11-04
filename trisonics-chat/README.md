@@ -62,3 +62,46 @@ The Slack app needs:
 - Bot events `app_mention` and `message.im`
 - Scopes `app_mentions:read`, `chat:write`, `im:history` and `channels:history`
 - The Messages tab turned on under App Home
+
+## History lake (`history_sql`)
+
+All of FRC since 2010 from TBA and Statbotics, queried by the bot with
+read-only SQL (DuckDB). `history_sql.py` opens the database read-only with
+file, network and extension access off and the configuration locked; one
+SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
+(`history_sql ...`).
+
+- `history/sync.py FIRST LAST [--refresh YEAR]`: download raw responses to
+  `history/data/raw/` (cached; ~45 min from scratch, git-ignored).
+- `python -m history.build [--upload]`: raw → `history/data/lake/*.parquet`
+  and `history/data/history.duckdb` (~40 s). `--upload` puts the database in
+  blob `history/history.duckdb` (set `AzureWebJobsStorage` to the app's
+  storage connection string). Instances download it to temp storage and
+  re-check its ETag every 5 minutes.
+- `history/refresh.py`: re-pulls only events running now (start − 1 day to
+  end + 1 day), the season's event list, active districts and EPA, replaces
+  those rows and uploads. ~1 minute for 32 events.
+  - Timer `HistoryRefresh`: **off** (`AzureWebJobs.HistoryRefresh.Disabled`).
+    Turn on in season: `az deployment group create ... -p
+    historyRefreshEnabled=true tbaKey=$TBA_KEY` (schedule param
+    `historyRefreshSchedule`, default hourly at :05).
+  - `HistoryRefreshNow` (POST, function key; `?date=YYYY-MM-DD` to pretend
+    it's that day) runs one by hand.
+- Infra deploys must pass `tbaKey=$TBA_KEY` (from `trisonics-api/setenv`), or
+  the app's TBA key is blanked.
+- `history_questions.txt`: 20 test questions (`python cli.py --batch history_questions.txt`).
+
+## Thread follow-ups
+
+In a channel thread the bot answers a reply without an @mention when nobody
+but the asker has posted since its last reply (otherwise people are talking to each
+other). Needs the Slack app's bot events `message.channels`, `message.groups`
+and `message.mpim` (scopes `channels:history`, `groups:history`,
+`mpim:history`). Each message is answered once across instances: the worker
+claims it with an empty blob in container `slack-claims`.
+
+## Vernacular
+
+`vernacular.md` holds team slang and nicknames ("worlds", "GVSU", "states"),
+one `term: meaning` line each, sent in the system prompt. Add a line and
+redeploy (`func azure functionapp publish trisonics-chat --python`).

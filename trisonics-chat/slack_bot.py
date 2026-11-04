@@ -151,6 +151,55 @@ def history(token, ev, bot_user_id):
     return out[-20:]
 
 
+def reply_thread(ev):
+    """Mentions in a channel get a thread; DMs answer inline unless already threaded."""
+    return ev.get('thread_ts') or (ev['ts'] if ev.get('channel_type') != 'im' else None)
+
+
+def follows_bot(token, ev, bot_user_id):
+    """True if the bot has replied in [ev]'s thread and nobody but this user
+    has posted since its last reply (so it's a follow-up, not people talking
+    to each other)."""
+    msgs = api(token, 'conversations.replies', channel=ev['channel'], ts=ev['thread_ts'],
+               limit=200).get('messages') or []
+    before = sorted((m for m in msgs if float(m.get('ts', 0)) < float(ev['ts'])),
+                    key=lambda m: float(m['ts']))
+    mine = [i for i, m in enumerate(before) if m.get('user') == bot_user_id or m.get('bot_id')]
+    if not mine:
+        return False
+    return all(m.get('user') == ev.get('user') for m in before[mine[-1] + 1:])
+
+
+_claims = None
+
+
+def claim(channel, ts):
+    """True the first time any instance claims this message (a tiny blob per
+    message in container slack-claims). Fails open if storage is unreachable."""
+    global _claims
+    try:
+        from azure.core.exceptions import ResourceExistsError
+        from azure.storage.blob import ContainerClient
+        if _claims is None:
+            conn = os.environ.get('AzureWebJobsStorage', '')
+            if not conn.startswith('DefaultEndpointsProtocol'):
+                return True  # local func host
+            c = ContainerClient.from_connection_string(conn, 'slack-claims')
+            if not c.exists():
+                try:
+                    c.create_container()
+                except ResourceExistsError:
+                    pass
+            _claims = c
+        _claims.upload_blob(f'{channel}/{ts}', b'', overwrite=False)
+        return True
+    except ResourceExistsError:
+        return False
+    except Exception:
+        logging.exception('claim failed; answering anyway')
+        return True
+
+
 def to_mrkdwn(text):
     """Patch the usual Markdown habits Slack doesn't render."""
     text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text)
