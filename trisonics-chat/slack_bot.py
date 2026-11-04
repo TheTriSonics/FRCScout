@@ -151,6 +151,11 @@ def history(token, ev, bot_user_id):
     return out[-20:]
 
 
+def reply_thread(ev):
+    """Mentions in a channel get a thread; DMs answer inline unless already threaded."""
+    return ev.get('thread_ts') or (ev['ts'] if ev.get('channel_type') != 'im' else None)
+
+
 def follows_bot(token, ev, bot_user_id):
     """True if the bot has replied in [ev]'s thread and nobody but this user
     has posted since its last reply (so it's a follow-up, not people talking
