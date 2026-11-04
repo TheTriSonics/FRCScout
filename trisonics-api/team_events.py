@@ -49,6 +49,9 @@ def season(team_number, events, statuses, awards):
                             if rec else None),
             'alliance': plain(st.get('alliance_status_str')) if st.get('alliance') else None,
             'playoff': ({'status': playoff.get('status'), 'level': playoff.get('level'),
+                         # Double-elim brackets call every bracket match 'sf';
+                         # the round says how far the alliance got.
+                         'bracket_round': playoff.get('double_elim_round'),
                          'record': f"{prec.get('wins', 0)}-{prec.get('losses', 0)}-{prec.get('ties', 0)}"}
                         if playoff else None),
             'summary': plain(st.get('overall_status_str')),

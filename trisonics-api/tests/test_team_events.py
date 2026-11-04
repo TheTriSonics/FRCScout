@@ -17,7 +17,8 @@ class SeasonTest(unittest.TestCase):
                 'qual': {'num_teams': 40, 'ranking': {'rank': 3, 'record': {'wins': 9, 'losses': 3, 'ties': 0}}},
                 'alliance': {'number': 2, 'pick': 0},
                 'alliance_status_str': '<b>Captain</b> of <b>Alliance 2</b>',
-                'playoff': {'status': 'eliminated', 'level': 'f', 'record': {'wins': 4, 'losses': 2, 'ties': 0}},
+                'playoff': {'status': 'eliminated', 'level': 'sf', 'double_elim_round': 'Round 3',
+                            'record': {'wins': 4, 'losses': 2, 'ties': 0}},
                 'overall_status_str': 'Team 1918 was <b>Rank 3/40</b>.',
             },
             '2026mibig': None,  # TBA has no status yet
@@ -32,7 +33,8 @@ class SeasonTest(unittest.TestCase):
         self.assertEqual(wmi['type'], 'District')
         self.assertEqual(wmi['qual_record'], '9-3-0')
         self.assertEqual(wmi['alliance'], 'Captain of Alliance 2')
-        self.assertEqual(wmi['playoff'], {'status': 'eliminated', 'level': 'f', 'record': '4-2-0'})
+        self.assertEqual(wmi['playoff'], {'status': 'eliminated', 'level': 'sf',
+                                          'bracket_round': 'Round 3', 'record': '4-2-0'})
         self.assertEqual(wmi['summary'], 'Team 1918 was Rank 3/40.')
 
 
