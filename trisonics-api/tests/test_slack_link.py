@@ -67,16 +67,20 @@ class SlackLinkTests(unittest.TestCase):
         self.assertEqual(cfg['redirect_uri'], 'https://p.org/api/SlackCallback')
 
     def test_fake_refused_in_azure(self):
-        self.assertTrue(sl.fake_enabled({'SLACK_FAKE': '1'}))
-        self.assertFalse(sl.fake_enabled(
-            {'SLACK_FAKE': '1', 'WEBSITE_INSTANCE_ID': 'abc'}))
-        azure = {'SLACK_FAKE': '1', 'WEBSITE_INSTANCE_ID': 'abc'}
+        local = {'SLACK_FAKE': '1', 'LOCAL_DEV': '1'}
+        self.assertTrue(sl.fake_enabled(local))
+        # Off unless LOCAL_DEV is set, and never on an Azure host.
+        self.assertFalse(sl.fake_enabled({'SLACK_FAKE': '1'}))
+        for marker in sl.AZURE_MARKERS:
+            self.assertFalse(sl.fake_enabled({**local, marker: 'x'}))
+            self.assertFalse(sl.local_dev({'LOCAL_DEV': '1', marker: 'x'}))
+        azure = {**local, 'WEBSITE_SITE_NAME': 'abc'}
         self.assertIsNone(cfg_for(doc=None, env=azure, key='zz-claude-test'))
-        fake = cfg_for(doc=None, env={'SLACK_FAKE': '1'}, key='zz-claude-test')
+        fake = cfg_for(doc=None, env=local, key='zz-claude-test')
         self.assertTrue(fake['fake'])
         self.assertEqual(fake['slack_team_id'], 'TFAKE')
         # Fake mode is only for the test key.
-        self.assertIsNone(cfg_for(doc=None, env={'SLACK_FAKE': '1'}))
+        self.assertIsNone(cfg_for(doc=None, env=local))
 
     def test_authorize_url(self):
         cfg = cfg_for()
