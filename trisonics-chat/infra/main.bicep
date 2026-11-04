@@ -116,6 +116,12 @@ resource historyContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
   name: 'history'
 }
 
+// One empty blob per Slack message answered, so two instances never both answer it.
+resource claimsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: 'slack-claims'
+}
+
 resource queues 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' = {
   parent: storage
   name: 'default'
@@ -206,7 +212,7 @@ resource site 'Microsoft.Web/sites@2024-04-01' = {
       ]
     }
   }
-  dependsOn: [ deployContainer, historyContainer, slackQueue, models ]
+  dependsOn: [ deployContainer, historyContainer, claimsContainer, slackQueue, models ]
 }
 
 // --- Spending alert ---

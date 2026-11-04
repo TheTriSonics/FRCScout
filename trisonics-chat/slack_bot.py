@@ -151,6 +151,47 @@ def history(token, ev, bot_user_id):
     return out[-20:]
 
 
+def follows_bot(token, ev, bot_user_id):
+    """True if the message just before [ev] in its thread is the bot's."""
+    msgs = api(token, 'conversations.replies', channel=ev['channel'], ts=ev['thread_ts'],
+               limit=100).get('messages') or []
+    before = [m for m in msgs if float(m.get('ts', 0)) < float(ev['ts'])]
+    if not before:
+        return False
+    last = max(before, key=lambda m: float(m['ts']))
+    return last.get('user') == bot_user_id or bool(last.get('bot_id'))
+
+
+_claims = None
+
+
+def claim(channel, ts):
+    """True the first time any instance claims this message (a tiny blob per
+    message in container slack-claims). Fails open if storage is unreachable."""
+    global _claims
+    try:
+        from azure.core.exceptions import ResourceExistsError
+        from azure.storage.blob import ContainerClient
+        if _claims is None:
+            conn = os.environ.get('AzureWebJobsStorage', '')
+            if not conn.startswith('DefaultEndpointsProtocol'):
+                return True  # local func host
+            c = ContainerClient.from_connection_string(conn, 'slack-claims')
+            if not c.exists():
+                try:
+                    c.create_container()
+                except ResourceExistsError:
+                    pass
+            _claims = c
+        _claims.upload_blob(f'{channel}/{ts}', b'', overwrite=False)
+        return True
+    except ResourceExistsError:
+        return False
+    except Exception:
+        logging.exception('claim failed; answering anyway')
+        return True
+
+
 def to_mrkdwn(text):
     """Patch the usual Markdown habits Slack doesn't render."""
     text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text)

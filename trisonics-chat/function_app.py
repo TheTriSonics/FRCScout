@@ -55,14 +55,20 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
                      req.headers.get('X-Slack-Retry-Reason'), payload.get('event_id'))
     if not _queued.add(payload.get('event_id')):
         return _json({'ok': True})  # this instance already queued it
-    wanted = (ev.get('type') == 'app_mention'
-              or (ev.get('type') == 'message' and ev.get('channel_type') == 'im'))
+    auth = (payload.get('authorizations') or [{}])[0]
+    bot = auth.get('user_id')
+    is_msg = ev.get('type') == 'message'
+    # A thread reply in a channel without a mention (mentions come as
+    # app_mention); the worker answers it only if it follows the bot's reply.
+    followup = (is_msg and ev.get('channel_type') in ('channel', 'group', 'mpim')
+                and bool(ev.get('thread_ts')) and f'<@{bot}>' not in (ev.get('text') or ''))
+    wanted = (ev.get('type') == 'app_mention' or followup
+              or (is_msg and ev.get('channel_type') == 'im'))
     if payload.get('type') == 'event_callback' and wanted \
             and not ev.get('bot_id') and not ev.get('subtype') and ev.get('user'):
-        auth = (payload.get('authorizations') or [{}])[0]
         out.set(json.dumps({
             'config_id': cfg['id'], 'event_id': payload.get('event_id'),
-            'bot_user_id': auth.get('user_id'),
+            'bot_user_id': bot, 'followup': followup,
             'event': {k: ev.get(k) for k in ('type', 'user', 'channel', 'channel_type',
                                              'ts', 'thread_ts', 'text')},
         }))
@@ -91,6 +97,15 @@ def _answer(job):
         logging.error('SlackWorker: config %s gone', job['config_id'])
         return
     ev, token = job['event'], cfg['bot_token']
+    if job.get('followup') and not slack_bot.follows_bot(token, ev, job.get('bot_user_id')):
+        return  # people talking in a thread the bot was in, not to the bot
+    # One answer per Slack message, across instances (Slack can deliver the
+    # same message as two events, e.g. a DM that also mentions the bot).
+    if not slack_bot.claim(ev['channel'], ev['ts']):
+        logging.info('SlackWorker: %s/%s already answered', ev['channel'], ev['ts'])
+        return
+    logging.info('SlackWorker: %s in %s (%s)', ev.get('type'), ev.get('channel_type'),
+                 'follow-up' if job.get('followup') else 'direct')
     # Mentions in a channel get a thread; DMs answer inline unless already threaded.
     thread = ev.get('thread_ts') or (ev['ts'] if ev.get('channel_type') != 'im' else None)
 

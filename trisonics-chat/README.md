@@ -90,3 +90,12 @@ SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
 - Infra deploys must pass `tbaKey=$TBA_KEY` (from `trisonics-api/setenv`), or
   the app's TBA key is blanked.
 - `history_questions.txt`: 20 test questions (`python cli.py --batch history_questions.txt`).
+
+## Thread follow-ups
+
+In a channel thread the bot answers a reply without an @mention only when the
+message right before it is the bot's (otherwise people are talking to each
+other). Needs the Slack app's bot events `message.channels`, `message.groups`
+and `message.mpim` (scopes `channels:history`, `groups:history`,
+`mpim:history`). Each message is answered once across instances: the worker
+claims it with an empty blob in container `slack-claims`.
