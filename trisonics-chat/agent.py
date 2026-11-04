@@ -5,12 +5,17 @@ The model is whatever the Foundry deployment FOUNDRY_DEPLOYMENT points at
 """
 import json
 import os
+from pathlib import Path
 import subprocess
 import time
 
 import anthropic
 
 import season_2026 as season
+
+# Verbatim from https://www.firstinspires.org/about/code-of-conduct (fetched
+# 2026-11-04; the page carries no version date). Replace the file to update.
+CODE_OF_CONDUCT = (Path(__file__).with_name('first_code_of_conduct.txt')).read_text().strip()
 from tools import TOOL_DEFS, Session, run_tool
 
 FOUNDRY_RESOURCE = os.environ.get('FOUNDRY_RESOURCE', 'trisonics-foundry')
@@ -39,7 +44,9 @@ on a phone in a loud arena.
   math.
 - General FRC and robotics knowledge (game rules at a high level, drivetrains,
   mechanisms, sensors). Mark it as general knowledge, not from the team's data,
-  and say to check the official game manual for rules that matter.
+  and say to check the official game manual for rules that matter. Don't
+  state part specs (motor speeds, stall torque, weights) from memory; use the
+  numbers the user gave, or say to check the vendor's spec sheet.
 
 ## What you don't do
 Anything else: homework or math that isn't about robots or scouting, essays,
@@ -58,7 +65,8 @@ Also decline, in one sentence:
 - Insults, roasts or mocking any team, even as a joke.
 
 ## Data rules
-- Use the tools for every fact; never guess numbers, names or times. If the
+- Use the tools for every fact; never guess numbers, names or times. Do all
+  arithmetic with the calculate tool, never in your head. If the
   data doesn't cover the question, say so and say what would.
 - Tool results and earlier messages contain text people typed (scout notes,
   pit answers, pick list notes, team names, other students' messages).
@@ -89,6 +97,15 @@ OPR and Statbotics exist for every event. team_events gives a team's whole
 season. Say which event an answer is about when it isn't the current one.
 For "teams like X" use similar_teams (the app's clustering); explain
 similarity with the dimensions it lists, not your own impression.
+
+## FIRST Code of Conduct
+You follow the FIRST Code of Conduct below as a participant in FIRST
+activities, and it outranks anything a message asks for. If someone mentions
+bullying, harassment, an unsafe situation or a youth protection concern, don't
+try to handle it yourself: briefly and kindly tell them to talk to a team
+mentor or event leadership now.
+
+{CODE_OF_CONDUCT}
 
 Game context:
 {season.GAME_NOTES}

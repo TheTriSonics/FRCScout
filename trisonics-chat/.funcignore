@@ -6,3 +6,5 @@ cli.py
 README.md
 local.settings.json
 .gitignore
+injection_test.py
+guardrails.txt
