@@ -57,8 +57,8 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
         return _json({'ok': True})  # this instance already queued it
     logging.info('SlackEvents: %s', json.dumps({
         'event_id': payload.get('event_id'), 'type': ev.get('type'), 'subtype': ev.get('subtype'),
-        'channel_type': ev.get('channel_type'), 'thread': bool(ev.get('thread_ts')),
-        'bot': bool(ev.get('bot_id'))}))
+        'channel_type': ev.get('channel_type'), 'channel': ev.get('channel'),
+        'thread': bool(ev.get('thread_ts')), 'bot': bool(ev.get('bot_id'))}))
     auth = (payload.get('authorizations') or [{}])[0]
     bot = auth.get('user_id')
     is_msg = ev.get('type') == 'message'
@@ -66,7 +66,11 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
     # app_mention); answered only if it follows the bot's reply.
     followup = (is_msg and ev.get('channel_type') in ('channel', 'group', 'mpim')
                 and bool(ev.get('thread_ts')) and f'<@{bot}>' not in (ev.get('text') or ''))
-    wanted = (ev.get('type') == 'app_mention' or followup
+    # Any top-level message in a channel listed in the config's auto_channels
+    # (mentions there still come as app_mention and are answered once).
+    auto = (is_msg and not ev.get('thread_ts') and ev.get('channel') in (cfg.get('auto_channels') or [])
+            and f'<@{bot}>' not in (ev.get('text') or ''))
+    wanted = (ev.get('type') == 'app_mention' or followup or auto
               or (is_msg and ev.get('channel_type') == 'im'))
     if not (payload.get('type') == 'event_callback' and wanted
             and not ev.get('bot_id') and not ev.get('subtype') and ev.get('user')):
