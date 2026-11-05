@@ -119,6 +119,12 @@ def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400,
             mimetype='application/json'
         )
+    if not event_key or len(event_key) < 4:
+        return func.HttpResponse(
+            json.dumps({'error': 'event_key is required'}),
+            status_code=400,
+            mimetype='application/json'
+        )
     logging.error('getting pit data now')
     df = get_pit_data(secret_team_key=secret_team_key, event_key=event_key,
                       team_key=team_key)
@@ -137,6 +143,12 @@ def get_pit_results(req: func.HttpRequest) -> func.HttpResponse:
 def get_results(req: func.HttpRequest) -> func.HttpResponse:
     secret_team_key = req.params.get('secret_team_key')
     event_key = req.params.get('event_key')
+    if not event_key or len(event_key) < 4:
+        return func.HttpResponse(
+            json.dumps({'error': 'event_key is required'}),
+            status_code=400,
+            mimetype='application/json'
+        )
     df = get_scouting_data(secret_team_key=secret_team_key,
                            event_key=event_key)
     json_obj = df.to_json(orient='records')
@@ -1924,10 +1936,28 @@ def get_container(container_name: str):
     return _cosmos_db.get_container_client(container_name)
 
 
+_known_containers = set()
+
+
+def container_exists(container_name: str) -> bool:
+    """False when the container hasn't been created yet, e.g. a new
+    season's MatchResults{year} before anyone has scouted."""
+    if container_name in _known_containers:
+        return True
+    try:
+        get_container(container_name).read()
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        return False
+    _known_containers.add(container_name)
+    return True
+
+
 def get_scouting_data(secret_team_key=None, event_key=None):
     # Get the year from event_key, the first four characters are the year
     year = event_key[:4]
     container_name = f'MatchResults{year}'
+    if not container_exists(container_name):
+        return pd.DataFrame()
     container = get_container(container_name)
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
@@ -1982,6 +2012,8 @@ def get_pit_data(secret_team_key=None, event_key=None, team_key=None):
     # Get the year from event_key, the first four characters are the year
     year = event_key[:4]
     container_name = f'PitResults{year}'
+    if not container_exists(container_name):
+        return None
     container = get_container(container_name)
     query = "SELECT * FROM c WHERE 1=1 "
     params = [
@@ -2068,8 +2100,12 @@ def http_get_opr_data(event_code):
     # Now get the qualification matches
 
     matches = get_event_matches_df(event_code)
+    if matches.empty or 'comp_level' not in matches.columns:
+        return pd.DataFrame()
     quals = matches[matches['comp_level'] == 'qm']
     quals = quals.dropna(axis='index', subset=['score_breakdown'])
+    if quals.empty:
+        return pd.DataFrame()
     for _, row in quals.iterrows():
         for color in ['blue', 'red']:
             row['score_breakdown'][color] = flatten_score_breakdown(
