@@ -1,12 +1,21 @@
 """Shaping TBA and Statbotics responses into the history tables, shared by
 build.py (whole lake from the raw cache) and refresh.py (a few live events).
 
+Three layers, each made only from the one before, by format changes:
+  raw (bronze): API responses as gzipped JSON, history/data/raw/ and history-source raw/
+  lake (silver): one Parquet file per table, lake/<table>.parquet (team_matches is
+    derived from matches here)
+  history.duckdb (gold): the Parquet tables loaded as is; what the bot queries.
+
 Each *_rows function takes one API response and yields table rows (dicts).
 """
 import json
 import os
 import re
 import tempfile
+from pathlib import Path
+
+import duckdb
 
 TABLES = ['teams', 'events', 'matches', 'awards', 'team_events', 'district_rankings',
           'epa_team_years', 'epa_team_events']
@@ -159,32 +168,76 @@ def _ndjson(rows):
     return f.name, n
 
 
-def create_table(con, name, rows):
-    """CREATE TABLE [name] from row dicts, types inferred. Returns the row count."""
+# Row groups capped by size too: a matches row carries ~2 KB of JSON breakdowns.
+PARQUET = "(FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 10000, ROW_GROUP_SIZE_BYTES '8MB')"
+
+
+def connect(memory='100MB'):
+    """A scratch DuckDB for moving data between layers. The defaults fit the Function App's
+    512 MB instance: one thread, insertion order not kept, spilling to temp disk."""
+    return duckdb.connect(config={'memory_limit': memory, 'threads': 1,
+                                  'preserve_insertion_order': False,
+                                  'temp_directory': os.path.join(tempfile.gettempdir(), f'duckdb-spill-{os.getpid()}')})
+
+
+def _typed(path, types):
+    """SELECT over an ndjson file with the given (column, type) list; JSON columns cast."""
+    cols = ', '.join(f"'{c}': '{'VARCHAR' if c in JSON_COLS else t}'" for c, t in types)
+    casts = ', '.join(f'"{c}"::JSON AS "{c}"' if c in JSON_COLS else f'"{c}"' for c, _ in types)
+    return f"SELECT {casts} FROM read_json('{path}', format='newline_delimited', columns={{{cols}}})"
+
+
+def write_parquet(con, rows, out):
+    """Silver from bronze: row dicts -> one Parquet file, types inferred. Returns the row count."""
     path, n = _ndjson(rows)
     try:
         src = f"read_json('{path}', format='newline_delimited', sample_size=-1)"
-        cols = [c for c, *_ in con.execute(f'DESCRIBE SELECT * FROM {src}').fetchall()]
-        casts = ', '.join(f'"{c}"::JSON AS "{c}"' if c in JSON_COLS else f'"{c}"' for c in cols)
-        con.execute(f'CREATE TABLE {name} AS SELECT {casts} FROM {src}')
+        # Parquet has no HUGEINT (it would become DOUBLE); unix times fit in BIGINT.
+        types = [(c, 'BIGINT' if t == 'HUGEINT' else t)
+                 for c, t, *_ in con.execute(f'DESCRIBE SELECT * FROM {src}').fetchall()]
+        con.execute(f"COPY ({_typed(path, types)}) TO '{out}' {PARQUET}")
     finally:
         os.unlink(path)
     return n
 
 
-def insert_rows(con, name, rows):
-    """INSERT row dicts into an existing table, using its column types."""
-    path, n = _ndjson(rows)
-    try:
+def replace_rows(con, table, keep, rows=None, sql=None):
+    """Rewrite one Parquet table in place: the old rows where [keep] (a SQL condition) plus
+    the new [rows] (dicts, typed like the file) and/or the rows of [sql]."""
+    table = str(table)
+    types = [(c, t) for c, t, *_ in con.execute(f"DESCRIBE SELECT * FROM '{table}'").fetchall()]
+    parts, tmp_json = [f"SELECT * FROM '{table}' WHERE {keep}"], None
+    if rows is not None:
+        tmp_json, n = _ndjson(rows)
         if n:
-            types = con.execute(f'DESCRIBE {name}').fetchall()
-            cols = ', '.join(f"'{c}': '{'VARCHAR' if c in JSON_COLS else t}'" for c, t, *_ in types)
-            casts = ', '.join(f'"{c}"::JSON' if c in JSON_COLS else f'"{c}"' for c, *_ in types)
-            con.execute(f"INSERT INTO {name} SELECT {casts} FROM read_json('{path}', "
-                        f"format='newline_delimited', columns={{{cols}}})")
+            parts.append(_typed(tmp_json, types))
+    if sql:
+        parts.append(f'SELECT * FROM ({sql})')
+    try:
+        con.execute(f"COPY ({' UNION ALL BY NAME '.join(parts)}) TO '{table}.new' {PARQUET}")
+        os.replace(f'{table}.new', table)
     finally:
-        os.unlink(path)
-    return n
+        if tmp_json:
+            os.unlink(tmp_json)
+
+
+def make_db(lake_dir, db_path, memory='100MB'):
+    """Gold from silver: every lake/<table>.parquet loaded as is into a new DuckDB file."""
+    db_path = Path(db_path)
+    db_path.unlink(missing_ok=True)
+    con = duckdb.connect(str(db_path), config={'memory_limit': memory, 'threads': 1,
+                                               'preserve_insertion_order': False})
+    try:
+        for f in sorted(Path(lake_dir).glob('*.parquet')):
+            con.execute(f"CREATE TABLE {f.stem} AS SELECT * FROM '{f}'")
+        con.execute('CHECKPOINT')
+    finally:
+        con.close()
+
+
+def matches_view(con, lake_dir):
+    """TEAM_MATCHES reads a table called matches; point it at the Parquet file."""
+    con.execute(f"CREATE OR REPLACE VIEW matches AS SELECT * FROM '{Path(lake_dir) / 'matches.parquet'}'")
 
 
 # Per team per match, derived from matches. {where} filters matches.

@@ -88,30 +88,44 @@ file, network and extension access off and the configuration locked; one
 SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
 (`history_sql ...`).
 
-- `history/sync.py FIRST LAST [--refresh YEAR]`: download raw responses to
-  `history/data/raw/` (cached; ~45 min from scratch, git-ignored).
-- `python -m history.build [--upload]`: raw → `history/data/lake/*.parquet`
-  and `history/data/history.duckdb` (~40 s). `--upload` puts the database in
-  blob `history/history.duckdb` (set `AzureWebJobsStorage` to the app's
-  storage connection string). Instances download it to temp storage and
-  re-check its ETag every 5 minutes.
-- **Source of truth: container `history-source`** (same storage account):
-  `raw/<source>/<kind>/<year>/<file>.json.gz` (every cached response, same
-  paths as `history/data/raw/`) and `lake/<table>.parquet`. Kinds: `tba/`
+Three layers, each made only from the one before by format changes (see
+`history/lake.py`):
+
+| Layer | What | Where |
+|---|---|---|
+| raw (bronze) | TBA/Statbotics responses, gzipped JSON | `history/data/raw/`, `history-source` `raw/` |
+| lake (silver) | one Parquet file per table (`team_matches` derived from `matches` here) | `history/data/lake/`, `history-source` `lake/` |
+| database (gold) | the Parquet tables loaded as is | `history/data/history.duckdb`, `history` `history.duckdb` |
+
+`history-source` and `history` are containers in the chat app's storage
+account (`trisonicschatst`). `history-source` is the source of truth.
+
+- Raw paths: `<source>/<kind>/<year>/<file>.json.gz`. Kinds: `tba/`
   `matches`, `awards`, `alliances`, `team_statuses`, `event_teams` (file =
   event key), `district_rankings` (file = district key), `events`,
   `districts`, `teams` (pages, no year); `sb/` `team_years`, `team_events`
-  (`offset_NNNNN` pages). `history/sync.py` `name()` is the mapping. Rebuild on any machine:
-  `az storage blob download-batch -s history-source --pattern 'raw/*' -d history/data`
-  then `python -m history.build`. After a local `sync.py`, push new files with
-  `az storage blob upload-batch -d history-source --destination-path raw -s history/data/raw`.
+  (`offset_NNNNN` pages). `history/sync.py` `name()` is the mapping.
+- `history/sync.py FIRST LAST [--refresh YEAR]`: download raw responses to
+  `history/data/raw/` (cached; ~45 min from scratch, git-ignored). Push new
+  files with `az storage blob upload-batch -d history-source --destination-path raw -s history/data/raw`.
+- `python -m history.build [--db-only] [--upload]`: raw → lake (~40 s) →
+  database (~6 s). `--db-only` remakes only the database from the Parquet
+  files (e.g. after downloading `history-source/lake/`). `--upload` puts the
+  Parquet files in `history-source` and the database in `history` (set
+  `AzureWebJobsStorage` to the app's storage connection string). Bot
+  instances download the database to temp storage and re-check its ETag
+  every 5 minutes.
+- Rebuild on any machine: `az storage blob download-batch -s history-source
+  --pattern 'raw/*' -d history/data` then `python -m history.build`; or just
+  the lake (`--pattern 'lake/*'`) and `--db-only`.
 - `history/refresh.py`: re-pulls only events running now (start − 1 day to
-  end + 1 day), the season's event list, active districts and EPA, replaces
-  those rows and uploads the database. It also saves every response it fetched
-  to `history-source/raw/` and the updated tables to `history-source/lake/`,
-  so a rebuild from `history-source` gives the same database (checked
-  2026-11-06). Retries 5xx/429. A 40-event weekend: ~45 s, ~275 MB peak
-  (the instance has 512 MB; the Parquet export runs at a 100 MB DuckDB limit).
+  end + 1 day), the season's event list, active districts and EPA, and
+  updates each layer in turn: the responses to `history-source/raw/`, those
+  rows replaced in the Parquet tables (`history-source/lake/`), then the
+  database made again from the Parquet and uploaded. Same result as a full
+  rebuild (checked 2026-11-06). Retries 5xx/429. A 40-event weekend: ~50 s,
+  ~255 MB peak (the instance has 512 MB; DuckDB runs at 100 MB with one
+  thread, spills to disk, and Parquet row groups are capped at 8 MB).
   - Timer `HistoryRefresh`: **off** (`AzureWebJobs.HistoryRefresh.Disabled`).
     Turn on in season: `az deployment group create ... -p
     historyRefreshEnabled=true tbaKey=$TBA_KEY` (schedule param

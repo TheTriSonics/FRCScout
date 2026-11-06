@@ -1,20 +1,18 @@
-"""Build the history lake from the raw cache sync.py downloaded.
-
-Writes history/data/lake/<table>.parquet (the lake) and
-history/data/history.duckdb (what the bot queries, read-only).
-Upload the .duckdb with --upload (needs AzureWebJobsStorage, the chat app's
-storage connection string). The raw cache can come from the history-source
+"""Build the history lake from the raw cache sync.py downloaded, layer by layer
+(see lake.py): raw -> history/data/lake/<table>.parquet -> history/data/history.duckdb
+(what the bot queries, read-only). --db-only remakes the database from the
+Parquet files alone. --upload puts the Parquet files in history-source and the
+database in history (needs AzureWebJobsStorage, the chat app's storage
+connection string). The raw cache can come from the history-source
 container instead of sync.py (see README).
 
-  python -m history.build [--upload]
+  python -m history.build [--db-only] [--upload]
 """
 import argparse
 import glob
 import gzip
 import json
 from pathlib import Path
-
-import duckdb
 
 from history import lake, store
 
@@ -69,23 +67,30 @@ SOURCES = {
 }
 
 
+def build_lake(memory='1GB'):
+    """raw -> lake/<table>.parquet, plus team_matches derived from matches."""
+    LAKE.mkdir(parents=True, exist_ok=True)
+    con = lake.connect(memory)
+    for name in lake.TABLES:
+        print(f'{name}: {lake.write_parquet(con, SOURCES[name](), LAKE / f"{name}.parquet")} rows', flush=True)
+    lake.matches_view(con, LAKE)
+    con.execute(f"COPY ({lake.TEAM_MATCHES.format(where='')}) TO '{LAKE / 'team_matches.parquet'}' {lake.PARQUET}")
+    print('team_matches:', con.execute(f"SELECT count(*) FROM '{LAKE / 'team_matches.parquet'}'").fetchone()[0])
+    con.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--upload', action='store_true')
+    ap.add_argument('--db-only', action='store_true', help='skip raw -> lake; only lake -> history.duckdb')
+    ap.add_argument('--upload', action='store_true',
+                    help='put lake/*.parquet in history-source and the database in history')
     args = ap.parse_args()
-    LAKE.mkdir(parents=True, exist_ok=True)
-    DB.unlink(missing_ok=True)
-    con = duckdb.connect(str(DB))
-    for name in lake.TABLES:
-        print(f'{name}: {lake.create_table(con, name, SOURCES[name]())} rows', flush=True)
-    con.execute('CREATE TABLE team_matches AS ' + lake.TEAM_MATCHES.format(where=''))
-    print('team_matches:', con.execute('SELECT count(*) FROM team_matches').fetchone()[0])
-    for (name,) in con.execute('SHOW TABLES').fetchall():
-        con.execute(f"COPY {name} TO '{LAKE / name}.parquet' (FORMAT parquet, COMPRESSION zstd)")
-    con.execute('CHECKPOINT')
-    con.close()
+    if not args.db_only:
+        build_lake()
+    lake.make_db(LAKE, DB, memory='1GB')
     print(f'{DB}: {DB.stat().st_size / 1e6:.0f} MB')
     if args.upload:
+        store.put_source(('lake/' + f.name, f) for f in sorted(LAKE.glob('*.parquet')))
         store.upload(DB)
         print('uploaded')
 
