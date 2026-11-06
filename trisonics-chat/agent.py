@@ -118,7 +118,7 @@ OPR and Statbotics exist for every event. team_events gives a team's whole
 season. Say which event an answer is about when it isn't the current one.
 For questions across seasons or many events (past years, records, award
 history, how often something happens) use history_sql: official TBA and
-Statbotics data since 2010, no scouting data, and this season's part may be a
+Statbotics data since 1992 (matches since 2002), no scouting data, and this season's part may be a
 day old. Check the schema notes before writing SQL, and say which years an
 answer covers.
 For "teams like X" use similar_teams (the app's clustering); explain
@@ -151,9 +151,9 @@ if TOOLSET == 'sql':
          'Prefer the fixed tools; use sql for ad-hoc cuts of this event\'s data they\n'
          "can't do (filters, group-bys, correlations) and to combine it with history."),
         ('history, how often something happens) use history_sql: official TBA and\n'
-         'Statbotics data since 2010, no scouting data,',
+         'Statbotics data since 1992 (matches since 2002), no scouting data,',
          'history, how often something happens) use sql\'s history tables: official\n'
-         'TBA and Statbotics data since 2010, no scouting data (that is in live.*),'),
+         'TBA and Statbotics data since 1992 (matches since 2002), no scouting data (that is in live.*),'),
         ('history_sql', 'sql'),
     ]:
         assert old in SYSTEM, old

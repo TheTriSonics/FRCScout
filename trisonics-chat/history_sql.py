@@ -1,5 +1,5 @@
 """history_sql: read-only SQL over the FRC history lake (TBA + Statbotics,
-2010 onward) in DuckDB.
+1992 onward) in DuckDB.
 
 Locked down: the database opens read-only, with no file, network or
 extension access and the configuration locked, so a query can only read the
@@ -50,7 +50,14 @@ Tables (team_number is an int; event_key like '2024micmp'; year = season):
   season's points.
 - epa_team_events(team_number, year, event_key, epa, epa_norm, epa_start, epa_pre_elim, epa_mean,
   epa_max, qual_rps_per_match, epa_breakdown JSON)
-Season notes: data starts in 2010, so streaks and all-time counts are "since 2010". 2015 quals had
+Coverage: events, teams and awards since 1992 (the first season). Matches from 2002 (2000 has one
+event, 1992-2001 none), so records, partners and opponents start in 2002. Statbotics EPA from 2002.
+Before 2007 team_events has no qual rank or record (use team_matches); before 2010 alliance picks are
+mostly only at Championship and playoff_level is incomplete. Count event wins from awards
+(award_type 1, Winner): complete for every year, while team_events playoff results have gaps (some
+are stuck at status 'playing'). Alliances were 2 teams in quals through 2004
+(red_teams has 2 entries). Say which years an answer covers when older data is thinner.
+Season notes: 2015 quals had
 no wins or losses (result is null; ranked by average score). 2020 stopped after week 2-3. 2021 had
 no normal season (only 'Remote' at-home events, no matches): treat 2020 -> 2022 as consecutive
 seasons for streaks. Some team_events rows are not real competition: 2021 "Season Participation"

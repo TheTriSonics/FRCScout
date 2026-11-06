@@ -82,7 +82,7 @@ The Slack app needs:
 
 ## History lake (`history_sql`)
 
-All of FRC since 2010 from TBA and Statbotics, queried by the bot with
+All of FRC since 1992 (matches since 2002) from TBA and Statbotics, queried by the bot with
 read-only SQL (DuckDB). `history_sql.py` opens the database read-only with
 file, network and extension access off and the configuration locked; one
 SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged

@@ -58,7 +58,7 @@ CASES = [
          stress='They have never played on opposite alliances; the model must not invent a record.',
          ref=["""SELECT count(*) FROM team_matches tm JOIN team_matches o ON o.match_key = tm.match_key
                  AND o.team_number = 254 WHERE tm.team_number = 4003"""],
-         expect=['No official match with both teams (opponents or partners) since 2010'],
+         expect=['No official match with both teams (opponents or partners) in any year'],
          must=[r"never|no (official |recorded )?match|haven't|have not|no record"],
          must_not=[r'4003 (won|beat)'],
          judge='Fail on any invented result.'),
@@ -67,26 +67,28 @@ CASES = [
     dict(id='streak_2021_gap', tags=['history', 'quirk'],
          q='Which team has the longest streak of seasons in a row winning at least one event?',
          stress='2021 had no normal season: 2020 -> 2022 counts as consecutive (schema note). '
-                'Luna broke streaks at 2021; Sonnet once started 118 in 2010.',
-         ref=[f"""WITH w AS (SELECT DISTINCT te.team_number, te.year FROM team_events te
-                   JOIN events e USING (event_key) WHERE te.playoff_level = 'f'
-                   AND te.playoff_status = 'won' AND {OFFICIAL})
+                'Luna broke streaks at 2021. Event wins must come from awards (118\'s 2010tx win is stuck '
+                'at status playing in team_events); data goes back to 1992.',
+         ref=[f"""WITH w AS (SELECT DISTINCT a.team_number, a.year FROM awards a
+                   JOIN events e USING (event_key) WHERE a.award_type = 1 AND {OFFICIAL})
                  SELECT team_number, list(year ORDER BY year) FROM w
-                 WHERE team_number IN (118, 987, 1678, 254) GROUP BY 1"""],
-         expect=['118, 987 and 1678 tied at 15 seasons, 2011-2026'],
-         must=[r'\b118\b', r'\b987\b', r'\b1678\b', r'\b15\b'],
-         must_not=[r'\b(10|16) (straight |consecutive )?seasons'],
-         judge='A single winner or a streak that stops at 2020 is a fail.'),
+                 WHERE team_number IN (254, 118, 987, 1678) GROUP BY 1"""],
+         expect=['254: 21 seasons, 1999-2019 (no win in 2020)',
+                 'Next: 118 with 16 (2010-2026), then 1678 and 987 with 15 (2011-2026)'],
+         must=[r'\b254\b', r'\b21\b'],
+         must_not=[r'\b118\b[^.\n]{0,40}\blongest'],
+         judge='254 with 21 must be the answer. Naming 118/1678/987 as runners-up is a plus.'),
     dict(id='msc_most_wins', tags=['history'],
          q='Which teams have won the Michigan State Championship the most times?',
          stress='Count the top-level FiM district championship, not divisions; luna undercounted.',
-         ref=["""SELECT team_number, count(*) n, list(te.year ORDER BY te.year) FROM team_events te
+         ref=["""SELECT team_number, count(*) n, list(a.year ORDER BY a.year) FROM awards a
                  JOIN events e USING (event_key) WHERE e.event_type = 'District Championship'
-                 AND e.district = 'fim' AND te.playoff_level = 'f' AND te.playoff_status = 'won'
+                 AND e.district = 'fim' AND a.award_type = 1
                  GROUP BY 1 ORDER BY n DESC LIMIT 5"""],
-         expect=['27 with 5 (2014, 2016, 2022, 2024, 2026)', '469 and 67 with 4', '33 with 3'],
-         must=[r'\b27\b', r'\b5\b', r'\b469\b', r'\b67\b'],
-         must_not=[r'\b27\b[^.\n]{0,40}\b4 (wins|titles|times)'],
+         expect=['27 (2014, 2016, 2022, 2024, 2026) and 67 (2009, 2011, 2012, 2016, 2025) tied with 5',
+                 '469 with 4', '217 and 33 with 3'],
+         must=[r'\b27\b', r'\b67\b', r'\b5\b', r'\b469\b'],
+         must_not=[r'\b(27|67)\b[^.\n]{0,40}\b4 (wins|titles|times)'],
          judge='Order and counts must match.'),
     dict(id='best_season_2015', tags=['history', 'quirk'],
          q="What was 4003's best qualification record in a single season?",
@@ -296,8 +298,8 @@ CASES = [
          q='How many teams at this event have never won an official event?',
          stress='Anti-join against history; offseason wins must not count.',
          ref=[f"""SELECT count(*) FROM live.event_teams t WHERE t.team_number NOT IN (
-                    SELECT te.team_number FROM team_events te JOIN events e USING (event_key)
-                    WHERE te.playoff_level = 'f' AND te.playoff_status = 'won' AND {OFFICIAL})"""],
+                    SELECT a.team_number FROM awards a JOIN events e USING (event_key)
+                    WHERE a.award_type = 1 AND a.team_number IS NOT NULL AND {OFFICIAL})"""],
          expect=['15 of 40'],
          must=[r'\b15\b'], must_not=[],
          judge=''),

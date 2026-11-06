@@ -53,7 +53,7 @@ prefixed live. For anything across events or seasons use the history tables inst
   fields (e.g. ranking_score).
 - live.event_teams: team_number, name for every team at the event.
 Live column lists vary with what was scouted: SELECT * FROM live.pit LIMIT 1 shows them, and an
-unknown column error lists the valid ones. History tables (below) cover every event since 2010
+unknown column error lists the valid ones. History tables (below) cover every event since 1992 (matches since 2002)
 from TBA/Statbotics; join them to live tables on team_number (e.g. past seasons' epa_norm).
 """
 
@@ -206,7 +206,7 @@ DESCRIPTION = (
     'catalog: our scouting records, pit records, official match results, OPR and rankings. Use it '
     'for ad-hoc cuts the fixed tools can\'t do: filters, group-bys, before/after a match number, '
     'comparing alliances or comp levels, correlations (corr(x, y), regr_slope), calibrating scouts. '
-    '2) FRC history from TBA and Statbotics since 2010: results, rankings, alliances, awards, '
+    '2) FRC history from TBA and Statbotics since 1992 (matches since 2002): results, rankings, alliances, awards, '
     'district points, EPA, for questions across seasons or events. The two join on team_number. '
     'Scope: a question about a team\'s partners, opponents, record, wins or "most often/ever" that '
     'names no event is about its whole history (history tables, not live.*); use live.* only when '
