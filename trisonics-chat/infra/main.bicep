@@ -122,6 +122,12 @@ resource claimsContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
   name: 'slack-claims'
 }
 
+// One blob per "Looking that up" placeholder until its answer lands (SlackWatchdog).
+resource pendingContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: 'slack-pending'
+}
+
 resource queues 'Microsoft.Storage/storageAccounts/queueServices@2023-05-01' = {
   parent: storage
   name: 'default'
@@ -212,7 +218,7 @@ resource site 'Microsoft.Web/sites@2024-04-01' = {
       ]
     }
   }
-  dependsOn: [ deployContainer, historyContainer, claimsContainer, slackQueue, models ]
+  dependsOn: [ deployContainer, historyContainer, claimsContainer, pendingContainer, slackQueue, models ]
 }
 
 // --- Spending alert ---

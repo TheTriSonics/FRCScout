@@ -100,6 +100,13 @@ and `message.mpim` (scopes `channels:history`, `groups:history`,
 `mpim:history`). Each message is answered once across instances: the worker
 claims it with an empty blob in container `slack-claims`.
 
+## Auto-answer channels
+
+In channels listed in the SlackConfigs doc's `auto_channels` (channel IDs,
+e.g. `["C0123ABCD"]`), the bot answers every top-level message, no @mention
+needed, and replies in a thread. Everywhere else it still needs a mention.
+Config is cached 5 minutes. The bot must be in the channel.
+
 ## Vernacular
 
 `vernacular.md` holds team slang and nicknames ("worlds", "GVSU", "states"),
