@@ -9,3 +9,4 @@ local.settings.json
 injection_test.py
 guardrails.txt
 history/data/
+evals/
