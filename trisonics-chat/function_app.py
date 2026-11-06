@@ -57,8 +57,8 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
         return _json({'ok': True})  # this instance already queued it
     logging.info('SlackEvents: %s', json.dumps({
         'event_id': payload.get('event_id'), 'type': ev.get('type'), 'subtype': ev.get('subtype'),
-        'channel_type': ev.get('channel_type'), 'thread': bool(ev.get('thread_ts')),
-        'bot': bool(ev.get('bot_id'))}))
+        'channel_type': ev.get('channel_type'), 'channel': ev.get('channel'),
+        'thread': bool(ev.get('thread_ts')), 'bot': bool(ev.get('bot_id'))}))
     auth = (payload.get('authorizations') or [{}])[0]
     bot = auth.get('user_id')
     is_msg = ev.get('type') == 'message'
@@ -66,7 +66,11 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
     # app_mention); answered only if it follows the bot's reply.
     followup = (is_msg and ev.get('channel_type') in ('channel', 'group', 'mpim')
                 and bool(ev.get('thread_ts')) and f'<@{bot}>' not in (ev.get('text') or ''))
-    wanted = (ev.get('type') == 'app_mention' or followup
+    # Any top-level message in a channel listed in the config's auto_channels
+    # (mentions there still come as app_mention and are answered once).
+    auto = (is_msg and not ev.get('thread_ts') and ev.get('channel') in (cfg.get('auto_channels') or [])
+            and f'<@{bot}>' not in (ev.get('text') or ''))
+    wanted = (ev.get('type') == 'app_mention' or followup or auto
               or (is_msg and ev.get('channel_type') == 'im'))
     if not (payload.get('type') == 'event_callback' and wanted
             and not ev.get('bot_id') and not ev.get('subtype') and ev.get('user')):
@@ -83,6 +87,8 @@ def slack_events(req: func.HttpRequest, out: func.Out[str]) -> func.HttpResponse
     # Show it was heard right away; the worker replaces this with the answer.
     placeholder = slack_bot.api(token, 'chat.postMessage', channel=ev['channel'],
                                 thread_ts=slack_bot.reply_thread(ev), text=slack_bot.PLACEHOLDER)
+    if placeholder.get('ok'):
+        slack_bot.pending_add(cfg['id'], placeholder['channel'], placeholder['ts'])
     out.set(json.dumps({
         'config_id': cfg['id'], 'event_id': payload.get('event_id'),
         'bot_user_id': bot, 'followup': followup,
@@ -124,6 +130,7 @@ def _answer(job):
         """Replace the placeholder SlackEvents posted (or post, if it couldn't)."""
         if ph:
             r = slack_bot.api(token, 'chat.update', channel=ph['channel'], ts=ph['ts'], text=text)
+            slack_bot.pending_done(ph['channel'], ph['ts'])
             if r.get('ok'):
                 return
         slack_bot.api(token, 'chat.postMessage', channel=ev['channel'],
@@ -158,6 +165,14 @@ def _answer(job):
         'seconds': round(time.time() - t0, 1),
         'usage': chat.usage if chat else None,
         'cost': round(chat.cost(), 4) if chat else None}))
+
+
+@app.function_name(name='SlackWatchdog')
+@app.timer_trigger(arg_name='timer', schedule='0 */2 * * * *', run_on_startup=False)
+def slack_watchdog(timer: func.TimerRequest) -> None:
+    """A worker that died mid-answer leaves "Looking that up" up forever;
+    replace any placeholder older than 5 minutes with an apology."""
+    slack_bot.sweep_stuck()
 
 
 # --- History lake refresh (off by default) ---

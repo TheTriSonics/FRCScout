@@ -170,34 +170,88 @@ def follows_bot(token, ev, bot_user_id):
     return all(m.get('user') == ev.get('user') for m in before[mine[-1] + 1:])
 
 
-_claims = None
+_containers = {}
+
+
+def _blobs(name):
+    """ContainerClient in the app's storage account (created if missing), or
+    None on the local func host."""
+    if name not in _containers:
+        from azure.core.exceptions import ResourceExistsError
+        from azure.storage.blob import ContainerClient
+        conn = os.environ.get('AzureWebJobsStorage', '')
+        if not conn.startswith('DefaultEndpointsProtocol'):
+            return None
+        c = ContainerClient.from_connection_string(conn, name)
+        if not c.exists():
+            try:
+                c.create_container()
+            except ResourceExistsError:
+                pass
+        _containers[name] = c
+    return _containers[name]
 
 
 def claim(channel, ts):
     """True the first time any instance claims this message (a tiny blob per
     message in container slack-claims). Fails open if storage is unreachable."""
-    global _claims
+    from azure.core.exceptions import ResourceExistsError
     try:
-        from azure.core.exceptions import ResourceExistsError
-        from azure.storage.blob import ContainerClient
-        if _claims is None:
-            conn = os.environ.get('AzureWebJobsStorage', '')
-            if not conn.startswith('DefaultEndpointsProtocol'):
-                return True  # local func host
-            c = ContainerClient.from_connection_string(conn, 'slack-claims')
-            if not c.exists():
-                try:
-                    c.create_container()
-                except ResourceExistsError:
-                    pass
-            _claims = c
-        _claims.upload_blob(f'{channel}/{ts}', b'', overwrite=False)
+        c = _blobs('slack-claims')
+        if c:
+            c.upload_blob(f'{channel}/{ts}', b'', overwrite=False)
         return True
     except ResourceExistsError:
         return False
     except Exception:
         logging.exception('claim failed; answering anyway')
         return True
+
+
+# --- stuck placeholders: a blob per placeholder in slack-pending, deleted
+# when the answer replaces it; the watchdog apologizes for old ones ---
+
+STUCK = ("Sorry, that one got stuck and I never finished it. "
+         "Try asking again (maybe a narrower question).")
+
+
+def pending_add(config_id, channel, ts):
+    try:
+        c = _blobs('slack-pending')
+        if c:
+            c.upload_blob(f'{channel}/{ts}', b'', overwrite=True, metadata={'config_id': config_id})
+    except Exception:
+        logging.exception('pending_add failed')
+
+
+def pending_done(channel, ts):
+    try:
+        c = _blobs('slack-pending')
+        if c:
+            c.delete_blob(f'{channel}/{ts}')
+    except Exception as e:
+        if type(e).__name__ != 'ResourceNotFoundError':
+            logging.exception('pending_done failed')
+
+
+def sweep_stuck(max_age=300):
+    """Replace placeholders older than [max_age] seconds with an apology."""
+    import datetime as dt
+    c = _blobs('slack-pending')
+    if not c:
+        return 0
+    now, n = dt.datetime.now(dt.timezone.utc), 0
+    for b in c.list_blobs(include=['metadata']):
+        if (now - b.last_modified).total_seconds() < max_age:
+            continue
+        channel, ts = b.name.split('/', 1)
+        cfg = config_by_id((b.metadata or {}).get('config_id'))
+        if cfg:
+            api(cfg['bot_token'], 'chat.update', channel=channel, ts=ts, text=STUCK)
+        c.delete_blob(b.name)
+        logging.warning('SlackWatchdog: placeholder %s/%s stuck; apologized', channel, ts)
+        n += 1
+    return n
 
 
 def to_mrkdwn(text):
