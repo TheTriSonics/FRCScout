@@ -5,14 +5,16 @@ model never chooses the secret key. Results are plain dicts, which the agent
 sends back to the model as JSON.
 """
 import logging
+import os
 import statistics
 import time
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 import season_2026 as season
 from query_data import query_data
 import history_sql
+import live_sql
 from scout_data import (Event, match_label, match_sort_key, match_start,
                         team_num, voter_key)
 
@@ -23,6 +25,8 @@ class Session:
     event_key: str
     scouter_name: str = ''
     team_number: int = 0
+    # live_sql connections per (secret key, event); shared by replace() copies.
+    sql_cache: dict = field(default_factory=dict, compare=False, repr=False)
 
     @property
     def event(self):
@@ -674,6 +678,14 @@ def history(session, sql):
     return history_sql.run(sql)
 
 
+def sql_tool(session, sql):
+    return live_sql.run(session, sql)
+
+
+# 'legacy': query_data + history_sql. 'sql': one sql tool over live + history.
+TOOLSET = os.environ.get('SCOUT_CHAT_TOOLS', 'sql')
+
+
 TOOLS = [
     (event_info, 'event_info',
      'Event name, dates, current local time, how many qual matches exist and have been '
@@ -699,7 +711,8 @@ TOOLS = [
      'and the notes. Filter by team and/or qual match number; max 60 rows.',
      _schema({'team': TEAM, 'match_number': {'type': 'integer', 'description': 'Qual match number'}})),
     (pit_data, 'pit_data',
-     'Pit scouting answers (drive train, capacity, auto starts, hanging, plans, notes). One '
+     'Pit scouting answers (drive train, capacity, auto starts, hanging, plans, notes; '
+     'hanging_works 1/0 says whether the hang works, hanging_level is the level it targets). One '
      'team, or every team; use fields to limit columns when asking about all teams.',
      _schema({'team': TEAM, 'fields': {'type': 'array', 'items': {'type': 'string'},
                                        'description': 'Pit field names to keep, e.g. ["drive_train","fuel_capacity"]'}})),
@@ -762,10 +775,14 @@ TOOLS = [
      'taken by other alliances, and notes.', _schema()),
 ]
 
+if TOOLSET == 'sql':
+    TOOLS = [t for t in TOOLS if t[1] not in ('query_data', 'history_sql')]
+    TOOLS.insert(-1, (sql_tool, 'sql', live_sql.DESCRIPTION, _schema({'sql': {'type': 'string'}}, ['sql'])))
+
 # Tools that work on any event: they take an optional event key (default: the
 # asker's current event). Schedule, scouts and pick board stay on the current one.
 ANY_EVENT = {'event_info', 'list_teams', 'team_info', 'leaderboard', 'scouted_rows', 'pit_data',
-             'matches', 'rankings', 'scouting_status', 'clusters', 'similar_teams', 'query_data'}
+             'matches', 'rankings', 'scouting_status', 'clusters', 'similar_teams', 'query_data', 'sql'}
 EVENT_PARAM = {'type': 'string', 'description': "Event key like 2026mibig (from find_event). "
                                                 "Leave out for the asker's current event."}
 for _fn, _name, _desc, _schema_ in TOOLS:
@@ -774,7 +791,7 @@ for _fn, _name, _desc, _schema_ in TOOLS:
 
 # Strict mode allows at most 24 optional parameters across all strict tools, and the
 # existing tools already use them. query_data validates its own spec, so it opts out.
-NON_STRICT = {'query_data'}
+NON_STRICT = {'query_data', 'sql'}
 TOOL_DEFS = [{'name': name, 'description': desc, 'input_schema': schema, 'strict': name not in NON_STRICT}
              for _, name, desc, schema in TOOLS]
 _FUNCS = {name: fn for fn, name, _, _ in TOOLS}
