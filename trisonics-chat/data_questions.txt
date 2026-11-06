@@ -1,0 +1,8 @@
+# Ad-hoc data questions that need query_data (python cli.py --batch data_questions.txt)
+Did 74's teleop accuracy change between the first and second half of quals?
+Which teams' scouted volley accuracy disagrees most with their OPR hub fuel?
+Is hopper size correlated with volley accuracy across teams?
+How often did the alliance with more hub fuel win?
+Do any scouters rate teleop accuracy consistently higher than other scouters for the same teams?
+What's the average winning margin in quals vs playoffs?
+Which swerve teams average more than 2 volleys?

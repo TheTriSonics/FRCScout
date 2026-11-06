@@ -9,7 +9,8 @@
     "queues": {
       "batchSize": 4,
       "newBatchThreshold": 2,
-      "maxDequeueCount": 1
+      "maxDequeueCount": 1,
+      "maxPollingInterval": "00:00:02"
     }
   },
   "extensionBundle": {
