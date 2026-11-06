@@ -19,7 +19,7 @@ source ../trisonics-api/setenv && python injection_test.py  # plants instruction
 
 The Foundry key comes from `FOUNDRY_API_KEY`, or from `az` if you're logged in.
 Other settings: `FOUNDRY_RESOURCE`, `FOUNDRY_DEPLOYMENT`,
-`SCOUT_CHAT_EFFORT` (default `medium`), `SCOUT_API_BASE`, `SCOUT_CHAT_TOOLS` (`legacy` = query_data + history_sql, the default; `sql` = one sql tool over live data and history).
+`SCOUT_CHAT_EFFORT` (default `medium`), `SCOUT_API_BASE`, `SCOUT_CHAT_TOOLS` (`sql`, the default = one sql tool over live data and history; `legacy` = query_data + history_sql).
 
 | File | What it does |
 |---|---|
@@ -27,7 +27,7 @@ Other settings: `FOUNDRY_RESOURCE`, `FOUNDRY_DEPLOYMENT`,
 | `season_2026.py` | What the season's fields mean. Copy it each year. |
 | `tools.py` | The tools and their schemas. Averages match the app's `TeamStats`, and `pick_board` ports `PickBoard.rows`. |
 | `query_data.py` | The `query_data` tool: a structured spec (tables, filters, group-by, aggregates, correlation) run in plain Python. Every call is logged as `query_data {...}`; common queries are candidates for real API endpoints. |
-| `live_sql.py`, `test_live_sql.py` | The `sql` tool (with `SCOUT_CHAT_TOOLS=sql`): one in-memory DuckDB per session and event, the history database attached read-only as the default catalog, and this event's live data (`live.scouted`, `team_results`, `opr`, `pit`, `pit_latest`, `rankings`, `event_teams`) loaded from the same builders as `query_data` when a query first names them, then locked down like `history_sql`. Replaces `query_data` and `history_sql`. `live_history_questions.txt` asks questions that need both. |
+| `live_sql.py`, `test_live_sql.py` | The `sql` tool (default; `SCOUT_CHAT_TOOLS=legacy` brings back the old pair): one in-memory DuckDB per session and event, the history database attached read-only as the default catalog, and this event's live data (`live.scouted`, `team_results`, `opr`, `pit`, `pit_latest`, `rankings`, `event_teams`) loaded from the same builders as `query_data` when a query first names them, then locked down like `history_sql`. Replaces `query_data` and `history_sql`. `live_history_questions.txt` asks questions that need both. |
 | `cluster_similarity.py` | Nearest teams in clustering space. A port of the app's `cluster_similarity.dart`, so `similar_teams` matches Team Details. |
 | `test_query_data.py`, `data_questions.txt` | Offline asserts for `query_data` (`python test_query_data.py`), and ad-hoc data questions for `--batch` |
 | `agent.py` | System prompt and the tool loop, with prompt caching and usage/cost tracking |

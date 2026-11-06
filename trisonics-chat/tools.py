@@ -683,7 +683,7 @@ def sql_tool(session, sql):
 
 
 # 'legacy': query_data + history_sql. 'sql': one sql tool over live + history.
-TOOLSET = os.environ.get('SCOUT_CHAT_TOOLS', 'legacy')
+TOOLSET = os.environ.get('SCOUT_CHAT_TOOLS', 'sql')
 
 
 TOOLS = [
