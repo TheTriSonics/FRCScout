@@ -1,0 +1,7 @@
+# Questions that combine this event's data with history (python cli.py --batch live_history_questions.txt)
+Which teams here have the biggest gap between their 2025 EPA and their OPR this event?
+Of the top 8 teams by scouted teleop volleys, which have won an event before (since 2010)?
+Are rookie teams here (rookie year 2025 or later) scoring less hub fuel OPR than veterans?
+Which teams at this event have been to Worlds the most times, and how do they rank here?
+Do teams that ranked well at their 2025 events also rank well here? Give a correlation.
+Which team here has the most awards all-time, and what's its scouted climb rate?

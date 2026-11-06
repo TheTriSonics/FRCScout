@@ -16,7 +16,7 @@ import season_2026 as season
 # Verbatim from https://www.firstinspires.org/about/code-of-conduct (fetched
 # 2026-11-04; the page carries no version date). Replace the file to update.
 CODE_OF_CONDUCT = (Path(__file__).with_name('first_code_of_conduct.txt')).read_text().strip()
-from tools import TOOL_DEFS, Session, run_tool
+from tools import TOOL_DEFS, TOOLSET, Session, run_tool
 
 # Team slang and nicknames ("worlds", "GVSU"): vernacular.md, minus # comments.
 VERNACULAR = '\n'.join(
@@ -139,6 +139,22 @@ answer in the same words.
 Game context:
 {season.GAME_NOTES}
 """
+
+if TOOLSET == 'sql':
+    # One sql tool replaces query_data and history_sql.
+    for old, new in [
+        ('Prefer the fixed tools; use query_data only for ad-hoc cuts of scouting data\n'
+         "they can't do (filters, group-bys, correlations).",
+         'Prefer the fixed tools; use sql for ad-hoc cuts of this event\'s data they\n'
+         "can't do (filters, group-bys, correlations) and to combine it with history."),
+        ('history, how often something happens) use history_sql: official TBA and\n'
+         'Statbotics data since 2010, no scouting data,',
+         'history, how often something happens) use sql\'s history tables: official\n'
+         'TBA and Statbotics data since 2010, no scouting data (that is in live.*),'),
+        ('history_sql', 'sql'),
+    ]:
+        assert old in SYSTEM, old
+        SYSTEM = SYSTEM.replace(old, new)
 
 
 def _foundry_key():
