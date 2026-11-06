@@ -4,7 +4,8 @@ In Azure the database is a blob (container "history", blob "history.duckdb"
 in the app's own storage account). Each instance downloads it to local temp
 storage on first use and checks the blob's ETag again every few minutes, so
 a refresh reaches running instances without a restart. Locally, without
-AzureWebJobsStorage, history/data/history.duckdb is used as is.
+AzureWebJobsStorage, history/data/history.duckdb is used as is. The data the
+database is built from is kept in SOURCE_CONTAINER.
 """
 import logging
 import os
@@ -14,6 +15,9 @@ import time
 from pathlib import Path
 
 CONTAINER = os.environ.get('HISTORY_CONTAINER', 'history')
+# The lake's source, so a rebuild never needs one machine's cache: raw/<source>/<file>.json.gz
+# (sync.py's cached responses, same names as history/data/raw/) and lake/<table>.parquet.
+SOURCE_CONTAINER = os.environ.get('HISTORY_SOURCE_CONTAINER', 'history-source')
 BLOB = 'history.duckdb'
 LOCAL = Path(__file__).with_name('data') / 'history.duckdb'
 CHECK_EVERY = 300
@@ -72,3 +76,21 @@ def upload(path: Path):
         container.create_container()
     with open(path, 'rb') as f:
         container.upload_blob(BLOB, f, overwrite=True, max_concurrency=4)
+
+
+def put_source(items):
+    """Upload (blob name, bytes or local Path) pairs to the source container."""
+    from azure.storage.blob import ContainerClient
+    container = ContainerClient.from_connection_string(_conn(), SOURCE_CONTAINER)
+    if not container.exists():
+        container.create_container()
+    n = 0
+    for blob, data in items:
+        if isinstance(data, Path):
+            with open(data, 'rb') as f:
+                container.upload_blob(blob, f, overwrite=True, max_concurrency=4)
+        else:
+            container.upload_blob(blob, data, overwrite=True)
+        n += 1
+    return n
+

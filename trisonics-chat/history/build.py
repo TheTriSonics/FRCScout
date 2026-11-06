@@ -3,7 +3,8 @@
 Writes history/data/lake/<table>.parquet (the lake) and
 history/data/history.duckdb (what the bot queries, read-only).
 Upload the .duckdb with --upload (needs AzureWebJobsStorage, the chat app's
-storage connection string).
+storage connection string). The raw cache can come from the history-source
+container instead of sync.py (see README).
 
   python -m history.build [--upload]
 """
@@ -39,8 +40,21 @@ def _each(pattern, fn, source='tba'):
         yield from fn(load(p))
 
 
+def _teams():
+    """TBA's team pages, plus teams only seen in event team lists refresh.py saved (rookies
+    registered after the pages were pulled)."""
+    seen = set()
+    for r in _each('teams__*.json.gz', lake.team_rows):
+        seen.add(r['team_number'])
+        yield r
+    for r in _each('event__*__teams.json.gz', lake.team_rows):
+        if r['team_number'] not in seen:
+            seen.add(r['team_number'])
+            yield r
+
+
 SOURCES = {
-    'teams': lambda: _each('teams__*.json.gz', lake.team_rows),
+    'teams': _teams,
     'events': lambda: _each('events__*.json.gz', lake.event_rows),
     'matches': lambda: _each('event__*__matches.json.gz', lake.match_rows),
     'awards': lambda: _each('event__*__awards.json.gz', lake.award_rows),
