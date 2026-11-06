@@ -30,8 +30,8 @@
   ]
  },
  "chairmans_level": {
-  "answer": "Team 4003 has won the Chairman's/Impact Award once since 2010. It was the District Chairman's Award at the FIM District West Michigan Event in 2018 (2018miwmi).\n\nI found no other Chairman's/Impact wins for 4003 in the data, which starts in 2010.",
-  "date": "20261105-230128",
+  "answer": "Team 4003 has won the Chairman's/Impact Award once, in 2018. It was the District Chairman's Award at the FIM District West Michigan Event (2018miwmi). The history data I searched covers awards since 1992.",
+  "date": "20261106-163431",
   "tool_calls": [
    [
     "sql",
@@ -72,13 +72,13 @@
   ]
  },
  "einstein_never_won": {
-  "answer": "No. 4003 has never won the world championship (data since 2010). The team won its division twice, the Archimedes Division in 2018 and the Daly Division in 2019. Both times it was eliminated in the semifinals on Einstein Field (Detroit).",
-  "date": "20261105-230128",
+  "answer": "No. 4003 has never won the world championship (Einstein finals). It did win two Championship divisions:\n\n- Archimedes Division in 2018\n- Daly Division in 2019\n\nThis covers awards data since 1992.",
+  "date": "20261106-163431",
   "tool_calls": [
    [
     "sql",
     {
-     "sql": "select te.event_key, e.name, e.event_type, te.year, te.playoff_level, te.playoff_status from team_events te join events e using(event_key) where te.team_number=4003 and e.event_type in ('Championship Finals','Championship Division') order by te.year"
+     "sql": "select a.event_key, e.name, e.event_type, a.year, a.name as award from awards a join events e using(event_key) where a.team_number=4003 and a.award_type=1 and e.event_type in ('Championship Finals','Championship Division')"
     }
    ]
   ]
@@ -237,19 +237,13 @@
   ]
  },
  "msc_most_wins": {
-  "answer": "Team 27 has won the Michigan State Championship the most times, with 5 titles (2014, 2016, 2022, 2024, 2026).\n\nNext are:\n- **Team 67:** 4 titles (2011, 2012, 2016, 2025)\n- **Team 469:** 4 titles (2010, 2012, 2013, 2017)\n- **Team 33:** 3 titles (2011, 2014, 2017)\n\nThis counts members of the winning alliance at the main state championship event each year, from 2010 on. That includes the 2010\u20132012 events, which TBA lists under the key \"gl\". A 2026 win is in the data, so 27's count includes it.",
-  "date": "20261105-230128",
+  "answer": "Teams 27 and 67 are tied for the most Michigan State Championship wins, with 5 each.\n\n- **Team 27:** 5 wins, from 2014 to 2026.\n- **Team 67:** 5 wins, from 2009 to 2025.\n- **Team 469:** 4 wins, from 2010 to 2017.\n- **Teams 217 and 33:** 3 wins each.\n\nOur team, 4003, won once, in 2018.\n\nThis counts the Winner award at FiM District Championship events, and the earliest win in the data is from 2009.",
+  "date": "20261106-163431",
   "tool_calls": [
    [
     "sql",
     {
-     "sql": "select e.event_key, e.year, e.name, e.event_type from events e where e.district='fim' and e.event_type like 'District Championship%' order by year"
-    }
-   ],
-   [
-    "sql",
-    {
-     "sql": "select t.team_number, count(*) wins, list(t.year order by t.year) yrs from team_events t join events e using(event_key) where e.district='fim' and e.event_type='District Championship' and t.playoff_level='f' and t.playoff_status='won' group by 1 order by 2 desc, 1 limit 10"
+     "sql": "select a.team_number, count(*) wins, min(a.year) first_year, max(a.year) last_year from awards a join events e on e.event_key=a.event_key where a.award_type=1 and e.event_type='District Championship' and e.district='fim' group by 1 order by 2 desc limit 10"
     }
    ]
   ]
@@ -303,13 +297,13 @@
   ]
  },
  "scope_partner_alltime": {
-  "answer": "Team 3234 has been 4003's most frequent playoff partner. They shared an alliance in 19 playoff matches across 3 events, from 2012 to 2014.\n\nNext are 2586 and 3098 with 15 matches each, both in 2018. This covers official events since 2010 and leaves out offseason events.",
-  "date": "20261105-230128",
+  "answer": "Team 3234 is 4003's most frequent playoff partner. They were on the same alliance for 19 playoff matches across 3 events, from 2012 to 2014.\n\nNext are 2586 and 3098 with 15 matches each, both in 2018. This covers official events only, since 2002.",
+  "date": "20261106-163431",
   "tool_calls": [
    [
     "sql",
     {
-     "sql": "with m as (\nselect ma.match_key, ma.event_key, case when list_contains(red_teams,4003) then red_teams else blue_teams end as t\nfrom matches ma join events e on e.event_key=ma.event_key\nwhere ma.comp_level<>'qm' and (list_contains(red_teams,4003) or list_contains(blue_teams,4003))\nand e.event_type in ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals'))\nselect p as partner, count(*) as matches, count(distinct event_key) as events, min(substr(event_key,1,4)) first_year, max(substr(event_key,1,4)) last_year\nfrom m, unnest(t) as u(p) where p<>4003 group by p order by matches desc limit 5"
+     "sql": "with m as (\nselect tm.match_key, tm.event_key, tm.alliance, tm.year from team_matches tm join events e on e.event_key=tm.event_key\nwhere tm.team_number=4003 and tm.comp_level<>'qm' and e.event_type not in ('Offseason','Preseason','Remote','Festival of Champions')\n)\nselect p.team_number, count(*) matches, count(distinct m.event_key) events, min(m.year) y1, max(m.year) y2\nfrom m join team_matches p on p.match_key=m.match_key and p.alliance=m.alliance and p.team_number<>4003\ngroup by 1 order by 2 desc limit 5"
     }
    ]
   ]
@@ -363,13 +357,13 @@
   ]
  },
  "streak_2021_gap": {
-  "answer": "Three teams tie for the longest streak: **118, 1678 and 987**. Each won at least one official event in 15 straight seasons, from 2011 through 2026.\n\n- Next longest are 67 (12 seasons, 2014\u20132026) and 2974 (11 seasons, 2015\u20132026).\n- There was no 2021 season, so I treated 2020 and 2022 as back-to-back.\n- 2026 is still in progress, so these streaks could still grow.\n- I counted event wins at Regional, District, District Championship and Championship events, and left out offseason events.",
-  "date": "20261105-230128",
+  "answer": "Team 254 has the longest streak. It won at least one official event in 21 straight seasons, from 1999 to 2019.\n\nNext are 118 with 16 (2010\u20132026), 1678 with 15 (2011\u20132026) and 987 with 15 (2011\u20132026). Those three are still active, and 2021 doesn't count against a streak because there was no normal season.\n\nThis counts winners at official events only (regionals, district events, district championships and Championship events), with offseason events left out.",
+  "date": "20261106-163431",
   "tool_calls": [
    [
     "sql",
     {
-     "sql": "WITH w AS (\n SELECT DISTINCT te.team_number, CASE WHEN te.year>=2022 THEN te.year-1 ELSE te.year END AS yi, te.year\n FROM team_events te JOIN events e USING(event_key)\n WHERE te.playoff_level='f' AND te.playoff_status='won'\n AND e.event_type IN ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals')\n AND te.year<>2021),\ng AS (SELECT team_number, yi, year, yi - dense_rank() OVER (PARTITION BY team_number ORDER BY yi) AS grp FROM w)\nSELECT team_number, count(*) AS streak, min(year) AS start_year, max(year) AS end_year\nFROM g GROUP BY team_number, grp ORDER BY streak DESC LIMIT 8"
+     "sql": "WITH w AS (\n SELECT DISTINCT a.team_number, CASE WHEN a.year>=2022 THEN a.year-1 ELSE a.year END AS yi, a.year\n FROM awards a JOIN events e ON e.event_key=a.event_key\n WHERE a.award_type=1 AND a.team_number IS NOT NULL\n AND e.event_type IN ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals')\n AND a.year<>2021\n), g AS (\n SELECT team_number, year, yi, yi - dense_rank() OVER (PARTITION BY team_number ORDER BY yi) AS grp FROM w\n)\nSELECT team_number, count(*) AS streak, min(year) AS start_year, max(year) AS end_year\nFROM g GROUP BY team_number, grp ORDER BY streak DESC LIMIT 5"
     }
    ]
   ]

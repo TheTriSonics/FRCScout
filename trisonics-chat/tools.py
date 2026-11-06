@@ -769,7 +769,7 @@ TOOLS = [
     (query_data, 'query_data', QUERY_DESC, QUERY_SCHEMA),
     (history, 'history_sql',
      'Read-only SQL (DuckDB) over FRC history from TBA and Statbotics, every team and event '
-     'since 2010: results, rankings, alliances, playoffs, awards, district points, EPA. Use for '
+     'since 1992 (matches since 2002): results, rankings, alliances, playoffs, awards, district points, EPA. Use for '
      'questions across seasons or many events (records, streaks, head-to-head history, '
      'who won what, how a team did in past years). One SELECT; max 200 rows, so aggregate. '
      'Live data for the current event still comes from the other tools.\n' + history_sql.SCHEMA,

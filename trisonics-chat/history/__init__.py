@@ -1,4 +1,4 @@
-"""FRC history lake (TBA + Statbotics since 2010) for the history_sql tool."""
+"""FRC history lake (TBA + Statbotics since 1992) for the history_sql tool."""
 import sys
 import types
 

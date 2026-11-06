@@ -4,7 +4,7 @@ Every response is cached as gzipped JSON under history/data/raw/, so a rerun
 only fetches what's missing. --refresh YEAR re-downloads one year (the
 current season changes; older ones don't).
 
-  source ../trisonics-api/setenv && python history/sync.py 2010 2026
+  source ../trisonics-api/setenv && python history/sync.py 1992 2026
 """
 import argparse
 import gzip
@@ -42,7 +42,8 @@ def fetch(source, route, refresh=False):
                 data = json.loads(r.read())
             break
         except urllib.error.HTTPError as e:
-            if e.code == 404:
+            # 404: nothing there; 422: Statbotics has no such year (it starts in 2002)
+            if e.code == 404 or (e.code == 422 and source == 'sb'):
                 data = None
                 break
             if attempt == 4:
