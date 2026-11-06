@@ -46,7 +46,9 @@ prefixed live. For anything across events or seasons use the history tables inst
 - live.opr: one row per team: team_number and OPR columns (""" + ', '.join(season.OPR_COLUMNS) + """,
   and more breakdown fields, e.g. hubScore_shift1Count).
 - live.pit: every pit scouting record (team_number, drive_train, fuel_capacity, hanging_level, ...;
-  several per team possible); live.pit_latest: the newest record per team.
+  several per team possible); live.pit_latest: the newest record per team. For "can it hang/climb"
+  use hanging_works (1 = the team says its hang works, 0 = not yet); hanging_level is the level it
+  is built for, not proof it works.
 - live.rankings: rank, team_number, wins, losses, ties, matches_played, dq, and the ranking sort
   fields (e.g. ranking_score).
 - live.event_teams: team_number, name for every team at the event.

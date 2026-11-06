@@ -711,7 +711,8 @@ TOOLS = [
      'and the notes. Filter by team and/or qual match number; max 60 rows.',
      _schema({'team': TEAM, 'match_number': {'type': 'integer', 'description': 'Qual match number'}})),
     (pit_data, 'pit_data',
-     'Pit scouting answers (drive train, capacity, auto starts, hanging, plans, notes). One '
+     'Pit scouting answers (drive train, capacity, auto starts, hanging, plans, notes; '
+     'hanging_works 1/0 says whether the hang works, hanging_level is the level it targets). One '
      'team, or every team; use fields to limit columns when asking about all teams.',
      _schema({'team': TEAM, 'fields': {'type': 'array', 'items': {'type': 'string'},
                                        'description': 'Pit field names to keep, e.g. ["drive_train","fuel_capacity"]'}})),
