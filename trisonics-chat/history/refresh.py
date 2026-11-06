@@ -6,7 +6,7 @@ database, and uploads it. Meant to run hourly in competition season; older
 seasons don't change and come from build.py.
 
 Every response it fetched is also saved to the history-source container under
-the same name sync.py caches it as (raw/tba/..., raw/sb/...), and the updated
+the same path sync.py caches it under (raw/tba/matches/2026/2026miwmi.json.gz, ...), and the updated
 tables as lake/<table>.parquet, so history-source stays a complete source:
 download raw/ into history/data/raw/ and build.py makes the same database.
 

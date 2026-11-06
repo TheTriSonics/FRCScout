@@ -1,6 +1,6 @@
 """Download raw TBA and Statbotics data for the history lake.
 
-Every response is cached as gzipped JSON under history/data/raw/, so a rerun
+Every response is cached as gzipped JSON under history/data/raw/ (see name()), so a rerun
 only fetches what's missing. --refresh YEAR re-downloads one year (the
 current season changes; older ones don't).
 
@@ -10,6 +10,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -22,10 +23,30 @@ SB = 'https://api.statbotics.io/v3'
 SB_PAGE = 1000
 
 
+# Where each response is kept: <source>/<kind>/<year>/<file>.json.gz under history/data/raw/
+# and, with 'raw/' in front, in the history-source container.
+EVENT_KINDS = {'matches': 'matches', 'awards': 'awards', 'alliances': 'alliances',
+               'teams/statuses': 'team_statuses', 'teams': 'event_teams'}
+_ROUTES = [
+    ('tba', re.compile(r'teams/(\d+)'), lambda m: f'teams/page_{int(m[1]):03d}'),
+    ('tba', re.compile(r'events/(\d{4})'), lambda m: f'events/{m[1]}/events'),
+    ('tba', re.compile(r'districts/(\d{4})'), lambda m: f'districts/{m[1]}/districts'),
+    ('tba', re.compile(r'event/((\d{4})\w+)/(' + '|'.join(EVENT_KINDS) + ')'),
+     lambda m: f'{EVENT_KINDS[m[3]]}/{m[2]}/{m[1]}'),
+    ('tba', re.compile(r'district/((\d{4})\w+)/rankings'), lambda m: f'district_rankings/{m[2]}/{m[1]}'),
+    ('sb', re.compile(r'(team_years|team_events)\?year=(\d{4})&limit=\d+&offset=(\d+)'),
+     lambda m: f'{m[1]}/{m[2]}/offset_{int(m[3]):05d}'),
+]
+
+
 def name(source, route):
-    """'tba', '/event/2026miwmi/matches' -> 'tba/event__2026miwmi__matches.json.gz': the file
-    under history/data/raw/ and, with 'raw/' in front, the blob in history-source."""
-    return f"{source}/" + route.strip('/').replace('/', '__').replace('?', '__') + '.json.gz'
+    """'tba', '/event/2026miwmi/matches' -> 'tba/matches/2026/2026miwmi.json.gz'."""
+    r = route.strip('/')
+    for src, pattern, path in _ROUTES:
+        m = pattern.fullmatch(r) if src == source else None
+        if m:
+            return f'{source}/{path(m)}.json.gz'
+    return f"{source}/other/" + r.replace('/', '__').replace('?', '__') + '.json.gz'
 
 
 def _path(source, route):

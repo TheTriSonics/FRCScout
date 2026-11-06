@@ -96,8 +96,12 @@ SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
   storage connection string). Instances download it to temp storage and
   re-check its ETag every 5 minutes.
 - **Source of truth: container `history-source`** (same storage account):
-  `raw/tba/...`, `raw/sb/...` (every cached response, same names as
-  `history/data/raw/`) and `lake/<table>.parquet`. Rebuild on any machine:
+  `raw/<source>/<kind>/<year>/<file>.json.gz` (every cached response, same
+  paths as `history/data/raw/`) and `lake/<table>.parquet`. Kinds: `tba/`
+  `matches`, `awards`, `alliances`, `team_statuses`, `event_teams` (file =
+  event key), `district_rankings` (file = district key), `events`,
+  `districts`, `teams` (pages, no year); `sb/` `team_years`, `team_events`
+  (`offset_NNNNN` pages). `history/sync.py` `name()` is the mapping. Rebuild on any machine:
   `az storage blob download-batch -s history-source --pattern 'raw/*' -d history/data`
   then `python -m history.build`. After a local `sync.py`, push new files with
   `az storage blob upload-batch -d history-source --destination-path raw -s history/data/raw`.
