@@ -1,0 +1,436 @@
+{
+ "alliance_picks": {
+  "answer": "Team 74, the captain of Alliance 4, picked 4003 as its 1st pick. Team 5610 was the 2nd pick on that alliance.\n\nThe alliance went 0-2 in the double-elimination bracket and was out in Round 2.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "team_info",
+    {
+     "team": 4003
+    }
+   ],
+   [
+    "sql",
+    {
+     "sql": "select * from team_events where event_key='2026miwmi' and alliance_number is not null order by alliance_number, alliance_pick"
+    }
+   ]
+  ]
+ },
+ "best_season_2015": {
+  "answer": "4003's best qualification season was 2018, at 39-7-0 (84.8% wins) across 4 official events. That's the best by win rate. It also has the most qualification wins.\n\nThe next best was 2022 at 35-11 (76.1%). These totals add up all of a season's official events.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select t.year, sum(qual_wins) w, sum(qual_losses) l, sum(qual_ties) t, round(sum(qual_wins)*1.0/nullif(sum(qual_wins+qual_losses+qual_ties),0),3) wr, count(*) events from team_events t join events e using(event_key) where t.team_number=4003 and e.event_type in ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals') and qual_matches>0 group by t.year order by wr desc, w desc"
+    }
+   ]
+  ]
+ },
+ "chairmans_level": {
+  "answer": "Team 4003 has won the Chairman's/Impact Award once since 2010. It was the District Chairman's Award at the FIM District West Michigan Event in 2018 (2018miwmi).\n\nI found no other Chairman's/Impact wins for 4003 in the data, which starts in 2010.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select a.year, a.event_key, e.name, e.event_type, a.name as award from awards a join events e using(event_key) where a.team_number=4003 and a.award_type=0 order by a.year"
+    }
+   ]
+  ]
+ },
+ "cross_event_4003": {
+  "answer": "Jackson (2026mibkn) was a bit better for 4003 than here (2026miwmi).\n\n| | Jackson | West Michigan (here) |\n|---|---|---|\n| Qual rank | 8 of 37 | 12 of 40 |\n| Qual record | 8-4 | 7-5 |\n| Alliance | Captain of Alliance 5 | 1st pick of Alliance 4 |\n| Playoffs | 1-2, out in Round 3 | 0-2, out in Round 2 |\n| Awards | Industrial Design Award | None |\n\nI only pulled Jackson's results from the season record. I didn't pull its OPR or scouting data, so this compares results only, not robot performance.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "team_events",
+    {
+     "team": 4003
+    }
+   ],
+   [
+    "team_info",
+    {
+     "team": 4003
+    }
+   ]
+  ]
+ },
+ "dup_records_141": {
+  "answer": "Our scouts covered team 141 in 9 different qual matches. There are 11 records in total, so some matches were scouted by more than one person.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select count(*) records, count(distinct match_number) matches from live.scouted where team_number=141"
+    }
+   ]
+  ]
+ },
+ "einstein_never_won": {
+  "answer": "No. 4003 has never won the world championship (data since 2010). The team won its division twice, the Archimedes Division in 2018 and the Daly Division in 2019. Both times it was eliminated in the semifinals on Einstein Field (Detroit).",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select te.event_key, e.name, e.event_type, te.year, te.playoff_level, te.playoff_status from team_events te join events e using(event_key) where te.team_number=4003 and e.event_type in ('Championship Finals','Championship Division') order by te.year"
+    }
+   ]
+  ]
+ },
+ "endgame_acc_not_recorded": {
+  "answer": "There isn't a best one. Endgame shooting accuracy is 0.0% for all 40 teams with data, so the scouted stat has no real values. It's probably not being recorded or is being entered wrong.\n\nFor shooting, these are better guides:\n- Teleop fuel accuracy.\n- Teleop volley accuracy.\n- OPR hub fuel counts.\n\nI can pull any of those if you want.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "leaderboard",
+    {
+     "metric": "endgame_fuel_accuracy",
+     "top_n": 5
+    }
+   ],
+   [
+    "leaderboard",
+    {
+     "lowest_first": true,
+     "metric": "endgame_fuel_accuracy",
+     "top_n": 5
+    }
+   ]
+  ]
+ },
+ "endgame_acc_other_event": {
+  "answer": "At the FIM District Jackson at Columbia Event (2026mibkn), the best endgame shooting accuracy was your own team, 4003 TriSonics, at 83.0% over 8 scouted matches. Next were 9210 Fighting Falcons at 80.8% and 7197 Mountie Megabots at 77.1%.\n\nThese are scouted averages from our scouts, so they can be noisy with only 8\u201310 matches per team.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "find_event",
+    {
+     "query": "Jackson"
+    }
+   ],
+   [
+    "leaderboard",
+    {
+     "event": "2026mibkn",
+     "metric": "endgame_fuel_accuracy"
+    }
+   ]
+  ]
+ },
+ "epa_norm_seasons": {
+  "answer": "4003 was relatively stronger in 2018 (Statbotics EPA data).\n\n| Year | epa_norm | World rank | Percentile | Record |\n|---|---|---|---|---|\n| 2018 | 1794 | 40 | 98.9% | 69-17 |\n| 2022 | 1753 | 60 | 98.0% | 50-15 |\n\nBoth seasons were elite. The 2018 numbers are higher on every measure. The records are season totals, not a per-event split. The raw EPA values (211 vs 45) come from different games, so I didn't compare them directly.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select year, epa, epa_norm, world_rank, world_percentile, wins, losses, ties from epa_team_years where team_number=4003 and year in (2018,2022)"
+    }
+   ]
+  ]
+ },
+ "epa_vs_opr_units": {
+  "answer": "2025 points and this year's points are different games, so I compared rank at this event on each measure (2025 EPA vs this event's OPR) instead of subtracting. The two ranks aren't on exactly the same pool. EPA is ranked among the 37 teams with 2025 data, and OPR among every team here.\n\n**Doing much better than 2025 EPA suggested:**\n- **6753:** EPA rank 25, OPR rank 9 (OPR 97.3).\n- **6094:** EPA rank 34, OPR rank 19 (OPR 48.5).\n- **6090:** EPA rank 14, OPR rank 2 (OPR 193.5).\n- **6114:** EPA rank 23, OPR rank 11 (OPR 92.7).\n\n**Doing worse than 2025 EPA suggested:**\n- **7210:** EPA rank 26, OPR rank 40 (OPR 0.4).\n- **107:** EPA rank 13, OPR rank 28 (OPR 26.4).\n- **4680:** EPA rank 7, OPR rank 22 (OPR 44.8).\n- **8397:** EPA rank 10, OPR rank 23 (OPR 40.2).\n- **244:** EPA rank 8, OPR rank 20 (OPR 47.3).\n\nThe biggest gaps are 6753 (+16 places) and 6094 (+15) on the upside, and 107 and 4680 (both \u221215) on the downside.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "with o as (select team_number, \"totalPoints\" opr, rank() over (order by \"totalPoints\" desc) opr_rank from live.opr), e as (select o.team_number, y.epa_norm, rank() over (order by y.epa_norm desc) epa_rank from o join epa_team_years y on y.team_number=o.team_number and y.year=2025) select o.team_number, round(e.epa_norm) epa_norm, e.epa_rank, round(o.opr,1) opr, o.opr_rank, (e.epa_rank - o.opr_rank) gap, (select count(*) from e) n from o join e using(team_number) order by abs(gap) desc limit 12"
+    }
+   ]
+  ]
+ },
+ "events_2026_4003": {
+  "answer": "Team 4003 competed at 2 official events in 2026:\n- FIM District Jackson at Columbia Event presented by Consumers Energy Foundation: ranked 8th, 8-4-0 in quals, and won the Industrial Design Award.\n- FIM District West Michigan Event presented by Grand Valley State University: ranked 12th, 7-5-0 in quals.\n\nThey also played two offseason events, which I left out of the count.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "team_events",
+    {
+     "team": 4003,
+     "year": 2026
+    }
+   ]
+  ]
+ },
+ "finals_dq": {
+  "answer": "Alliance 5623, 3539 and 6090 won the finals 2\u20130 at the FIM District West Michigan Event.\n\n- **Final 1:** Red won 295\u2013220.\n- **Final 2:** Red won 370\u20130. Blue (3572, 8397, 1918) was disqualified, so it scored 0.\n\nStatbotics gave red about a 58\u201360% win chance in each match.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "matches",
+    {
+     "match": "f1m1"
+    }
+   ],
+   [
+    "matches",
+    {
+     "match": "f1m2"
+    }
+   ],
+   [
+    "event_info",
+    {}
+   ]
+  ]
+ },
+ "h2h_never_met": {
+  "answer": "No. Since 2010, 4003 and 254 have never played on opposing alliances in an official match, so 4003 has no win over 254. This comes from TBA match history.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "SELECT a.year, a.event_key, a.match_key, a.alliance, a.score, a.opp_score, a.result FROM team_matches a JOIN team_matches b ON a.match_key=b.match_key AND a.alliance<>b.alliance WHERE a.team_number=4003 AND b.team_number=254 ORDER BY a.time"
+    }
+   ]
+  ]
+ },
+ "hang_conflict": {
+  "answer": "Three teams say their hang works but never climbed in a match we scouted:\n\n| Team | Pit hang level | Matches scouted | Climbs |\n|---|---|---|---|\n| 9721 | 1 | 12 | 0 |\n| 85 | 1 | 10 | 0 |\n| 6114 | 1 | 9 | 0 |\n\nAll three are Level 1 hangs. Teams with no scouted matches at all would show a blank match count, and none do.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "WITH p AS (SELECT team_number, hanging_level FROM live.pit_latest WHERE hanging_works=1), s AS (SELECT team_number, count(*) n, sum(endgame_climbed) c, max(endgame_tower_level) lvl FROM live.scouted GROUP BY 1) SELECT p.team_number, p.hanging_level, s.n, s.c FROM p LEFT JOIN s USING(team_number) WHERE coalesce(s.c,0)=0 ORDER BY s.n DESC NULLS LAST"
+    }
+   ]
+  ]
+ },
+ "hang_works": {
+  "answer": "Eight swerve teams say their hang works, per pit scouting. All are built for level 1:\n\n3458, 85, 8397, 6877, 6114, 6090, 3539, 2619\n\nThe other 23 swerve teams, including us (4003), have it marked \"not yet\" in pit data. This is self-reported, so check the scouted endgame climb stats before you rely on it.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "SELECT team_number, drive_train, hanging_works, hanging_level FROM live.pit_latest WHERE drive_train ILIKE '%swerve%' ORDER BY hanging_works DESC, hanging_level DESC"
+    }
+   ]
+  ]
+ },
+ "margin_quals_playoffs": {
+  "answer": "At 2026miwmi, the average winning margin is bigger in quals than in playoffs:\n\n- **Quals:** 107.5 points, across 80 decided matches.\n- **Playoffs:** 88.1 points, across 15 decided matches.\n\nTies are left out of both numbers.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select comp_level='qm' as is_qual, count(*)/2 as matches, avg(abs(margin)) as avg_margin from live.team_results where won=1 group by 1"
+    }
+   ],
+   [
+    "sql",
+    {
+     "sql": "select comp_level='qm' as is_qual, count(distinct match_key) as matches, avg(margin) as avg_margin from live.team_results where won=1 group by 1"
+    }
+   ]
+  ]
+ },
+ "msc_most_wins": {
+  "answer": "Team 27 has won the Michigan State Championship the most times, with 5 titles (2014, 2016, 2022, 2024, 2026).\n\nNext are:\n- **Team 67:** 4 titles (2011, 2012, 2016, 2025)\n- **Team 469:** 4 titles (2010, 2012, 2013, 2017)\n- **Team 33:** 3 titles (2011, 2014, 2017)\n\nThis counts members of the winning alliance at the main state championship event each year, from 2010 on. That includes the 2010\u20132012 events, which TBA lists under the key \"gl\". A 2026 win is in the data, so 27's count includes it.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select e.event_key, e.year, e.name, e.event_type from events e where e.district='fim' and e.event_type like 'District Championship%' order by year"
+    }
+   ],
+   [
+    "sql",
+    {
+     "sql": "select t.team_number, count(*) wins, list(t.year order by t.year) yrs from team_events t join events e using(event_key) where e.district='fim' and e.event_type='District Championship' and t.playoff_level='f' and t.playoff_status='won' group by 1 order by 2 desc, 1 limit 10"
+    }
+   ]
+  ]
+ },
+ "not_in_data_cycle_time": {
+  "answer": "We don't have a cycle time for 4003. Scouts log volleys and accuracy, not timed cycles.\n\nWhat the data does show for 4003, from 9 scouted matches:\n- **Teleop volleys:** 2.0 per match, against an event average of 1.55 (rank 14 of 40).\n- **Volley accuracy:** 81%, against an event average of 65%.\n- **Hopper size:** 50.\n- **Teleop hub fuel OPR:** 84.6.\n\nTwo scout notes (Q49, Q74) say the robot should be faster. The notes don't give times.\n\nFor an actual cycle time, time a few cycles from match video.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "team_info",
+    {
+     "team": 4003
+    }
+   ]
+  ]
+ },
+ "oldest_teams_here": {
+  "answer": "Oldest teams at 2026miwmi by rookie year, with their qualification results:\n\n| Team | Rookie year | Rank | Record (W-L-T) |\n|---|---|---|---|\n| 74 Team CHAOS | 1995 | 6 | 8-4-0 |\n| 141 WOBOT | 1995 | 21 | 6-6-0 |\n| 85 B.O.B. (Built on Brains) | 1996 | 20 | 5-7-0 |\n| 107 Team R.O.B.O.T.I.C.S. | 1997 | 24 | 6-6-0 |\n| 244 RoboDawgs 3D | 1999 | 13 | 7-5-0 |\n| 288 The RoboDawgs | 1999 | 19 | 6-6-0 |\n\nTeams 74 and 141 are the oldest, both from 1995. Team 74 did best of the group at rank 6.\n\nThese are qualification records only, not playoffs.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select e.team_number, t.nickname, t.rookie_year, r.rank, r.wins, r.losses, r.ties from live.event_teams e join teams t using(team_number) left join live.rankings r using(team_number) order by t.rookie_year asc, e.team_number limit 8"
+    }
+   ]
+  ]
+ },
+ "rank_corr_2025": {
+  "answer": "Yes, fairly strongly. Across the 37 teams here that also played an official 2025 event, the correlation is **r \u2248 0.72**. It compares each team's average 2025 qual rank percentile (rank \u00f7 number of teams) with its current rank at 2026miwmi.\n\n- Teams that ranked high last season tend to rank high here too. Rank percentile is used so 2025 events of different sizes are comparable.\n- The rankings are based on up to 12 matches per team so far, so they could still move.\n- Three teams here had no official 2025 event data and are left out.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "with p as (\nselect te.team_number, avg(te.qual_rank*1.0/te.num_teams) as pr, count(*) as n\nfrom team_events te join events e using(event_key)\nwhere te.year=2025 and e.event_type in ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals') and te.qual_rank is not null and te.num_teams>0\ngroup by 1),\nc as (select team_number, rank, (select count(*) from live.rankings) as nt from live.rankings)\nselect count(*) as teams, corr(p.pr, c.rank*1.0/c.nt) as r, corr(p.pr, c.rank) as r_raw, (select count(*) from live.rankings where matches_played>0) as played, (select max(matches_played) from live.rankings) as maxmp\nfrom p join c using(team_number)"
+    }
+   ]
+  ]
+ },
+ "scope_h2h_33": {
+  "answer": "Across all official matches since 2010, 4003 and 33 have faced each other on opposite alliances 5 times, and neither team has won more often. 4003 won 2, 33 won 2, and 1 match was a tie.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select count(*) n, count(*) filter (where a.result='win') w4003, count(*) filter (where a.result='loss') w33, count(*) filter (where a.result='tie') ties from team_matches a join team_matches b on a.match_key=b.match_key and a.alliance<>b.alliance where a.team_number=4003 and b.team_number=33 and a.event_key in (select event_key from events where event_type not in ('Offseason','Preseason','Remote','Festival of Champions'))"
+    }
+   ]
+  ]
+ },
+ "scope_partner_alltime": {
+  "answer": "Team 3234 has been 4003's most frequent playoff partner. They shared an alliance in 19 playoff matches across 3 events, from 2012 to 2014.\n\nNext are 2586 and 3098 with 15 matches each, both in 2018. This covers official events since 2010 and leaves out offseason events.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "with m as (\nselect ma.match_key, ma.event_key, case when list_contains(red_teams,4003) then red_teams else blue_teams end as t\nfrom matches ma join events e on e.event_key=ma.event_key\nwhere ma.comp_level<>'qm' and (list_contains(red_teams,4003) or list_contains(blue_teams,4003))\nand e.event_type in ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals'))\nselect p as partner, count(*) as matches, count(distinct event_key) as events, min(substr(event_key,1,4)) first_year, max(substr(event_key,1,4)) last_year\nfrom m, unnest(t) as u(p) where p<>4003 group by p order by matches desc limit 5"
+    }
+   ]
+  ]
+ },
+ "scope_partner_here": {
+  "answer": "In the playoffs at 2026miwmi, 4003 was on an alliance with **74 and 5610**. The alliance lost both of its matches, sf2m1 and sf5m1, so it was eliminated in the semifinals.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select match_key, comp_level, alliance, partners, won from live.team_results where team_number=4003 and comp_level<>'qm' order by match_key"
+    }
+   ]
+  ]
+ },
+ "scout_disagree": {
+  "answer": "Team 5610 has the biggest spread in teleop shooting accuracy across our scouts' ratings. The standard deviation is 34.4 over 10 records from 10 different scouts. The ratings run from 0% to 100%, and the average is 56%.\n\nNext are 5927 (SD 32.0), 11522 (30.7) and 9754 (30.0).\n\nSome of the 0% ratings may mean the robot didn't shoot, or the field was left blank, rather than a real accuracy rating. I didn't check that.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select team_number, count(*) n, count(distinct scouter_name) scouts, round(avg(teleop_fuel_accuracy),1) avg_acc, min(teleop_fuel_accuracy) lo, max(teleop_fuel_accuracy) hi, round(stddev_samp(teleop_fuel_accuracy),1) sd from live.scouted group by 1 having count(*)>=2 order by sd desc nulls last limit 8"
+    }
+   ]
+  ]
+ },
+ "scout_most": {
+  "answer": "Five scouts tied for the most records, each with 30:\n\n- aiden shearer: 30 matches\n- Tyler Clark: 30 matches\n- Jake Sprague: 30 matches\n- ryland: 30 records across 29 distinct matches\n- Caleb Roach: 30 records across 29 distinct matches\n\nIf you count distinct matches, aiden shearer, Tyler Clark and Jake Sprague tie at 30. ryland and Caleb Roach each have one match scouted twice.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select scouter_name, count(*) n, count(distinct match_number) m from live.scouted group by 1 order by n desc limit 5"
+    }
+   ]
+  ]
+ },
+ "seasons_competed": {
+  "answer": "Team 4003 has competed in 14 seasons, from 2012 through 2026. That count covers only official events where they played matches, and it skips offseason events. The count is below 15 because there's no 2021 season and the data may skip another year.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select count(distinct tm.year) seasons, min(tm.year) first_year, max(tm.year) last_year from team_matches tm join events e on e.event_key=tm.event_key where tm.team_number=4003 and e.event_type not in ('Offseason','Preseason','Remote','Festival of Champions')"
+    }
+   ]
+  ]
+ },
+ "streak_2021_gap": {
+  "answer": "Three teams tie for the longest streak: **118, 1678 and 987**. Each won at least one official event in 15 straight seasons, from 2011 through 2026.\n\n- Next longest are 67 (12 seasons, 2014\u20132026) and 2974 (11 seasons, 2015\u20132026).\n- There was no 2021 season, so I treated 2020 and 2022 as back-to-back.\n- 2026 is still in progress, so these streaks could still grow.\n- I counted event wins at Regional, District, District Championship and Championship events, and left out offseason events.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "WITH w AS (\n SELECT DISTINCT te.team_number, CASE WHEN te.year>=2022 THEN te.year-1 ELSE te.year END AS yi, te.year\n FROM team_events te JOIN events e USING(event_key)\n WHERE te.playoff_level='f' AND te.playoff_status='won'\n AND e.event_type IN ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals')\n AND te.year<>2021),\ng AS (SELECT team_number, yi, year, yi - dense_rank() OVER (PARTITION BY team_number ORDER BY yi) AS grp FROM w)\nSELECT team_number, count(*) AS streak, min(year) AS start_year, max(year) AS end_year\nFROM g GROUP BY team_number, grp ORDER BY streak DESC LIMIT 8"
+    }
+   ]
+  ]
+ },
+ "teams_never_won": {
+  "answer": "15 of the 40 teams at this event have never won an official event, going by TBA history since 2010. I counted official Regional, District, District Championship and Championship events and left offseason events out. Wins from before 2010 aren't in the data.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select count(*) filter (where not exists (select 1 from team_events te join events e on e.event_key=te.event_key where te.team_number=t.team_number and te.playoff_level='f' and te.playoff_status='won' and e.event_type in ('Regional','District','District Championship','District Championship Division','Championship Division','Championship Finals'))) as never_won, count(*) as total from live.event_teams t"
+    }
+   ]
+  ]
+ },
+ "top_2025_here": {
+  "answer": "Team 2054 had the best 2025 world EPA rank at this event. It was ranked #95 in the world, with an epa_norm of 1738. It is currently ranked #4 in quals here.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select e.team_number, e.world_rank, e.epa_norm, r.rank from epa_team_years e join live.event_teams t on t.team_number=e.team_number left join live.rankings r on r.team_number=e.team_number where e.year=2025 order by e.world_rank asc limit 5"
+    }
+   ]
+  ]
+ },
+ "unscouted_event": {
+  "answer": "We have no scouted averages for 4003 at the Grand Rapids Girls Robotics Competition (2026miwyo). Our scouts didn't cover it, so there are 0 scouting rows. It was an offseason event.\n\nThe official data is still there. 4003 finished rank 1 with a 5-1 record in quals:\n- Average match score: 204.5\n- Average auto fuel: 46.5\n- OPR: 106.9 total points, of which 31.9 were auto and 75.5 were teleop",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "find_event",
+    {
+     "query": "Grand Rapids Girls Robotics Competition"
+    }
+   ],
+   [
+    "team_info",
+    {
+     "event": "2026miwyo",
+     "team": 4003
+    }
+   ]
+  ]
+ },
+ "winners_unbeaten": {
+  "answer": "No. The winning alliance of 5623, 3539 and 6090 went undefeated in playoffs at 2026miwmi (5-0).\n\n- Upper bracket, sf1: won 326\u2013162.\n- Upper bracket, sf7: won 305\u2013189.\n- Sf11: won 359\u2013326 over 3572, 8397 and 1918.\n- Finals: swept the same 3572/8397/1918 alliance, 295\u2013220 and 370\u20130.",
+  "date": "20261105-230128",
+  "tool_calls": [
+   [
+    "sql",
+    {
+     "sql": "select match_key, alliance, partners, won, alliance_score, opponent_score, team_number from live.team_results where comp_level in ('sf','f') order by match_key"
+    }
+   ],
+   [
+    "event_info",
+    {}
+   ]
+  ]
+ }
+}

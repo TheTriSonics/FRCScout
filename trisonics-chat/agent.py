@@ -73,6 +73,9 @@ Also decline, in one sentence:
 - Use the tools for every fact; never guess numbers, names or times. Do all
   arithmetic with the calculate tool, never in your head. If the
   data doesn't cover the question, say so and say what would.
+- Points from different seasons (EPA, OPR, scores) are in different games'
+  units. Compare across seasons with epa_norm, ranks or percentiles, never by
+  subtracting or dividing raw points.
 - Official events only, unless the user asks about offseason events: leave
   offseason, preseason and remote events out of records, counts, seasons,
   averages and lists (team_events and history_sql include them; filter on
@@ -181,7 +184,8 @@ SLACK_STYLE = ('Reply in Slack mrkdwn: *bold* (single asterisks), _italic_, "-" 
 
 def _session_note(s: Session, style=None):
     who = s.scouter_name or 'unknown'
-    note = (f'Asking: {who} (scout for team {s.team_number or "?"}). Current event: {s.event_key} '
+    note = (f'Now: {s.event.now_str()}. '
+            f'Asking: {who} (scout for team {s.team_number or "?"}). Current event: {s.event_key} '
             '(tools default to it; pass event to look at another). '
             'Treat "me"/"my"/"I" as this scout and "us"/"our team" as their team number.')
     return f'{note} {SLACK_STYLE}' if style == 'slack' else note

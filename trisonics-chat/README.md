@@ -39,6 +39,22 @@ doesn't need to change. Azure counts `max_tokens` against the per-minute
 token limit before the request runs, so keep `MAX_TOKENS` small. At 16k,
 requests stalled on 429s.
 
+## Regression evals (`evals/`)
+
+`python -m evals.run` asks every case in `evals/cases.py` as a fresh chat (3 at a time, about
+$1 and 2 minutes for all of them) and writes `evals/results/<stamp>/report.md` (git-ignored).
+Each case records the question, why it's hard, reference SQL (re-run every time, so the
+expected answer follows the data), the expected facts, `must`/`must_not` regexes for a quick
+PASS/CHECK, and notes for the judge. The regexes are only a smoke check: grade a run by reading
+the report, which puts each answer next to the reference results and the last known-good answer
+(`evals/good_answers.json`; save new ones with `--accept <results dir> <ids>`).
+
+- `--only id1,id2`, `--tags history`, `--repeat 3` (flaky cases need several runs).
+- Run it after any change to the system prompt, tool descriptions or schema notes. When a case
+  fails, fix the cause in a way that would help other questions too, not the case's wording.
+- The cases use 2026miwmi / 4003data (finished event). For a new season, add cases on the new
+  event and keep the history ones.
+
 ## Slack (deployed)
 
 `function_app.py` runs on Function App `trisonics-chat` (Flex Consumption, Python 3.13):
