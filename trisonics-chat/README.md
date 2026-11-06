@@ -95,13 +95,26 @@ SELECT per call, 15 s, 256 MB, 200 rows. Every query is logged
   blob `history/history.duckdb` (set `AzureWebJobsStorage` to the app's
   storage connection string). Instances download it to temp storage and
   re-check its ETag every 5 minutes.
+- **Source of truth: container `history-source`** (same storage account):
+  `raw/tba/...`, `raw/sb/...` (every cached response, same names as
+  `history/data/raw/`) and `lake/<table>.parquet`. Rebuild on any machine:
+  `az storage blob download-batch -s history-source --pattern 'raw/*' -d history/data`
+  then `python -m history.build`. After a local `sync.py`, push new files with
+  `az storage blob upload-batch -d history-source --destination-path raw -s history/data/raw`.
 - `history/refresh.py`: re-pulls only events running now (start − 1 day to
   end + 1 day), the season's event list, active districts and EPA, replaces
-  those rows and uploads. ~1 minute for 32 events.
+  those rows and uploads the database. It also saves every response it fetched
+  to `history-source/raw/` and the updated tables to `history-source/lake/`,
+  so a rebuild from `history-source` gives the same database (checked
+  2026-11-06). Retries 5xx/429. A 40-event weekend: ~45 s, ~275 MB peak
+  (the instance has 512 MB; the Parquet export runs at a 100 MB DuckDB limit).
   - Timer `HistoryRefresh`: **off** (`AzureWebJobs.HistoryRefresh.Disabled`).
     Turn on in season: `az deployment group create ... -p
     historyRefreshEnabled=true tbaKey=$TBA_KEY` (schedule param
-    `historyRefreshSchedule`, default hourly at :05).
+    `historyRefreshSchedule`, default hourly at :05), or quickly with
+    `az functionapp config appsettings set -g trisonics-chat -n trisonics-chat
+    --settings AzureWebJobs.HistoryRefresh.Disabled=false` (an infra deploy
+    without the param turns it back off).
   - `HistoryRefreshNow` (POST, function key; `?date=YYYY-MM-DD` to pretend
     it's that day) runs one by hand.
 - Infra deploys must pass `tbaKey=$TBA_KEY` (from `trisonics-api/setenv`), or

@@ -22,8 +22,14 @@ SB = 'https://api.statbotics.io/v3'
 SB_PAGE = 1000
 
 
+def name(source, route):
+    """'tba', '/event/2026miwmi/matches' -> 'tba/event__2026miwmi__matches.json.gz': the file
+    under history/data/raw/ and, with 'raw/' in front, the blob in history-source."""
+    return f"{source}/" + route.strip('/').replace('/', '__').replace('?', '__') + '.json.gz'
+
+
 def _path(source, route):
-    return RAW / source / (route.strip('/').replace('/', '__').replace('?', '__') + '.json.gz')
+    return RAW / name(source, route)
 
 
 def fetch(source, route, refresh=False):
