@@ -53,7 +53,10 @@ Tables (team_number is an int; event_key like '2024micmp'; year = season):
 Season notes: data starts in 2010, so streaks and all-time counts are "since 2010". 2015 quals had
 no wins or losses (result is null; ranked by average score). 2020 stopped after week 2-3. 2021 had
 no normal season (only 'Remote' at-home events, no matches): treat 2020 -> 2022 as consecutive
-seasons for streaks. Offseason events often have test or bad scores. state_prov is a postal code
+seasons for streaks. Some team_events rows are not real competition: 2021 "Season Participation"
+placeholders (typed 'District') and cancelled 2020 events ("(Cancelled)" in the name), both with no
+matches; count a team's events or seasons from team_matches or qual_matches > 0. A team's season
+record means all its official events that year added together. Offseason events often have test or bad scores. state_prov is a postal code
 for the USA and Canada ('MI', 'ON').
 DuckDB SQL: list_contains(red_teams, 254), UNNEST, ->> for JSON fields, QUALIFY, FILTER.
 """

@@ -96,6 +96,11 @@ def _match_summary(ev, m, sb=None, breakdown=False, team=None):
     if played:
         out.update(red_score=red.get('score'), blue_score=blue.get('score'),
                    winner=m.get('winning_alliance') or 'tie')
+        for side, a in (('red', red), ('blue', blue)):
+            if a.get('dq_team_keys'):  # disqualified teams score 0 for the match
+                out[f'{side}_disqualified'] = [team_num(t) for t in a['dq_team_keys']]
+            if a.get('surrogate_team_keys'):
+                out[f'{side}_surrogates'] = [team_num(t) for t in a['surrogate_team_keys']]
         bd = m.get('score_breakdown') or {}
         for side in ('red', 'blue'):
             b = bd.get(side) or {}

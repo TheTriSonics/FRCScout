@@ -132,7 +132,8 @@ def _pit(ev):
             v = _clean(v)
             if v is not None:
                 d[k] = v
-        rows.append(d)
+        if len(d) > 1:  # robot notes are notes-only pit records: nothing left here
+            rows.append(d)
     return rows
 
 
