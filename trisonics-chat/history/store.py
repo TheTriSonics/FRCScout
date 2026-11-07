@@ -64,10 +64,16 @@ def db_path():
         return _state['path']
 
 
-def download(to: Path):
-    """The current blob into [to] (for a refresh to start from)."""
-    with open(to, 'wb') as f:
-        _blob().download_blob(max_concurrency=4).readinto(f)
+def get_lake(to: Path):
+    """history-source lake/*.parquet into the folder [to] (for a refresh to start from)."""
+    from azure.storage.blob import ContainerClient
+    container = ContainerClient.from_connection_string(_conn(), SOURCE_CONTAINER)
+    to.mkdir(parents=True, exist_ok=True)
+    for b in container.list_blobs(name_starts_with='lake/'):
+        if b.name.endswith('.parquet'):
+            with open(to / Path(b.name).name, 'wb') as f:
+                container.download_blob(b.name, max_concurrency=4).readinto(f)
+    return to
 
 
 def upload(path: Path):

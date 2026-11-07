@@ -1,14 +1,15 @@
 """Refresh the history database for events happening now.
 
 Pulls only events that are on (start - 1 day through end + days_after) plus
-the season's event list and EPA, replaces those rows in a copy of the
-database, and uploads it. Meant to run hourly in competition season; older
-seasons don't change and come from build.py.
+the season's event list and EPA, and updates each layer from the one before
+(see lake.py): the responses go to history-source raw/, those rows are
+replaced in the Parquet tables (history-source lake/), and the database is
+made again from the Parquet tables and uploaded. Meant to run hourly in
+competition season; older seasons don't change and come from build.py.
 
-Every response it fetched is also saved to the history-source container under
-the same path sync.py caches it under (raw/tba/matches/2026/2026miwmi.json.gz, ...), and the updated
-tables as lake/<table>.parquet, so history-source stays a complete source:
-download raw/ into history/data/raw/ and build.py makes the same database.
+Raw files use the same paths as sync.py's cache (raw/tba/matches/2026/2026miwmi.json.gz,
+...), so history-source stays a complete source: download raw/ into
+history/data/raw/ and build.py makes the same lake and database.
 
 Calls per run: 1 event list, 4 per active event (matches, awards, statuses,
 teams), 1 per active district, ~4 Statbotics team_years pages and ~4
@@ -20,6 +21,7 @@ import gzip
 import json
 import logging
 import os
+import shutil
 import tempfile
 import threading
 import time
@@ -27,8 +29,6 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-
-import duckdb
 
 from history import lake, store, sync
 
@@ -95,8 +95,11 @@ def active(events, today, days_after=1):
     return out
 
 
-def refresh(year=None, today=None, days_after=1, db=None, upload=True):
-    """Returns a summary dict. db: work on this local file instead of the blob."""
+def refresh(year=None, today=None, days_after=1, lake_dir=None, db=None, upload=True):
+    """Bring every layer up to date for the events on now: raw responses, then the
+    Parquet tables, then the database made from them. Returns a summary dict.
+    lake_dir/db: patch this local lake folder and write this database (for testing)
+    instead of starting from history-source; upload=False keeps everything local."""
     today = today or dt.date.today()
     year = year or today.year
     log = _fetched.log = []
@@ -123,7 +126,7 @@ def refresh(year=None, today=None, days_after=1, db=None, upload=True):
         dranks = dict(zip(districts, pool.map(district, districts)))
     team_years = sb_pages(f'/team_years?year={year}')
     sb_events = [t for t in sb_pages(f'/team_events?year={year}') if t.get('event') in keys]
-    if upload:  # the source first: a failed database update is redone next run
+    if upload:  # bronze first: a failed later step is redone next run
         raw = {sync.name(s, r): d for s, r, d in log}  # last fetch of a route wins
         summary['source_raw'] = store.put_source(
             ('raw/' + n, gzip.compress(json.dumps(d).encode())) for n, d in raw.items())
@@ -131,63 +134,50 @@ def refresh(year=None, today=None, days_after=1, db=None, upload=True):
     log.clear()
     _fetched.log = None
 
-    if db:
-        path = Path(db)
-    else:
-        fd, tmp = tempfile.mkstemp(prefix='history-refresh-', suffix='.duckdb')
-        os.close(fd)
-        path = Path(tmp)
-        store.download(path)
-    con = duckdb.connect(str(path), config={'memory_limit': '200MB', 'threads': 2})
+    work = Path(tempfile.mkdtemp(prefix='history-refresh-'))
+    lake_dir = Path(lake_dir) if lake_dir else store.get_lake(work / 'lake')
+    db = Path(db) if db else work / 'history.duckdb'
+    con = lake.connect()
     try:
-        con.execute('BEGIN')
+        t = {name: lake_dir / f'{name}.parquet' for name in lake.TABLES + ['team_matches']}
         in_keys = '(' + ','.join(f"'{k}'" for k in keys) + ')'
-        teams = [t for _, d in fetched for t in d['teams'] or []]
-        numbers = sorted({t['team_number'] for t in teams})
-        if numbers:
-            con.execute(f"DELETE FROM teams WHERE team_number IN ({','.join(map(str, numbers))})")
-            lake.insert_rows(con, 'teams', {t['team_number']: r for t, r in
-                                            zip(teams, lake.team_rows(teams))}.values())
-        con.execute('DELETE FROM events WHERE year = ?', [year])
-        lake.insert_rows(con, 'events', lake.event_rows(events))
-        for table in ('matches', 'awards', 'team_events', 'epa_team_events', 'team_matches'):
-            con.execute(f'DELETE FROM {table} WHERE event_key IN {in_keys}')
-        for key, d in fetched:
-            lake.insert_rows(con, 'matches', lake.match_rows(d['matches']))
-            lake.insert_rows(con, 'awards', lake.award_rows(d['awards']))
-            lake.insert_rows(con, 'team_events', lake.team_event_rows(key, d['teams/statuses']))
-        lake.insert_rows(con, 'epa_team_events', lake.epa_event_rows(sb_events))
-        con.execute('INSERT INTO team_matches ' + lake.TEAM_MATCHES.format(where=f'WHERE event_key IN {in_keys}'))
-        for dk, ranks in dranks.items():
-            con.execute('DELETE FROM district_rankings WHERE district_key = ?', [dk])
-            lake.insert_rows(con, 'district_rankings', lake.district_rows(dk, ranks))
+        teams = {t_['team_number']: r for t_, r in zip(
+            (x for _, d in fetched for x in d['teams'] or []),
+            lake.team_rows([x for _, d in fetched for x in d['teams'] or []]))}
+        if teams:
+            lake.replace_rows(con, t['teams'], f"team_number NOT IN ({','.join(map(str, teams))})",
+                              teams.values())
+        lake.replace_rows(con, t['events'], f'year <> {int(year)}', lake.event_rows(events))
+        lake.replace_rows(con, t['matches'], f'event_key NOT IN {in_keys}',
+                          (r for _, d in fetched for r in lake.match_rows(d['matches'])))
+        lake.replace_rows(con, t['awards'], f'event_key NOT IN {in_keys}',
+                          (r for _, d in fetched for r in lake.award_rows(d['awards'])))
+        lake.replace_rows(con, t['team_events'], f'event_key NOT IN {in_keys}',
+                          (r for k, d in fetched for r in lake.team_event_rows(k, d['teams/statuses'])))
+        lake.replace_rows(con, t['epa_team_events'], f'event_key NOT IN {in_keys}',
+                          lake.epa_event_rows(sb_events))
+        if dranks:
+            lake.replace_rows(con, t['district_rankings'],
+                              'district_key NOT IN (' + ','.join(f"'{k}'" for k in dranks) + ')',
+                              (r for dk, ranks in dranks.items() for r in lake.district_rows(dk, ranks)))
         if team_years:
-            con.execute('DELETE FROM epa_team_years WHERE year = ?', [year])
-            lake.insert_rows(con, 'epa_team_years', lake.epa_year_rows(team_years))
-        con.execute('COMMIT')
-        con.execute('CHECKPOINT')
+            lake.replace_rows(con, t['epa_team_years'], f'year <> {int(year)}',
+                              lake.epa_year_rows(team_years))
         del fetched, sb_events, team_years, teams, dranks, events
-        gc.collect()  # the responses are in the database now; keep the instance's 512 MB for COPY
-        summary['matches'] = con.execute(f'SELECT count(*) FROM matches WHERE event_key IN {in_keys}').fetchone()[0]
-        # COPY uses all the memory it may; the instance has 512 MB shared with chat requests.
-        con.execute("SET memory_limit = '100MB'")
-        con.execute('SET threads = 1')
-        con.execute('SET preserve_insertion_order = false')
-        lake_dir = Path(tempfile.mkdtemp(prefix='history-lake-'))
-        for (name,) in con.execute('SHOW TABLES').fetchall():
-            con.execute(f"COPY {name} TO '{lake_dir / name}.parquet' "
-                        "(FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 10000)")
+        gc.collect()  # the responses are in the lake now; keep the instance's 512 MB for DuckDB
+        lake.matches_view(con, lake_dir)
+        lake.replace_rows(con, t['team_matches'], f'event_key NOT IN {in_keys}',
+                          sql=lake.TEAM_MATCHES.format(where=f'WHERE event_key IN {in_keys}'))
+        summary['matches'] = con.execute(
+            f"SELECT count(*) FROM '{t['matches']}' WHERE event_key IN {in_keys}").fetchone()[0]
     finally:
         con.close()
-    parquet = sorted(lake_dir.glob('*.parquet'))
+    if upload:  # silver
+        summary['source_lake'] = store.put_source(('lake/' + f.name, f) for f in sorted(lake_dir.glob('*.parquet')))
+    lake.make_db(lake_dir, db)  # gold
     if upload:
-        store.upload(path)
+        store.upload(db)
         summary['uploaded'] = True
-        summary['source_lake'] = store.put_source(('lake/' + f.name, f) for f in parquet)
-    for f in parquet:
-        f.unlink()
-    lake_dir.rmdir()
-    if not db:
-        path.unlink(missing_ok=True)
+    shutil.rmtree(work, ignore_errors=True)
     logging.info('history refresh %s', summary)
     return summary
