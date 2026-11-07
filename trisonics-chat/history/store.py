@@ -15,8 +15,9 @@ import time
 from pathlib import Path
 
 CONTAINER = os.environ.get('HISTORY_CONTAINER', 'history')
-# The lake's source, so a rebuild never needs one machine's cache: raw/<source>/<file>.json.gz
-# (sync.py's cached responses, same names as history/data/raw/) and lake/<table>.parquet.
+# The lake's source, so a rebuild never needs one machine's cache:
+# raw/<source>/<kind>/<year>/<file>.json.gz (sync.py's cached responses, same paths as
+# history/data/raw/, see sync.name) and lake/<table>.parquet.
 SOURCE_CONTAINER = os.environ.get('HISTORY_SOURCE_CONTAINER', 'history-source')
 BLOB = 'history.duckdb'
 LOCAL = Path(__file__).with_name('data') / 'history.duckdb'

@@ -27,16 +27,18 @@ def load(path):
         return json.load(f)
 
 
-def raw(source, pattern):
-    return sorted(glob.glob(str(RAW / source / pattern)))
+def raw(pattern):
+    """Raw files matching [pattern] (relative to history/data/raw/, see sync.name)."""
+    return sorted(glob.glob(str(RAW / pattern)))
 
 
-def _name(path, prefix, suffix):
-    return Path(path).name.removeprefix(prefix).removesuffix(suffix)
+def _key(path):
+    """tba/matches/2026/2026miwmi.json.gz -> '2026miwmi'."""
+    return Path(path).name.removesuffix('.json.gz')
 
 
-def _each(pattern, fn, source='tba'):
-    for p in raw(source, pattern):
+def _each(pattern, fn):
+    for p in raw(pattern):
         yield from fn(load(p))
 
 
@@ -44,10 +46,10 @@ def _teams():
     """TBA's team pages, plus teams only seen in event team lists refresh.py saved (rookies
     registered after the pages were pulled)."""
     seen = set()
-    for r in _each('teams__*.json.gz', lake.team_rows):
+    for r in _each('tba/teams/*.json.gz', lake.team_rows):
         seen.add(r['team_number'])
         yield r
-    for r in _each('event__*__teams.json.gz', lake.team_rows):
+    for r in _each('tba/event_teams/*/*.json.gz', lake.team_rows):
         if r['team_number'] not in seen:
             seen.add(r['team_number'])
             yield r
@@ -55,17 +57,15 @@ def _teams():
 
 SOURCES = {
     'teams': _teams,
-    'events': lambda: _each('events__*.json.gz', lake.event_rows),
-    'matches': lambda: _each('event__*__matches.json.gz', lake.match_rows),
-    'awards': lambda: _each('event__*__awards.json.gz', lake.award_rows),
-    'team_events': lambda: (r for p in raw('tba', 'event__*__teams__statuses.json.gz')
-                            for r in lake.team_event_rows(
-                                _name(p, 'event__', '__teams__statuses.json.gz'), load(p))),
-    'district_rankings': lambda: (r for p in raw('tba', 'district__*__rankings.json.gz')
-                                  for r in lake.district_rows(
-                                      _name(p, 'district__', '__rankings.json.gz'), load(p))),
-    'epa_team_years': lambda: _each('team_years__*.json.gz', lake.epa_year_rows, 'sb'),
-    'epa_team_events': lambda: _each('team_events__*.json.gz', lake.epa_event_rows, 'sb'),
+    'events': lambda: _each('tba/events/*/*.json.gz', lake.event_rows),
+    'matches': lambda: _each('tba/matches/*/*.json.gz', lake.match_rows),
+    'awards': lambda: _each('tba/awards/*/*.json.gz', lake.award_rows),
+    'team_events': lambda: (r for p in raw('tba/team_statuses/*/*.json.gz')
+                            for r in lake.team_event_rows(_key(p), load(p))),
+    'district_rankings': lambda: (r for p in raw('tba/district_rankings/*/*.json.gz')
+                                  for r in lake.district_rows(_key(p), load(p))),
+    'epa_team_years': lambda: _each('sb/team_years/*/*.json.gz', lake.epa_year_rows),
+    'epa_team_events': lambda: _each('sb/team_events/*/*.json.gz', lake.epa_event_rows),
 }
 
 
